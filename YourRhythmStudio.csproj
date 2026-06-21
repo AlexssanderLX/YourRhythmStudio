@@ -6,4 +6,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Foundation\src\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" PrivateAssets="all" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Foundation\src\Foundation.Access\Foundation.Access.csproj" />
+    <ProjectReference Include="Foundation\src\Foundation.Assistant\Foundation.Assistant.csproj" />
+    <ProjectReference Include="Foundation\src\Foundation.Core\Foundation.Core.csproj" />
+    <ProjectReference Include="Foundation\src\Foundation.SecureLinks\Foundation.SecureLinks.csproj" />
+  </ItemGroup>
+
 </Project>

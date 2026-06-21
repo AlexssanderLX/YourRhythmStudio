@@ -1,7 +1,12 @@
+using YourRhythmStudio.Infrastructure.Data;
+using YourRhythmStudio.Infrastructure.Foundation;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddYourRhythmDatabase(builder.Configuration);
+builder.Services.AddYourRhythmFoundation();
 
 var app = builder.Build();
 
