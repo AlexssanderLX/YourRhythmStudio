@@ -1,0 +1,12 @@
+@*
+    Floating soundtrack player for the landing page.
+    Hidden by default — soundtrack.js reveals it after the user scrolls,
+    and only if at least one audio file exists. No autoplay.
+*@
+<div class="soundtrack" id="soundtrack" hidden>
+    <button class="soundtrack-btn" id="soundtrackBtn" type="button" aria-pressed="false" aria-label="Trilha sonora da página">
+        <span class="st-eq" id="stEq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="st-label" id="stLabel">🎧 Ativar trilha sonora</span>
+    </button>
+    <audio id="soundtrackAudio" preload="none"></audio>
+</div>

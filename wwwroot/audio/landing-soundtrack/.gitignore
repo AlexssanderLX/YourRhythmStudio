@@ -1,0 +1,10 @@
+# Não versionar as faixas de áudio (adicionadas manualmente no deploy).
+# Mantém apenas a estrutura da pasta (README + este .gitignore).
+*.mp3
+*.ogg
+*.wav
+*.m4a
+*.flac
+
+!README.md
+!.gitignore
