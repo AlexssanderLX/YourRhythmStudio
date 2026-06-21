@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using YourRhythmStudio.Application.Users;
 
 namespace YourRhythmStudio.Infrastructure.Data;
 
@@ -16,6 +17,7 @@ public static class DatabaseServiceCollectionExtensions
 
         services.AddDbContext<YourRhythmDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        services.AddScoped<IUserDirectoryService, UserDirectoryService>();
 
         return services;
     }
