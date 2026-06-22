@@ -1,0 +1,53 @@
+@model YourRhythmStudio.ViewModels.Auth.LoginViewModel
+
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = "Entrar";
+}
+
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="login-title">
+        <div class="auth-brand">
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+            <span>YourRhythm<span>.</span></span>
+        </div>
+
+        <div class="auth-copy">
+            <p class="auth-kicker">Acesso seguro</p>
+            <h1 id="login-title">Entre no seu studio</h1>
+            <p>Continue acompanhando alunos, aulas, repertorio e progresso musical.</p>
+        </div>
+
+        <form asp-controller="Auth" asp-action="Login" method="post" class="auth-form" novalidate>
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
+
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" placeholder="admin@yourrhythm.local" />
+            <span asp-validation-for="Email"></span>
+
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="current-password" placeholder="Sua senha" />
+            <span asp-validation-for="Password"></span>
+
+            <label asp-for="TenantKey"></label>
+            <input asp-for="TenantKey" autocomplete="off" placeholder="Opcional no MVP" />
+            <span asp-validation-for="TenantKey"></span>
+
+            <label class="auth-check">
+                <input asp-for="RememberMe" />
+                <span>Manter conectado</span>
+            </label>
+
+            <button type="submit">Entrar</button>
+        </form>
+
+        <p class="auth-demo">Demo local: admin@yourrhythm.local / YourRhythm@123</p>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

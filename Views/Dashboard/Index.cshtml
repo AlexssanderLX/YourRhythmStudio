@@ -1,0 +1,34 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="py-5">
+    <div class="container">
+        <div class="p-4 p-md-5 bg-light border rounded-3">
+            <p class="text-uppercase text-muted small mb-2">YourRhythm Studio</p>
+            <h1 class="display-6 mb-3">Dashboard</h1>
+            <p class="lead mb-4">
+                Login ativo para @User.Identity?.Name. A base privada do produto ja esta protegida por cookie.
+            </p>
+
+            <dl class="row mb-4">
+                <dt class="col-sm-3">E-mail</dt>
+                <dd class="col-sm-9">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</dd>
+
+                <dt class="col-sm-3">Conta</dt>
+                <dd class="col-sm-9">@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value</dd>
+
+                <dt class="col-sm-3">Sessao</dt>
+                <dd class="col-sm-9">@User.FindFirst("SessionId")?.Value</dd>
+
+                <dt class="col-sm-3">Role plataforma</dt>
+                <dd class="col-sm-9">@User.FindFirst("PlatformRole")?.Value</dd>
+            </dl>
+
+            <form asp-controller="Auth" asp-action="Logout" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Sair</button>
+            </form>
+        </div>
+    </div>
+</section>
