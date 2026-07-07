@@ -7,82 +7,128 @@
     var studentId = Model.Detail.Student.StudentProfileId;
 }
 
+<a class="back-link" asp-controller="Teacher" asp-action="Students">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Meus alunos
+</a>
+
 @if (TempData["Error"] is string error)
 {
-    <div class="card" style="border-color:#ff7676;color:#ffb0b0">@error</div>
+    <div class="auth-validation" style="margin-bottom:4px">@error</div>
 }
 
 <div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Detail.Student.CurrentXp</span><span class="sc-lbl">XP</span></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Detail.Student.CurrentXp</span><span class="sc-lbl">XP total</span></div>
     <div class="sc-sep"></div>
     <div class="stat-chip"><span class="sc-val">@Model.Detail.Student.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
     <div class="sc-sep"></div>
     <div class="stat-chip"><span class="sc-val">@Model.Detail.Assignments.Count(a => a.Status.ToString() == "Completed")</span><span class="sc-lbl">Missões concluídas</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Detail.Assignments.Count(a => a.Status.ToString() == "Pending" || a.Status.ToString() == "InProgress")</span><span class="sc-lbl">Em aberto</span></div>
 </div>
 
-<div class="dash-grid cols-2">
-    <div class="card">
-        <h3>Nova missão</h3>
+<div class="card">
+    <div class="action-tabs" id="actionTabs">
+        <button class="action-tab-btn active" data-tab="tab-assignment">Nova missão</button>
+        <button class="action-tab-btn" data-tab="tab-repertoire">Repertório</button>
+        <button class="action-tab-btn" data-tab="tab-lesson">Registrar aula</button>
+        <button class="action-tab-btn" data-tab="tab-feedback">Feedback</button>
+    </div>
+
+    <div class="action-form active" id="tab-assignment">
+        <h3 style="margin-bottom:16px">Nova missão</h3>
         <form asp-controller="Teacher" asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form">
             @Html.AntiForgeryToken()
             <input asp-for="Assignment.StudentProfileId" type="hidden" value="@studentId" />
-            <label asp-for="Assignment.Title">Título</label>
-            <input asp-for="Assignment.Title" />
-            <label asp-for="Assignment.Description">Descrição</label>
-            <textarea asp-for="Assignment.Description"></textarea>
-            <label asp-for="Assignment.DueAtUtc">Prazo</label>
-            <input asp-for="Assignment.DueAtUtc" type="datetime-local" />
-            <label asp-for="Assignment.TargetMinutes">Minutos alvo</label>
-            <input asp-for="Assignment.TargetMinutes" type="number" />
-            <label asp-for="Assignment.XpReward">XP</label>
-            <input asp-for="Assignment.XpReward" type="number" />
+            <div>
+                <label asp-for="Assignment.Title">Título</label>
+                <input asp-for="Assignment.Title" placeholder="Ex: Praticar escalas 20min" />
+            </div>
+            <div>
+                <label asp-for="Assignment.Description">Descrição (opcional)</label>
+                <textarea asp-for="Assignment.Description" placeholder="Detalhe a tarefa…"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label asp-for="Assignment.DueAtUtc">Prazo</label>
+                    <input asp-for="Assignment.DueAtUtc" type="datetime-local" />
+                </div>
+                <div>
+                    <label asp-for="Assignment.TargetMinutes">Minutos alvo</label>
+                    <input asp-for="Assignment.TargetMinutes" type="number" min="1" placeholder="20" />
+                </div>
+            </div>
+            <div>
+                <label asp-for="Assignment.XpReward">XP de recompensa</label>
+                <input asp-for="Assignment.XpReward" type="number" min="0" placeholder="20" />
+            </div>
             <button type="submit">Criar missão</button>
         </form>
     </div>
 
-    <div class="card">
-        <h3>Adicionar repertório</h3>
+    <div class="action-form" id="tab-repertoire">
+        <h3 style="margin-bottom:16px">Adicionar repertório</h3>
         <form asp-controller="Teacher" asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" class="auth-form">
             @Html.AntiForgeryToken()
             <input asp-for="Repertoire.StudentProfileId" type="hidden" value="@studentId" />
-            <label asp-for="Repertoire.Title">Música</label>
-            <input asp-for="Repertoire.Title" />
-            <label asp-for="Repertoire.ComposerOrArtist">Compositor/artista</label>
-            <input asp-for="Repertoire.ComposerOrArtist" />
-            <label asp-for="Repertoire.Instrument">Instrumento</label>
-            <input asp-for="Repertoire.Instrument" />
-            <label asp-for="Repertoire.Level">Nível</label>
-            <input asp-for="Repertoire.Level" />
-            <label asp-for="Repertoire.ReferenceUrl">Referência</label>
-            <input asp-for="Repertoire.ReferenceUrl" />
+            <div>
+                <label asp-for="Repertoire.Title">Música</label>
+                <input asp-for="Repertoire.Title" placeholder="Ex: Clair de Lune" />
+            </div>
+            <div>
+                <label asp-for="Repertoire.ComposerOrArtist">Compositor / artista</label>
+                <input asp-for="Repertoire.ComposerOrArtist" placeholder="Ex: Debussy" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label asp-for="Repertoire.Instrument">Instrumento</label>
+                    <input asp-for="Repertoire.Instrument" placeholder="Piano" />
+                </div>
+                <div>
+                    <label asp-for="Repertoire.Level">Nível</label>
+                    <input asp-for="Repertoire.Level" type="number" min="1" placeholder="1" />
+                </div>
+            </div>
+            <div>
+                <label asp-for="Repertoire.ReferenceUrl">Link de referência (opcional)</label>
+                <input asp-for="Repertoire.ReferenceUrl" type="url" placeholder="https://youtube.com/…" />
+            </div>
             <button type="submit">Adicionar repertório</button>
         </form>
     </div>
 
-    <div class="card">
-        <h3>Registrar aula</h3>
+    <div class="action-form" id="tab-lesson">
+        <h3 style="margin-bottom:16px">Registrar aula</h3>
         <form asp-controller="Teacher" asp-action="CreateLesson" asp-route-studentId="@studentId" method="post" class="auth-form">
             @Html.AntiForgeryToken()
             <input asp-for="Lesson.StudentProfileId" type="hidden" value="@studentId" />
-            <label asp-for="Lesson.Title">Título</label>
-            <input asp-for="Lesson.Title" />
-            <label asp-for="Lesson.LessonDateUtc">Data</label>
-            <input asp-for="Lesson.LessonDateUtc" type="datetime-local" />
-            <label asp-for="Lesson.Notes">Notas</label>
-            <textarea asp-for="Lesson.Notes"></textarea>
+            <div>
+                <label asp-for="Lesson.Title">Título da aula</label>
+                <input asp-for="Lesson.Title" placeholder="Ex: Escalas maiores — mão direita" />
+            </div>
+            <div>
+                <label asp-for="Lesson.LessonDateUtc">Data e hora</label>
+                <input asp-for="Lesson.LessonDateUtc" type="datetime-local" />
+            </div>
+            <div>
+                <label asp-for="Lesson.Notes">Notas (opcional)</label>
+                <textarea asp-for="Lesson.Notes" placeholder="O que foi trabalhado, observações…"></textarea>
+            </div>
             <button type="submit">Registrar aula</button>
         </form>
     </div>
 
-    <div class="card">
-        <h3>Feedback</h3>
+    <div class="action-form" id="tab-feedback">
+        <h3 style="margin-bottom:16px">Deixar feedback</h3>
         <form asp-controller="Teacher" asp-action="CreateFeedback" asp-route-studentId="@studentId" method="post" class="auth-form">
             @Html.AntiForgeryToken()
             <input asp-for="Feedback.StudentProfileId" type="hidden" value="@studentId" />
-            <label asp-for="Feedback.Message">Mensagem</label>
-            <textarea asp-for="Feedback.Message"></textarea>
+            <div>
+                <label asp-for="Feedback.Message">Mensagem</label>
+                <textarea asp-for="Feedback.Message" placeholder="Escreva um retorno para o aluno…" style="min-height:120px"></textarea>
+            </div>
             <label class="auth-check">
-                <input asp-for="Feedback.VisibleToStudent" />
+                <input asp-for="Feedback.VisibleToStudent" type="checkbox" />
                 <span>Visível para o aluno</span>
             </label>
             <button type="submit">Salvar feedback</button>
@@ -93,28 +139,140 @@
 <div class="dash-grid cols-3">
     <div class="card">
         <h3>Missões</h3>
-        @foreach (var item in Model.Detail.Assignments)
+        <div class="card-sub" style="margin-bottom:12px">@Model.Detail.Assignments.Count total</div>
+        @if (Model.Detail.Assignments.Any())
         {
-            <div class="mission"><div><div class="m-label">@item.Status</div><div class="m-title">@item.Title</div></div><div class="m-xp">+@item.XpReward XP</div></div>
+            foreach (var item in Model.Detail.Assignments.OrderBy(a => a.Status.ToString() == "Completed" ? 1 : 0))
+            {
+                var statusLabel = item.Status.ToString() switch
+                {
+                    "Pending"    => "Pendente",
+                    "InProgress" => "Em andamento",
+                    "Completed"  => "Concluída",
+                    "Skipped"    => "Ignorada",
+                    _            => item.Status.ToString()
+                };
+                var statusCss = item.Status.ToString() switch
+                {
+                    "Pending"    => "pending",
+                    "InProgress" => "in-progress",
+                    "Completed"  => "completed",
+                    "Skipped"    => "skipped",
+                    _            => ""
+                };
+                <div class="assignment-card @(item.Status.ToString() == "Completed" ? "is-completed" : "")">
+                    <div class="asgn-top">
+                        <div class="asgn-info">
+                            <div class="asgn-status @statusCss">@statusLabel</div>
+                            <div class="asgn-title">@item.Title</div>
+                        </div>
+                        <div class="asgn-xp">+@item.XpReward XP</div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="card-sub">Nenhuma missão criada.</p>
         }
     </div>
+
     <div class="card">
         <h3>Repertório</h3>
-        @foreach (var item in Model.Detail.Repertoire)
+        <div class="card-sub" style="margin-bottom:12px">@Model.Detail.Repertoire.Count itens</div>
+        @if (Model.Detail.Repertoire.Any())
         {
-            <div class="prow"><div class="pmeta"><div class="pn">@item.Title</div><div class="ps">@item.ProgressPercent% · @item.Status</div><div class="pbar"><i style="width:@item.ProgressPercent%"></i></div></div></div>
+            foreach (var item in Model.Detail.Repertoire)
+            {
+                <div class="prow">
+                    <div class="pmeta">
+                        <div class="pn">@item.Title</div>
+                        <div class="ps">@item.ComposerOrArtist · @item.Status</div>
+                        <div class="pbar" style="margin-top:6px"><i style="width:@item.ProgressPercent%"></i></div>
+                    </div>
+                    <div class="ppct">@item.ProgressPercent%</div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="card-sub">Nenhuma música adicionada.</p>
         }
     </div>
+
     <div class="card">
         <h3>Feedbacks</h3>
-        @foreach (var item in Model.Detail.Feedback)
+        <div class="card-sub" style="margin-bottom:12px">@Model.Detail.Feedback.Count registros</div>
+        @if (Model.Detail.Feedback.Any())
         {
-            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>@(item.VisibleToStudent ? "Público" : "Privado")</b><span>@item.Message</span></div></div>
+            <div class="sched">
+                @foreach (var item in Model.Detail.Feedback.OrderByDescending(f => f.CreatedAtUtc))
+                {
+                    <div class="sitem">
+                        <span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
+                        <div class="sinfo">
+                            <b>@(item.VisibleToStudent ? "Público" : "Privado")</b>
+                            <span>@item.Message</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="card-sub">Nenhum feedback registrado.</p>
         }
     </div>
 </div>
 
+@if (Model.Detail.Lessons.Any())
+{
+    <div class="card">
+        <h3>Aulas registradas</h3>
+        <div class="card-sub" style="margin-bottom:12px">@Model.Detail.Lessons.Count aulas</div>
+        <div class="sched">
+            @foreach (var lesson in Model.Detail.Lessons.OrderByDescending(l => l.LessonDateUtc))
+            {
+                <div class="sitem">
+                    <span class="stime">@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
+                    <div class="sinfo">
+                        <b>@lesson.Title</b>
+                        <span>@lesson.Status@(lesson.Notes != null ? " · " + lesson.Notes : "")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<script>
+(function () {
+    var tabs = document.querySelectorAll('.action-tab-btn');
+    var forms = document.querySelectorAll('.action-form');
+    tabs.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            tabs.forEach(function (b) { b.classList.remove('active'); });
+            forms.forEach(function (f) { f.classList.remove('active'); });
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.add('active');
+        });
+    });
+
+    // abre aba via hash
+    var hash = window.location.hash.replace('#', '');
+    if (hash) {
+        var target = document.getElementById('tab-' + hash);
+        if (target) {
+            tabs.forEach(function (b) { b.classList.remove('active'); });
+            forms.forEach(function (f) { f.classList.remove('active'); });
+            var btn = document.querySelector('[data-tab="tab-' + hash + '"]');
+            if (btn) btn.classList.add('active');
+            target.classList.add('active');
+        }
+    }
+}());
+</script>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

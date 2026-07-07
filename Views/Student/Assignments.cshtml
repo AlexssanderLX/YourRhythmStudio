@@ -6,29 +6,74 @@
     ViewData["DashTitle"] = "Missões";
 }
 
-<div class="card">
-    <h3>Minhas missões</h3>
-    <div class="row-list">
-        @foreach (var item in Model.Assignments)
-        {
-            <div class="prow">
-                <div class="pmeta">
-                    <div class="pn">@item.Title</div>
-                    <div class="ps">@item.Description</div>
-                    <div class="ps">@item.Status · +@item.XpReward XP</div>
-                </div>
-                <div style="display:flex;gap:8px">
-                    <form asp-controller="Student" asp-action="StartAssignment" asp-route-assignmentId="@item.Id" method="post">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-ghost">Iniciar</button>
-                    </form>
-                    <form asp-controller="Student" asp-action="CompleteAssignment" asp-route-assignmentId="@item.Id" method="post">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-primary">Concluir</button>
-                    </form>
-                </div>
-            </div>
-        }
-    </div>
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "Pending")</span><span class="sc-lbl">Pendentes</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "InProgress")</span><span class="sc-lbl">Em andamento</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "Completed")</span><span class="sc-lbl">Concluídas</span></div>
 </div>
 
+<div class="card">
+    <h3>Minhas missões</h3>
+    <div class="card-sub" style="margin-bottom:16px">@Model.Assignments.Count missões no total</div>
+
+    @if (Model.Assignments.Any())
+    {
+        @foreach (var item in Model.Assignments.OrderBy(a => a.Status.ToString() == "Completed" ? 2 : a.Status.ToString() == "InProgress" ? 0 : 1))
+        {
+            var statusLabel = item.Status.ToString() switch
+            {
+                "Pending"    => "Pendente",
+                "InProgress" => "Em andamento",
+                "Completed"  => "Concluída",
+                "Skipped"    => "Ignorada",
+                _            => item.Status.ToString()
+            };
+            var statusCss = item.Status.ToString() switch
+            {
+                "Pending"    => "pending",
+                "InProgress" => "in-progress",
+                "Completed"  => "completed",
+                "Skipped"    => "skipped",
+                _            => ""
+            };
+            <div class="assignment-card @(item.Status.ToString() is "Completed" or "Skipped" ? "is-completed" : "")">
+                <div class="asgn-top">
+                    <div class="asgn-info">
+                        <div class="asgn-status @statusCss">@statusLabel</div>
+                        <div class="asgn-title">@item.Title</div>
+                        @if (!string.IsNullOrEmpty(item.Description))
+                        {
+                            <div class="asgn-desc">@item.Description</div>
+                        }
+                    </div>
+                    <div class="asgn-xp">+@item.XpReward XP</div>
+                </div>
+
+                @if (item.Status.ToString() is not "Completed" and not "Skipped")
+                {
+                    <div class="asgn-actions">
+                        @if (item.Status.ToString() == "Pending")
+                        {
+                            <form asp-controller="Student" asp-action="StartAssignment" asp-route-assignmentId="@item.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-ghost btn-sm">Iniciar</button>
+                            </form>
+                        }
+                        <form asp-controller="Student" asp-action="CompleteAssignment" asp-route-assignmentId="@item.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary btn-sm">Concluir</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>Seu professor ainda não criou nenhuma missão.</p>
+        </div>
+    }
+</div>

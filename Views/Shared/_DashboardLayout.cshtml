@@ -17,21 +17,16 @@
     {
         "student" => new[]
         {
-            ("Index",          "Visão geral",   "home"),
-            ("Repertoire",     "Meu repertório","music"),
-            ("StudentMissions","Missões",        "target"),
-            ("Achievements",   "Conquistas",     "trophy"),
+            ("Dashboard",   "Visão geral", "home"),
+            ("Assignments", "Missões",     "target"),
+            ("Repertoire",  "Repertório",  "music"),
+            ("Feedback",    "Feedback",    "message"),
+            ("Progress",    "Progresso",   "home"),
         },
         "teacher" => new[]
         {
-            ("Index",    "Visão geral", "home"),
-            ("Students", "Meus alunos","users"),
-            ("Lessons",  "Aulas",      "calendar"),
-            ("Missions", "Missões",    "target"),
-            ("Index",    "Relatórios", "home"),
-            ("Index",    "Materiais",  "music"),
-            ("Index",    "Pagamentos", "card"),
-            ("Index",    "Agenda",     "calendar"),
+            ("Dashboard", "Visão geral", "home"),
+            ("Students",  "Meus alunos", "users"),
         },
         _ => new[]
         {
@@ -50,42 +45,14 @@
     };
 
     var nav = navDef.Select(n => (
-        Href:   Url.Action(NavAction(role, n.Action), navController)!,
+        Href:   Url.Action(n.Action, navController)!,
         Label:  n.Label,
         Icon:   n.Icon,
         Active: string.Equals(currentAction, n.Action, StringComparison.OrdinalIgnoreCase)
-                || (n.Action == "Index" && currentAction == "")
     )).ToArray();
 
     var settingsUrl = Url.Action("Settings", "Dashboard")!;
     var isSettings  = currentAction == "settings";
-
-    string NavAction(string currentRole, string action)
-    {
-        if (currentRole == "student")
-        {
-            return action switch
-            {
-                "Index" => "Dashboard",
-                "StudentMissions" => "Assignments",
-                "Achievements" => "Progress",
-                _ => action
-            };
-        }
-
-        if (currentRole == "teacher")
-        {
-            return action switch
-            {
-                "Index" => "Dashboard",
-                "Lessons" => "Students",
-                "Missions" => "Students",
-                _ => action
-            };
-        }
-
-        return action;
-    }
 }
 <!DOCTYPE html>
 <html lang="pt-BR">

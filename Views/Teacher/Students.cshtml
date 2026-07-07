@@ -6,13 +6,17 @@
     ViewData["DashTitle"] = "Meus alunos";
 }
 
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Students.Count</span><span class="sc-lbl">Alunos ativos</span></div>
+</div>
+
 <div class="card">
     <div class="sl-header">
         <div>
-            <h3>Alunos</h3>
-            <div class="card-sub">@Model.Students.Count alunos ativos</div>
+            <h3>Meus alunos</h3>
+            <div class="card-sub">Clique para gerenciar</div>
         </div>
-        <a class="btn btn-primary" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
+        <a class="btn btn-primary btn-sm" asp-controller="Teacher" asp-action="CreateStudent">+ Cadastrar aluno</a>
     </div>
 
     <div class="sl-list">
@@ -28,12 +32,18 @@
                     <div class="pbar"><i style="width:@student.RepertoireProgressPercent%"></i></div>
                     <span class="sl-pct">@student.RepertoireProgressPercent%</span>
                 </div>
-                <div class="sl-right"><span class="pill lvl">Nível @student.CurrentLevel</span></div>
+                <div class="sl-right">
+                    <span class="pill lvl">Nível @student.CurrentLevel</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
             </a>
         }
         @if (!Model.Students.Any())
         {
-            <p class="card-sub">Cadastre o primeiro aluno para começar.</p>
+            <div class="empty-state">
+                <p>Nenhum aluno cadastrado ainda.</p>
+                <a class="btn btn-primary" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar primeiro aluno</a>
+            </div>
         }
     </div>
 </div>
@@ -45,4 +55,3 @@
         return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
     }
 }
-

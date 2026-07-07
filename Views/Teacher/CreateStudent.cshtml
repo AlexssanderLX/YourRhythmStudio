@@ -6,33 +6,50 @@
     ViewData["DashTitle"] = "Cadastrar aluno";
 }
 
-<div class="card">
+<a class="back-link" asp-controller="Teacher" asp-action="Students">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Voltar para alunos
+</a>
+
+<div class="card" style="max-width:560px">
+    <h3 style="margin-bottom:4px">Novo aluno</h3>
+    <div class="card-sub" style="margin-bottom:20px">O aluno receberá um convite por e-mail para acessar o app.</div>
+
     <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
 
-        <label asp-for="DisplayName">Nome</label>
-        <input asp-for="DisplayName" />
-        <span asp-validation-for="DisplayName"></span>
+        <div>
+            <label asp-for="DisplayName">Nome completo</label>
+            <input asp-for="DisplayName" placeholder="Ex: Sofia Almeida" autocomplete="name" />
+            <span asp-validation-for="DisplayName" class="field-error"></span>
+        </div>
 
-        <label asp-for="Email">E-mail</label>
-        <input asp-for="Email" />
-        <span asp-validation-for="Email"></span>
+        <div>
+            <label asp-for="Email">E-mail</label>
+            <input asp-for="Email" type="email" placeholder="aluno@email.com" autocomplete="email" />
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
 
-        <label asp-for="Instrument">Instrumento</label>
-        <input asp-for="Instrument" />
+        <div>
+            <label asp-for="Instrument">Instrumento</label>
+            <input asp-for="Instrument" placeholder="Ex: Piano, Violão, Teclado…" />
+        </div>
 
-        <label asp-for="Level">Nível</label>
-        <input asp-for="Level" />
+        <div>
+            <label asp-for="Level">Nível inicial</label>
+            <input asp-for="Level" type="number" min="1" placeholder="1" />
+        </div>
 
-        <label asp-for="Notes">Notas</label>
-        <textarea asp-for="Notes"></textarea>
+        <div>
+            <label asp-for="Notes">Observações (opcional)</label>
+            <textarea asp-for="Notes" placeholder="Histórico, objetivos, dificuldades…"></textarea>
+        </div>
 
-        <button type="submit">Cadastrar aluno</button>
+        <button type="submit" class="btn-full">Cadastrar aluno</button>
     </form>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

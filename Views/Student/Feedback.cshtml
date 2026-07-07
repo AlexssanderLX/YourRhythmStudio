@@ -8,11 +8,27 @@
 
 <div class="card">
     <h3>Feedbacks do professor</h3>
-    <div class="sched">
-        @foreach (var item in Model.Feedback)
-        {
-            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>Feedback</b><span>@item.Message</span></div></div>
-        }
-    </div>
-</div>
+    <div class="card-sub" style="margin-bottom:16px">@Model.Feedback.Count mensagens</div>
 
+    @if (Model.Feedback.Any())
+    {
+        <div class="sched">
+            @foreach (var item in Model.Feedback.OrderByDescending(f => f.CreatedAtUtc))
+            {
+                <div class="sitem">
+                    <span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
+                    <div class="sinfo">
+                        <b>Professor</b>
+                        <span>@item.Message</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>Nenhum feedback recebido ainda.</p>
+        </div>
+    }
+</div>
