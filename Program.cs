@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // MVC
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 
 // Infrastructure
 builder.Services.AddYourRhythmDatabase(builder.Configuration);
@@ -51,6 +52,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",

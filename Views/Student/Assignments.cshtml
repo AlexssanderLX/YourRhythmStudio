@@ -1,0 +1,34 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentAssignmentsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Missões";
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Missões";
+}
+
+<div class="card">
+    <h3>Minhas missões</h3>
+    <div class="row-list">
+        @foreach (var item in Model.Assignments)
+        {
+            <div class="prow">
+                <div class="pmeta">
+                    <div class="pn">@item.Title</div>
+                    <div class="ps">@item.Description</div>
+                    <div class="ps">@item.Status · +@item.XpReward XP</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <form asp-controller="Student" asp-action="StartAssignment" asp-route-assignmentId="@item.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-ghost">Iniciar</button>
+                    </form>
+                    <form asp-controller="Student" asp-action="CompleteAssignment" asp-route-assignmentId="@item.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary">Concluir</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+

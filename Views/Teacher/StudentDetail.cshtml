@@ -1,0 +1,120 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model.Detail.Student.DisplayName;
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = Model.Detail.Student.DisplayName;
+    var studentId = Model.Detail.Student.StudentProfileId;
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="card" style="border-color:#ff7676;color:#ffb0b0">@error</div>
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Detail.Student.CurrentXp</span><span class="sc-lbl">XP</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Detail.Student.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Detail.Assignments.Count(a => a.Status.ToString() == "Completed")</span><span class="sc-lbl">Missões concluídas</span></div>
+</div>
+
+<div class="dash-grid cols-2">
+    <div class="card">
+        <h3>Nova missão</h3>
+        <form asp-controller="Teacher" asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form">
+            @Html.AntiForgeryToken()
+            <input asp-for="Assignment.StudentProfileId" type="hidden" value="@studentId" />
+            <label asp-for="Assignment.Title">Título</label>
+            <input asp-for="Assignment.Title" />
+            <label asp-for="Assignment.Description">Descrição</label>
+            <textarea asp-for="Assignment.Description"></textarea>
+            <label asp-for="Assignment.DueAtUtc">Prazo</label>
+            <input asp-for="Assignment.DueAtUtc" type="datetime-local" />
+            <label asp-for="Assignment.TargetMinutes">Minutos alvo</label>
+            <input asp-for="Assignment.TargetMinutes" type="number" />
+            <label asp-for="Assignment.XpReward">XP</label>
+            <input asp-for="Assignment.XpReward" type="number" />
+            <button type="submit">Criar missão</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Adicionar repertório</h3>
+        <form asp-controller="Teacher" asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" class="auth-form">
+            @Html.AntiForgeryToken()
+            <input asp-for="Repertoire.StudentProfileId" type="hidden" value="@studentId" />
+            <label asp-for="Repertoire.Title">Música</label>
+            <input asp-for="Repertoire.Title" />
+            <label asp-for="Repertoire.ComposerOrArtist">Compositor/artista</label>
+            <input asp-for="Repertoire.ComposerOrArtist" />
+            <label asp-for="Repertoire.Instrument">Instrumento</label>
+            <input asp-for="Repertoire.Instrument" />
+            <label asp-for="Repertoire.Level">Nível</label>
+            <input asp-for="Repertoire.Level" />
+            <label asp-for="Repertoire.ReferenceUrl">Referência</label>
+            <input asp-for="Repertoire.ReferenceUrl" />
+            <button type="submit">Adicionar repertório</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Registrar aula</h3>
+        <form asp-controller="Teacher" asp-action="CreateLesson" asp-route-studentId="@studentId" method="post" class="auth-form">
+            @Html.AntiForgeryToken()
+            <input asp-for="Lesson.StudentProfileId" type="hidden" value="@studentId" />
+            <label asp-for="Lesson.Title">Título</label>
+            <input asp-for="Lesson.Title" />
+            <label asp-for="Lesson.LessonDateUtc">Data</label>
+            <input asp-for="Lesson.LessonDateUtc" type="datetime-local" />
+            <label asp-for="Lesson.Notes">Notas</label>
+            <textarea asp-for="Lesson.Notes"></textarea>
+            <button type="submit">Registrar aula</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Feedback</h3>
+        <form asp-controller="Teacher" asp-action="CreateFeedback" asp-route-studentId="@studentId" method="post" class="auth-form">
+            @Html.AntiForgeryToken()
+            <input asp-for="Feedback.StudentProfileId" type="hidden" value="@studentId" />
+            <label asp-for="Feedback.Message">Mensagem</label>
+            <textarea asp-for="Feedback.Message"></textarea>
+            <label class="auth-check">
+                <input asp-for="Feedback.VisibleToStudent" />
+                <span>Visível para o aluno</span>
+            </label>
+            <button type="submit">Salvar feedback</button>
+        </form>
+    </div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card">
+        <h3>Missões</h3>
+        @foreach (var item in Model.Detail.Assignments)
+        {
+            <div class="mission"><div><div class="m-label">@item.Status</div><div class="m-title">@item.Title</div></div><div class="m-xp">+@item.XpReward XP</div></div>
+        }
+    </div>
+    <div class="card">
+        <h3>Repertório</h3>
+        @foreach (var item in Model.Detail.Repertoire)
+        {
+            <div class="prow"><div class="pmeta"><div class="pn">@item.Title</div><div class="ps">@item.ProgressPercent% · @item.Status</div><div class="pbar"><i style="width:@item.ProgressPercent%"></i></div></div></div>
+        }
+    </div>
+    <div class="card">
+        <h3>Feedbacks</h3>
+        @foreach (var item in Model.Detail.Feedback)
+        {
+            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>@(item.VisibleToStudent ? "Público" : "Privado")</b><span>@item.Message</span></div></div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

@@ -12,6 +12,7 @@ public sealed record DemoPersona(string Email, string DisplayName, string Role);
 public static class DemoPersonas
 {
     public const string DemoPassword = "YourRhythm@123";
+    public const string SchoolSlug = "escola-harmonia";
 
     public static readonly IReadOnlyList<DemoPersona> All = new[]
     {

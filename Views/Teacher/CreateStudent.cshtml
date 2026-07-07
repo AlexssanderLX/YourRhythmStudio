@@ -1,0 +1,38 @@
+@model YourRhythmStudio.ViewModels.Learning.CreateStudentViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Cadastrar aluno";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Cadastrar aluno";
+}
+
+<div class="card">
+    <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
+
+        <label asp-for="DisplayName">Nome</label>
+        <input asp-for="DisplayName" />
+        <span asp-validation-for="DisplayName"></span>
+
+        <label asp-for="Email">E-mail</label>
+        <input asp-for="Email" />
+        <span asp-validation-for="Email"></span>
+
+        <label asp-for="Instrument">Instrumento</label>
+        <input asp-for="Instrument" />
+
+        <label asp-for="Level">Nível</label>
+        <input asp-for="Level" />
+
+        <label asp-for="Notes">Notas</label>
+        <textarea asp-for="Notes"></textarea>
+
+        <button type="submit">Cadastrar aluno</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

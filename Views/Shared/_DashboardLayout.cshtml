@@ -42,8 +42,15 @@
         }
     };
 
+    var navController = role switch
+    {
+        "student" => "Student",
+        "teacher" => "Teacher",
+        _ => "Dashboard"
+    };
+
     var nav = navDef.Select(n => (
-        Href:   Url.Action(n.Action, "Dashboard")!,
+        Href:   Url.Action(NavAction(role, n.Action), navController)!,
         Label:  n.Label,
         Icon:   n.Icon,
         Active: string.Equals(currentAction, n.Action, StringComparison.OrdinalIgnoreCase)
@@ -52,6 +59,33 @@
 
     var settingsUrl = Url.Action("Settings", "Dashboard")!;
     var isSettings  = currentAction == "settings";
+
+    string NavAction(string currentRole, string action)
+    {
+        if (currentRole == "student")
+        {
+            return action switch
+            {
+                "Index" => "Dashboard",
+                "StudentMissions" => "Assignments",
+                "Achievements" => "Progress",
+                _ => action
+            };
+        }
+
+        if (currentRole == "teacher")
+        {
+            return action switch
+            {
+                "Index" => "Dashboard",
+                "Lessons" => "Students",
+                "Missions" => "Students",
+                _ => action
+            };
+        }
+
+        return action;
+    }
 }
 <!DOCTYPE html>
 <html lang="pt-BR">

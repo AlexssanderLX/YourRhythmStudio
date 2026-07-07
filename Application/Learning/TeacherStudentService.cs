@@ -1,0 +1,272 @@
+using Microsoft.EntityFrameworkCore;
+using YourRhythmStudio.Application.Users;
+using YourRhythmStudio.Domain;
+using YourRhythmStudio.Domain.Learning;
+using YourRhythmStudio.Domain.Learning.Enums;
+using YourRhythmStudio.Domain.Users;
+using YourRhythmStudio.Infrastructure.Data;
+
+namespace YourRhythmStudio.Application.Learning;
+
+public sealed class TeacherStudentService
+{
+    private readonly YourRhythmDbContext _dbContext;
+
+    public TeacherStudentService(YourRhythmDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<IReadOnlyCollection<TeacherStudentSummary>> ListStudentsAsync(
+        AuthenticatedUserProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+
+        return await QueryTeacherStudents(schoolId, teacherProfileId)
+            .OrderBy(student => student.DisplayName)
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<StudentDetailSummary> GetStudentDetailAsync(
+        AuthenticatedUserProfile profile,
+        Guid studentProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            studentProfileId,
+            cancellationToken);
+
+        var student = await QueryTeacherStudents(schoolId, teacherProfileId)
+            .FirstAsync(item => item.StudentProfileId == studentProfileId, cancellationToken);
+
+        var lessons = await _dbContext.Lessons
+            .AsNoTracking()
+            .Where(lesson => lesson.SchoolId == schoolId
+                && lesson.TeacherProfileId == teacherProfileId
+                && lesson.StudentProfileId == studentProfileId)
+            .OrderByDescending(lesson => lesson.LessonDateUtc)
+            .Take(10)
+            .Select(lesson => new LessonSummary(
+                lesson.Id,
+                lesson.Title,
+                lesson.LessonDateUtc,
+                lesson.CompletedAtUtc,
+                lesson.Status,
+                lesson.Notes))
+            .ToArrayAsync(cancellationToken);
+
+        var repertoire = await _dbContext.RepertoireItems
+            .AsNoTracking()
+            .Where(item => item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == studentProfileId)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Take(10)
+            .Select(item => new RepertoireSummary(
+                item.Id,
+                item.Title,
+                item.ComposerOrArtist,
+                item.Instrument,
+                item.Level,
+                item.Status,
+                item.ProgressPercent,
+                item.Notes,
+                item.ReferenceUrl))
+            .ToArrayAsync(cancellationToken);
+
+        var assignments = await _dbContext.Assignments
+            .AsNoTracking()
+            .Where(assignment => assignment.SchoolId == schoolId
+                && assignment.TeacherProfileId == teacherProfileId
+                && assignment.StudentProfileId == studentProfileId)
+            .OrderByDescending(assignment => assignment.CreatedAtUtc)
+            .Take(10)
+            .Select(assignment => new AssignmentSummary(
+                assignment.Id,
+                assignment.Title,
+                assignment.Description,
+                assignment.DueAtUtc,
+                assignment.Status,
+                assignment.TargetMinutes,
+                assignment.CompletedAtUtc,
+                assignment.XpReward,
+                assignment.XpGranted))
+            .ToArrayAsync(cancellationToken);
+
+        var feedback = await _dbContext.FeedbackEntries
+            .AsNoTracking()
+            .Where(entry => entry.SchoolId == schoolId
+                && entry.TeacherProfileId == teacherProfileId
+                && entry.StudentProfileId == studentProfileId)
+            .OrderByDescending(entry => entry.CreatedAtUtc)
+            .Take(10)
+            .Select(entry => new FeedbackSummary(entry.Id, entry.Message, entry.VisibleToStudent, entry.CreatedAtUtc))
+            .ToArrayAsync(cancellationToken);
+
+        return new StudentDetailSummary(student, lessons, repertoire, assignments, feedback);
+    }
+
+    public async Task<TeacherStudentSummary> CreateStudentAsync(
+        AuthenticatedUserProfile profile,
+        CreateTeacherStudentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        var email = NormalizeEmail(request.Email);
+
+        var existingStudent = await _dbContext.StudentProfiles
+            .Include(student => student.SchoolUser)
+            .FirstOrDefaultAsync(
+                student => student.SchoolId == schoolId && student.SchoolUser!.Email == email,
+                cancellationToken);
+
+        StudentProfile studentProfile;
+        if (existingStudent is null)
+        {
+            var schoolUser = new SchoolUser
+            {
+                SchoolId = schoolId,
+                DisplayName = RequireText(request.DisplayName, nameof(request.DisplayName)),
+                Email = email,
+                Role = YourRhythmRoles.Student
+            };
+
+            studentProfile = new StudentProfile
+            {
+                SchoolId = schoolId,
+                SchoolUserId = schoolUser.Id,
+                Instrument = OptionalText(request.Instrument) ?? string.Empty,
+                Level = OptionalText(request.Level) ?? string.Empty,
+                Notes = OptionalText(request.Notes) ?? string.Empty,
+                CurrentLevel = 1
+            };
+
+            _dbContext.SchoolUsers.Add(schoolUser);
+            _dbContext.StudentProfiles.Add(studentProfile);
+        }
+        else
+        {
+            studentProfile = existingStudent;
+        }
+
+        var link = await _dbContext.TeacherStudents.FirstOrDefaultAsync(
+            item => item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == studentProfile.Id,
+            cancellationToken);
+
+        if (link is null)
+        {
+            _dbContext.TeacherStudents.Add(new TeacherStudent(schoolId, teacherProfileId, studentProfile.Id, DateTime.UtcNow));
+        }
+        else
+        {
+            link.Reactivate();
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return await QueryTeacherStudents(schoolId, teacherProfileId)
+            .FirstAsync(item => item.StudentProfileId == studentProfile.Id, cancellationToken);
+    }
+
+    public async Task<TeacherDashboardSummary> GetTeacherDashboardAsync(
+        AuthenticatedUserProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+
+        var students = await QueryTeacherStudents(schoolId, teacherProfileId)
+            .OrderBy(student => student.DisplayName)
+            .Take(4)
+            .ToArrayAsync(cancellationToken);
+
+        var activeStudentCount = await _dbContext.TeacherStudents.CountAsync(
+            link => link.SchoolId == schoolId && link.TeacherProfileId == teacherProfileId && link.IsActive,
+            cancellationToken);
+
+        var pendingAssignmentCount = await _dbContext.Assignments.CountAsync(
+            assignment => assignment.SchoolId == schoolId
+                && assignment.TeacherProfileId == teacherProfileId
+                && assignment.Status != AssignmentStatus.Completed
+                && assignment.Status != AssignmentStatus.Skipped,
+            cancellationToken);
+
+        var recentCompletedAssignmentCount = await _dbContext.Assignments.CountAsync(
+            assignment => assignment.SchoolId == schoolId
+                && assignment.TeacherProfileId == teacherProfileId
+                && assignment.Status == AssignmentStatus.Completed
+                && assignment.CompletedAtUtc >= DateTime.UtcNow.AddDays(-14),
+            cancellationToken);
+
+        var recentLessons = await _dbContext.Lessons
+            .AsNoTracking()
+            .Where(lesson => lesson.SchoolId == schoolId && lesson.TeacherProfileId == teacherProfileId)
+            .OrderByDescending(lesson => lesson.LessonDateUtc)
+            .Take(4)
+            .Select(lesson => new LessonSummary(
+                lesson.Id,
+                lesson.Title,
+                lesson.LessonDateUtc,
+                lesson.CompletedAtUtc,
+                lesson.Status,
+                lesson.Notes))
+            .ToArrayAsync(cancellationToken);
+
+        return new TeacherDashboardSummary(
+            activeStudentCount,
+            pendingAssignmentCount,
+            recentCompletedAssignmentCount,
+            students,
+            recentLessons);
+    }
+
+    private IQueryable<TeacherStudentSummary> QueryTeacherStudents(Guid schoolId, Guid teacherProfileId)
+    {
+        return from link in _dbContext.TeacherStudents.AsNoTracking()
+               join student in _dbContext.StudentProfiles.AsNoTracking() on link.StudentProfileId equals student.Id
+               join user in _dbContext.SchoolUsers.AsNoTracking() on student.SchoolUserId equals user.Id
+               where link.SchoolId == schoolId
+                   && link.TeacherProfileId == teacherProfileId
+                   && link.IsActive
+                   && user.IsActive
+               select new TeacherStudentSummary(
+                   student.Id,
+                   user.Id,
+                   user.DisplayName,
+                   user.Email,
+                   student.Instrument,
+                   student.Level,
+                   student.CurrentXp,
+                   student.CurrentLevel,
+                   _dbContext.RepertoireItems
+                       .Where(item => item.SchoolId == schoolId && item.StudentProfileId == student.Id)
+                       .OrderByDescending(item => item.UpdatedAtUtc)
+                       .Select(item => (int?)item.ProgressPercent)
+                       .FirstOrDefault() ?? 0,
+                   _dbContext.RepertoireItems
+                       .Where(item => item.SchoolId == schoolId && item.StudentProfileId == student.Id)
+                       .OrderByDescending(item => item.UpdatedAtUtc)
+                       .Select(item => item.Title)
+                       .FirstOrDefault());
+    }
+
+    private static string RequireText(string value, string name)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException($"{name} is required.", name);
+        }
+
+        return value.Trim();
+    }
+
+    private static string? OptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string NormalizeEmail(string email) => RequireText(email, nameof(email)).ToUpperInvariant();
+}

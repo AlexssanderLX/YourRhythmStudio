@@ -1,0 +1,68 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherDashboardViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Painel do professor";
+    ViewData["Role"] = "teacher";
+    var first = (User.Identity?.Name ?? "Professor").Split(' ')[0];
+    ViewData["DashTitle"] = $"Bom dia, {first}";
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.ActiveStudentCount</span><span class="sc-lbl">Alunos ativos</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.PendingAssignmentCount</span><span class="sc-lbl">Missões pendentes</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.RecentCompletedAssignmentCount</span><span class="sc-lbl">Concluídas recentes</span></div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card span-2">
+        <h3>Alunos recentes</h3>
+        <div class="card-sub">Dados reais vinculados ao professor</div>
+        <div class="row-list">
+            @foreach (var student in Model.Summary.RecentStudents)
+            {
+                <a class="prow" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId" style="text-decoration:none;color:inherit">
+                    <div class="pavatar">@Initials(student.DisplayName)</div>
+                    <div class="pmeta">
+                        <div class="pn">@student.DisplayName</div>
+                        <div class="ps">@student.Instrument · @(student.CurrentRepertoireTitle ?? "Sem repertório")</div>
+                        <div class="pbar"><i style="width:@student.RepertoireProgressPercent%"></i></div>
+                    </div>
+                    <span class="pill lvl">Nível @student.CurrentLevel</span>
+                </a>
+            }
+            @if (!Model.Summary.RecentStudents.Any())
+            {
+                <p class="card-sub">Nenhum aluno cadastrado ainda.</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Aulas recentes</h3>
+        <div class="card-sub">Últimos registros</div>
+        <div class="sched">
+            @foreach (var lesson in Model.Summary.RecentLessons)
+            {
+                <div class="sitem">
+                    <span class="stime">@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
+                    <div class="sinfo"><b>@lesson.Title</b><span>@lesson.Status</span></div>
+                </div>
+            }
+            @if (!Model.Summary.RecentLessons.Any())
+            {
+                <p class="card-sub">Nenhuma aula registrada.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string Initials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray();
+        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
+    }
+}
+

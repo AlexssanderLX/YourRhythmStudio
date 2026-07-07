@@ -5,6 +5,7 @@ using Foundation.Access.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Infrastructure.Foundation;
 using YourRhythmStudio.ViewModels.Auth;
@@ -16,10 +17,17 @@ public class AuthController : Controller
     private const string CookieScheme = "YourRhythmCookie";
 
     private readonly SaasAccessService _saasAccessService;
+    private readonly IUserProfileResolver _userProfileResolver;
+    private readonly IWebHostEnvironment _environment;
 
-    public AuthController(SaasAccessService saasAccessService)
+    public AuthController(
+        SaasAccessService saasAccessService,
+        IUserProfileResolver userProfileResolver,
+        IWebHostEnvironment environment)
     {
         _saasAccessService = saasAccessService;
+        _userProfileResolver = userProfileResolver;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -61,17 +69,12 @@ public class AuthController : Controller
 
         // Papel de domínio (escola/professor/aluno) usado para rotear o dashboard.
         // No MVP é resolvido pelas contas demo; admin de plataforma vira platform-admin.
-        var domainRole = DemoPersonas.ResolveRole(session.Email);
-        if (domainRole is null && session.PlatformRole == PlatformAccessRole.PlatformAdmin)
-        {
-            domainRole = YourRhythmRoles.PlatformAdmin;
-        }
-
-        if (domainRole is not null)
-        {
-            claims.Add(new Claim("YourRhythmRole", domainRole));
-            claims.Add(new Claim(ClaimTypes.Role, domainRole));
-        }
+        var profile = await _userProfileResolver.ResolveForSignInAsync(
+            session.AccountId,
+            session.Email,
+            session.DisplayName,
+            ResolveFallbackRole(session));
+        AddYourRhythmClaims(claims, profile);
 
         var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
         var principal = new ClaimsPrincipal(identity);
@@ -112,6 +115,46 @@ public class AuthController : Controller
         }
 
         return RedirectToAction("Index", "Dashboard");
+    }
+
+    private string? ResolveFallbackRole(IssuedSaasSession session)
+    {
+        if (_environment.IsDevelopment())
+        {
+            var demoRole = DemoPersonas.ResolveRole(session.Email);
+            if (demoRole is not null)
+            {
+                return demoRole;
+            }
+        }
+
+        return session.PlatformRole == PlatformAccessRole.PlatformAdmin
+            ? YourRhythmRoles.PlatformAdmin
+            : null;
+    }
+
+    private static void AddYourRhythmClaims(List<Claim> claims, AuthenticatedUserProfile? profile)
+    {
+        if (profile is null)
+        {
+            return;
+        }
+
+        claims.Add(new Claim(UserProfileResolver.RoleClaim, profile.Role));
+        claims.Add(new Claim(ClaimTypes.Role, profile.Role));
+
+        AddGuidClaim(claims, UserProfileResolver.SchoolIdClaim, profile.SchoolId);
+        AddGuidClaim(claims, UserProfileResolver.SchoolUserIdClaim, profile.SchoolUserId);
+        AddGuidClaim(claims, UserProfileResolver.TeacherProfileIdClaim, profile.TeacherProfileId);
+        AddGuidClaim(claims, UserProfileResolver.StudentProfileIdClaim, profile.StudentProfileId);
+    }
+
+    private static void AddGuidClaim(List<Claim> claims, string type, Guid? value)
+    {
+        if (value is not null)
+        {
+            claims.Add(new Claim(type, value.Value.ToString()));
+        }
     }
 
     private static List<Claim> BuildClaims(IssuedSaasSession session)

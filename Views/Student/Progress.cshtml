@@ -1,0 +1,26 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentProgressViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Progresso";
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Progresso";
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Progress.CurrentXp</span><span class="sc-lbl">XP</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Progress.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Progress.CompletedAssignments</span><span class="sc-lbl">Missões concluídas</span></div>
+</div>
+
+<div class="card">
+    <h3>Histórico de XP</h3>
+    <div class="sched">
+        @foreach (var item in Model.Progress.RecentXpEvents)
+        {
+            <div class="sitem"><span class="stime">+@item.Points</span><div class="sinfo"><b>@item.Description</b><span>@item.CreatedAtUtc.ToLocalTime().ToString("g")</span></div></div>
+        }
+    </div>
+</div>
+

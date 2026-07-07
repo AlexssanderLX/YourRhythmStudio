@@ -17,6 +17,8 @@ TestResults/
 
 # ASP.NET Core local configuration and secrets
 appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
 secrets.json
 *.secrets.json
 *.env
@@ -56,6 +58,8 @@ log/
 # Uploads and generated content
 wwwroot/uploads/
 wwwroot/upload/
+storage/
+uploads/
 
 # Node/frontend dependencies and build artifacts
 node_modules/

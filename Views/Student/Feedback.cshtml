@@ -1,0 +1,18 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentFeedbackViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Feedback";
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Feedback";
+}
+
+<div class="card">
+    <h3>Feedbacks do professor</h3>
+    <div class="sched">
+        @foreach (var item in Model.Feedback)
+        {
+            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>Feedback</b><span>@item.Message</span></div></div>
+        }
+    </div>
+</div>
+

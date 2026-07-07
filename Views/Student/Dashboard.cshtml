@@ -1,0 +1,46 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentDashboardViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Meu painel";
+    ViewData["Role"] = "student";
+    var first = (User.Identity?.Name ?? "Aluno").Split(' ')[0];
+    ViewData["DashTitle"] = $"Olá, {first}";
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CurrentXp</span><span class="sc-lbl">XP atual</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.PendingAssignments</span><span class="sc-lbl">Missões pendentes</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CompletedAssignments</span><span class="sc-lbl">Concluídas</span></div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card span-2">
+        <h3>Missões pendentes</h3>
+        @foreach (var item in Model.Summary.PendingAssignments)
+        {
+            <div class="mission"><div><div class="m-label">@item.Status</div><div class="m-title">@item.Title</div></div><div class="m-xp">+@item.XpReward XP</div></div>
+        }
+    </div>
+    <div class="card">
+        <h3>Feedback recente</h3>
+        @foreach (var item in Model.Summary.RecentFeedback)
+        {
+            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>Professor</b><span>@item.Message</span></div></div>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <h3>Repertório em andamento</h3>
+    <div class="row-list">
+        @foreach (var item in Model.Summary.RepertoireInProgress)
+        {
+            <div class="prow"><div class="pmeta"><div class="pn">@item.Title</div><div class="ps">@item.ComposerOrArtist</div><div class="pbar"><i style="width:@item.ProgressPercent%"></i></div></div><div class="ppct">@item.ProgressPercent%</div></div>
+        }
+    </div>
+</div>
+

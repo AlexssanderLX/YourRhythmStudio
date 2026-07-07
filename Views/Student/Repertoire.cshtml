@@ -1,0 +1,25 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentRepertoireViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Meu repertório";
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Meu repertório";
+}
+
+<div class="card">
+    <h3>Repertório</h3>
+    <div class="row-list">
+        @foreach (var item in Model.Repertoire)
+        {
+            <div class="prow">
+                <div class="pmeta">
+                    <div class="pn">@item.Title</div>
+                    <div class="ps">@item.ComposerOrArtist · @item.Status</div>
+                    <div class="pbar"><i style="width:@item.ProgressPercent%"></i></div>
+                </div>
+                <div class="ppct">@item.ProgressPercent%</div>
+            </div>
+        }
+    </div>
+</div>
+

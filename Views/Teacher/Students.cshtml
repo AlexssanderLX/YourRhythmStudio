@@ -1,0 +1,48 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Meus alunos";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Meus alunos";
+}
+
+<div class="card">
+    <div class="sl-header">
+        <div>
+            <h3>Alunos</h3>
+            <div class="card-sub">@Model.Students.Count alunos ativos</div>
+        </div>
+        <a class="btn btn-primary" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
+    </div>
+
+    <div class="sl-list">
+        @foreach (var student in Model.Students)
+        {
+            <a asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId" class="sl-row">
+                <div class="pavatar">@Initials(student.DisplayName)</div>
+                <div class="sl-info">
+                    <span class="sl-name">@student.DisplayName</span>
+                    <span class="sl-sub">@student.Instrument · @(student.CurrentRepertoireTitle ?? "Sem repertório")</span>
+                </div>
+                <div class="sl-progress">
+                    <div class="pbar"><i style="width:@student.RepertoireProgressPercent%"></i></div>
+                    <span class="sl-pct">@student.RepertoireProgressPercent%</span>
+                </div>
+                <div class="sl-right"><span class="pill lvl">Nível @student.CurrentLevel</span></div>
+            </a>
+        }
+        @if (!Model.Students.Any())
+        {
+            <p class="card-sub">Cadastre o primeiro aluno para começar.</p>
+        }
+    </div>
+</div>
+
+@functions {
+    private static string Initials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray();
+        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
+    }
+}
+

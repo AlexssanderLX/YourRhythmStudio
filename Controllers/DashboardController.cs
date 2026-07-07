@@ -14,8 +14,8 @@ public class DashboardController : Controller
 
         return role switch
         {
-            YourRhythmRoles.Student => View("Student"),
-            YourRhythmRoles.Teacher => View("Teacher"),
+            YourRhythmRoles.Student => RedirectToAction("Dashboard", "Student"),
+            YourRhythmRoles.Teacher => RedirectToAction("Dashboard", "Teacher"),
             YourRhythmRoles.SchoolOwner or YourRhythmRoles.SchoolAdmin => View("School"),
             _ => View("School"),
         };
@@ -26,30 +26,33 @@ public class DashboardController : Controller
     [HttpGet]
     public IActionResult Students()
     {
-        RequireRole(YourRhythmRoles.Teacher);
-        return View("TeacherStudents");
+        return RequireRole(YourRhythmRoles.Teacher)
+            ? RedirectToAction("Students", "Teacher")
+            : Forbid();
     }
 
     [HttpGet]
-    public IActionResult StudentDetail(int id)
+    public IActionResult StudentDetail(Guid id)
     {
-        RequireRole(YourRhythmRoles.Teacher);
-        ViewData["StudentId"] = id;
-        return View("TeacherStudentDetail");
+        return RequireRole(YourRhythmRoles.Teacher)
+            ? RedirectToAction("StudentDetail", "Teacher", new { studentId = id })
+            : Forbid();
     }
 
     [HttpGet]
     public IActionResult Lessons()
     {
-        RequireRole(YourRhythmRoles.Teacher);
-        return View("TeacherLessons");
+        return RequireRole(YourRhythmRoles.Teacher)
+            ? RedirectToAction("Students", "Teacher")
+            : Forbid();
     }
 
     [HttpGet]
     public IActionResult Missions()
     {
-        RequireRole(YourRhythmRoles.Teacher);
-        return View("TeacherMissions");
+        return RequireRole(YourRhythmRoles.Teacher)
+            ? RedirectToAction("Students", "Teacher")
+            : Forbid();
     }
 
     // ---------- Student pages ----------
@@ -57,22 +60,25 @@ public class DashboardController : Controller
     [HttpGet]
     public IActionResult Repertoire()
     {
-        RequireRole(YourRhythmRoles.Student);
-        return View("StudentRepertoire");
+        return RequireRole(YourRhythmRoles.Student)
+            ? RedirectToAction("Repertoire", "Student")
+            : Forbid();
     }
 
     [HttpGet]
     public IActionResult StudentMissions()
     {
-        RequireRole(YourRhythmRoles.Student);
-        return View("StudentMissions");
+        return RequireRole(YourRhythmRoles.Student)
+            ? RedirectToAction("Assignments", "Student")
+            : Forbid();
     }
 
     [HttpGet]
     public IActionResult Achievements()
     {
-        RequireRole(YourRhythmRoles.Student);
-        return View("StudentAchievements");
+        return RequireRole(YourRhythmRoles.Student)
+            ? RedirectToAction("Progress", "Student")
+            : Forbid();
     }
 
     // ---------- School pages ----------
@@ -98,10 +104,9 @@ public class DashboardController : Controller
     [HttpGet]
     public IActionResult Settings() => View("Settings");
 
-    private void RequireRole(string role)
+    private bool RequireRole(string role)
     {
         var actual = User.FindFirst("YourRhythmRole")?.Value;
-        if (actual != role)
-            Response.Redirect("/dashboard");
+        return actual == role;
     }
 }
