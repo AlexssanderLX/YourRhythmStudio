@@ -1,0 +1,149 @@
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Missões";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Missões";
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">18</span><span class="sc-lbl">Concluídas</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">4</span><span class="sc-lbl">Em andamento</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">142</span><span class="sc-lbl">XP distribuído</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">7</span><span class="sc-lbl">Com missão ativa</span></div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card span-2">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div>
+                <h3>Missões ativas</h3>
+                <div class="card-sub">Atribuídas aos alunos · ordenadas por prazo</div>
+            </div>
+            <button class="btn-primary-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nova missão
+            </button>
+        </div>
+
+        <div class="mission-list">
+            @foreach (var m in new[] {
+                new { Student="Sofia Almeida",   Task="Praticar Clair de Lune compassos 1–16",       Xp="+30 XP", Deadline="Hoje",  Status="em-andamento", Pct=70  },
+                new { Student="Lucas Martins",   Task="Assistir vídeo de ritmo e completar exercício",Xp="+20 XP", Deadline="Amanhã",Status="em-andamento", Pct=40  },
+                new { Student="Gabriel Nunes",   Task="Memorizar Canon in D parte A",                 Xp="+25 XP", Deadline="Qui",   Status="em-andamento", Pct=55  },
+                new { Student="Beatriz Rocha",   Task="Leitura à primeira vista — Etude nº3",         Xp="+15 XP", Deadline="Sex",   Status="pendente",     Pct=0   },
+                new { Student="Clara Ribeiro",   Task="Dedilhado Für Elise mão direita x10",          Xp="+20 XP", Deadline="Sex",   Status="concluida",    Pct=100 },
+                new { Student="Pedro Torres",    Task="Acordes de barra — F, Bb, Bm",                 Xp="+25 XP", Deadline="Dom",   Status="pendente",     Pct=0   },
+            })
+            {
+                var statusLabel = m.Status switch {
+                    "concluida"    => "Concluída",
+                    "em-andamento" => "Em andamento",
+                    _              => "Pendente"
+                };
+                <div class="mission-card @m.Status">
+                    <div class="mc-left">
+                        <div class="mc-avatar-wrap">
+                            <div class="mc-avatar">@string.Concat(m.Student.Split(' ').Take(2).Select(p => p[0]))</div>
+                        </div>
+                        <div class="mc-info">
+                            <span class="mc-student">@m.Student</span>
+                            <span class="mc-task">@m.Task</span>
+                            @if (m.Pct > 0 && m.Pct < 100)
+                            {
+                                <div class="pbar" style="max-width:260px;margin-top:8px"><i style="width:@(m.Pct)%"></i></div>
+                            }
+                        </div>
+                    </div>
+                    <div class="mc-right">
+                        <span class="mc-xp">@m.Xp</span>
+                        <span class="mc-deadline">⏱ @m.Deadline</span>
+                        <span class="mission-status @m.Status">@statusLabel</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Modelos rápidos</h3>
+        <div class="card-sub">Clique para atribuir a um aluno</div>
+        <div class="template-list">
+            @foreach (var t in new[] {
+                new { Icon="🎹", Title="Prática diária 20min",     Xp="+10 XP" },
+                new { Icon="🎸", Title="Aprender nova música",      Xp="+30 XP" },
+                new { Icon="🎯", Title="Técnica específica",         Xp="+15 XP" },
+                new { Icon="👂", Title="Treino de ouvido",           Xp="+20 XP" },
+                new { Icon="📖", Title="Leitura à primeira vista",   Xp="+25 XP" },
+                new { Icon="🎵", Title="Memorização de trecho",      Xp="+20 XP" },
+            })
+            {
+                <div class="template-item">
+                    <span class="tmpl-icon">@t.Icon</span>
+                    <div class="tmpl-meta">
+                        <span class="tmpl-title">@t.Title</span>
+                        <span class="tmpl-xp">@t.Xp</span>
+                    </div>
+                    <button class="tmpl-btn" title="Atribuir">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+.btn-primary-sm {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 100px;
+    background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
+    border: none; color: #fff; font-size: 13.5px; font-weight: 500; cursor: pointer;
+    transition: opacity .2s;
+}
+.btn-primary-sm:hover { opacity: 0.88; }
+
+.mission-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.mission-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 14px 16px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    transition: border-color .2s;
+}
+.mission-card:hover { border-color: var(--border); }
+.mission-card.concluida { opacity: 0.55; }
+.mc-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.mc-avatar { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; font-family: var(--font-display); font-weight: 600; font-size: 12px; color: #fff; background: linear-gradient(135deg, var(--blue-deep), #0c1430); border: 1px solid var(--border); }
+.mc-info { flex: 1; min-width: 0; }
+.mc-student { display: block; font-size: 13px; font-weight: 600; }
+.mc-task { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.mc-xp { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--blue-bright); }
+.mc-deadline { font-size: 11.5px; color: var(--muted); }
+.mission-status { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.mission-status.concluida    { background: rgba(95,208,160,0.15); color: #5fd0a0; }
+.mission-status.em-andamento { background: rgba(46,155,255,0.12); color: var(--blue-bright); }
+.mission-status.pendente     { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+.template-list { display: flex; flex-direction: column; gap: 6px; }
+.template-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 12px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    transition: border-color .2s; cursor: pointer;
+}
+.template-item:hover { border-color: var(--border); }
+.tmpl-icon { font-size: 18px; flex-shrink: 0; }
+.tmpl-meta { flex: 1; min-width: 0; }
+.tmpl-title { display: block; font-size: 13.5px; font-weight: 500; }
+.tmpl-xp { font-size: 11.5px; color: var(--blue-bright); font-family: var(--font-display); }
+.tmpl-btn {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    display: grid; place-items: center; cursor: pointer;
+    background: rgba(46,155,255,0.12); border: 1px solid rgba(46,155,255,0.25);
+    color: var(--blue-bright); transition: background .2s;
+}
+.tmpl-btn:hover { background: rgba(46,155,255,0.22); }
+</style>

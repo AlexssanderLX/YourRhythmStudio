@@ -1,0 +1,180 @@
+@{
+    var displayName = User.Identity?.Name ?? "Usuário";
+    var role = (ViewData["Role"] as string) ?? "school";
+    var roleLabel = role switch
+    {
+        "student" => "Aluno",
+        "teacher" => "Professor",
+        "school"  => "Escola",
+        _ => "Studio"
+    };
+    var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2).Select(p => char.ToUpperInvariant(p[0])));
+
+    var currentAction = (ViewContext.RouteData.Values["action"] as string ?? "").ToLower();
+
+    (string Action, string Label, string Icon)[] navDef = role switch
+    {
+        "student" => new[]
+        {
+            ("Index",          "Visão geral",   "home"),
+            ("Repertoire",     "Meu repertório","music"),
+            ("StudentMissions","Missões",        "target"),
+            ("Achievements",   "Conquistas",     "trophy"),
+        },
+        "teacher" => new[]
+        {
+            ("Index",    "Visão geral", "home"),
+            ("Students", "Meus alunos","users"),
+            ("Lessons",  "Aulas",      "calendar"),
+            ("Missions", "Missões",    "target"),
+            ("Index",    "Relatórios", "home"),
+            ("Index",    "Materiais",  "music"),
+            ("Index",    "Pagamentos", "card"),
+            ("Index",    "Agenda",     "calendar"),
+        },
+        _ => new[]
+        {
+            ("Index",         "Visão geral",  "home"),
+            ("Teachers",      "Professores",  "users"),
+            ("SchoolStudents","Alunos",        "graduation"),
+            ("Plan",          "Plano",         "card"),
+        }
+    };
+
+    var nav = navDef.Select(n => (
+        Href:   Url.Action(n.Action, "Dashboard")!,
+        Label:  n.Label,
+        Icon:   n.Icon,
+        Active: string.Equals(currentAction, n.Action, StringComparison.OrdinalIgnoreCase)
+                || (n.Action == "Index" && currentAction == "")
+    )).ToArray();
+
+    var settingsUrl = Url.Action("Settings", "Dashboard")!;
+    var isSettings  = currentAction == "settings";
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · YourRhythm Studio</title>
+    <link rel="icon" type="image/svg+xml" href="~/img/logo-mark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+</head>
+<body class="dash-body">
+    <div class="dash-shell">
+        <aside class="dash-sidebar">
+
+            
+            <a class="dash-brand" asp-controller="Home" asp-action="Index">
+                <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+                <span>YourRhythm<span>.</span><small>Studio</small></span>
+            </a>
+
+            
+            <div class="mob-topbar">
+                <a class="dash-brand mob-brand" asp-controller="Home" asp-action="Index">
+                    <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+                    <span>YourRhythm<span>.</span></span>
+                </a>
+                <div class="mob-actions">
+                    <a href="@settingsUrl" class="mob-action-btn @(isSettings ? "active" : "")" title="Configurações" aria-label="Configurações">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                    </a>
+                    <a href="@settingsUrl#account" class="mob-avatar-btn" title="Minha conta" aria-label="Minha conta">
+                        <div class="dash-avatar mob-avatar">@initials</div>
+                    </a>
+                </div>
+            </div>
+
+            
+            <div class="dash-nav-wrap"><nav class="dash-nav" id="dashNav">
+                @foreach (var item in nav)
+                {
+                    <a href="@item.Href" class="dash-nav-item @(item.Active ? "active" : "")">
+                        <partial name="_DashIcon" model="item.Icon" />
+                        <span>@item.Label</span>
+                    </a>
+                }
+            </nav></div>
+
+            
+            <div class="dash-user">
+                <div class="dash-avatar">@initials</div>
+                <div class="dash-user-meta">
+                    <strong>@displayName</strong>
+                    <span>@roleLabel</span>
+                </div>
+                <form asp-controller="Auth" asp-action="Logout" method="post" class="dash-logout">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" title="Sair" aria-label="Sair">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <main class="dash-main">
+            <header class="dash-topbar">
+                <div>
+                    <p class="dash-kicker">@roleLabel · YourRhythm Studio</p>
+                    <h1>@ViewData["DashTitle"]</h1>
+                </div>
+                <a class="dash-back" asp-controller="Home" asp-action="Index">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                    Voltar ao site
+                </a>
+            </header>
+
+            <div class="dash-content">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+<script>
+(function () {
+    var nav = document.getElementById('dashNav');
+    if (!nav) return;
+
+    var wrap = nav.parentElement;
+
+    // Centraliza item ativo usando scrollIntoView (padrão ZeroPaper)
+    var active = nav.querySelector('.dash-nav-item.active');
+    if (active) {
+        window.requestAnimationFrame(function () {
+            active.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' });
+        });
+    }
+
+    // Converte scroll vertical em horizontal (padrão ZeroPaper)
+    nav.addEventListener('wheel', function (e) {
+        if (nav.scrollWidth <= nav.clientWidth) return;
+        var delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (!delta) return;
+        e.preventDefault();
+        nav.scrollLeft += delta;
+    }, { passive: false });
+
+
+    function updateFades() {
+        if (window.innerWidth > 900) return;
+        wrap.classList.toggle('fade-left',  nav.scrollLeft > 8);
+        wrap.classList.toggle('fade-right', nav.scrollLeft < nav.scrollWidth - nav.clientWidth - 8);
+    }
+
+    nav.addEventListener('scroll', updateFades, { passive: true });
+    window.addEventListener('resize', updateFades);
+    setTimeout(updateFades, 50);
+}());
+</script>
+</body>
+</html>

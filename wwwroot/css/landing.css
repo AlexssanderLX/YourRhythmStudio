@@ -120,35 +120,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 .nav-login { color: var(--muted); font-weight: 500; font-size: 15px; }
 .nav-login:hover { color: var(--ink); }
 
-.landing-login-link {
-    position: fixed;
-    top: 22px;
-    right: 28px;
-    z-index: 80;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 86px;
-    height: 42px;
-    padding: 0 18px;
-    border: 1px solid rgba(107, 192, 255, 0.28);
-    border-radius: 999px;
-    background: rgba(9, 12, 22, 0.56);
-    color: var(--ink);
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    backdrop-filter: blur(16px) saturate(1.2);
-    box-shadow: 0 16px 42px -22px rgba(0, 0, 0, 0.9);
-}
-
-.landing-login-link:hover,
-.landing-login-link:focus-visible {
-    border-color: rgba(107, 192, 255, 0.58);
-    color: #fff;
-    outline: none;
-}
 
 /* ---------- Auth ---------- */
 .auth-shell {
@@ -299,10 +270,27 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 
 .auth-demo {
     margin-top: 18px;
-    color: var(--faint);
+    color: var(--muted);
     font-size: 12.5px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
 }
+.auth-demo > span { color: var(--faint); }
+.auth-demo-pick {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    background: var(--surface);
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.auth-demo-pick:hover { border-color: var(--border); background: var(--surface-2); transform: translateY(-1px); }
 
 /* ---------- Hero ---------- */
 .hero { padding: 90px 0 70px; }
@@ -677,6 +665,10 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
     border-radius: 0 0 4px 4px;
     box-shadow: 0 6px 9px rgba(0, 0, 0, .55), inset 0 -3px 5px rgba(255, 255, 255, 0.07);
 }
+.bkey:active, .bkey.press { background: linear-gradient(180deg, var(--blue-deep) 0%, #0a1228 92%); box-shadow: 0 3px 6px rgba(0, 0, 0, .55), 0 0 14px rgba(46, 155, 255, 0.6); }
+/* the hero keyboard is a playable mini piano */
+.keyboard.playable { cursor: pointer; touch-action: none; }
+.keyboard.playable .wkey, .keyboard.playable .bkey { cursor: pointer; }
 /* blue light glowing up from the keys, breathing */
 .key-glow {
     position: absolute; left: 0; right: 0; bottom: 0; height: 58%; z-index: 2; pointer-events: none;

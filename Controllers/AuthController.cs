@@ -5,6 +5,8 @@ using Foundation.Access.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using YourRhythmStudio.Domain;
+using YourRhythmStudio.Infrastructure.Foundation;
 using YourRhythmStudio.ViewModels.Auth;
 
 namespace YourRhythmStudio.Controllers;
@@ -56,6 +58,21 @@ public class AuthController : Controller
 
         var session = result.Value;
         var claims = BuildClaims(session);
+
+        // Papel de domínio (escola/professor/aluno) usado para rotear o dashboard.
+        // No MVP é resolvido pelas contas demo; admin de plataforma vira platform-admin.
+        var domainRole = DemoPersonas.ResolveRole(session.Email);
+        if (domainRole is null && session.PlatformRole == PlatformAccessRole.PlatformAdmin)
+        {
+            domainRole = YourRhythmRoles.PlatformAdmin;
+        }
+
+        if (domainRole is not null)
+        {
+            claims.Add(new Claim("YourRhythmRole", domainRole));
+            claims.Add(new Claim(ClaimTypes.Role, domainRole));
+        }
+
         var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
         var principal = new ClaimsPrincipal(identity);
 

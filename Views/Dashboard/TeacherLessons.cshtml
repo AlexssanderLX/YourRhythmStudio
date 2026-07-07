@@ -1,0 +1,339 @@
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Aulas";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Aulas";
+
+    // Horários que o professor definiu (slots fixos da semana)
+    var slots = new[] { "08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","16:30","17:00","18:00","19:00","19:30","20:00","21:00" };
+
+    // Dias da semana
+    var days = new[] { "Seg","Ter","Qua","Qui","Sex","Sáb","Dom" };
+
+    // Aulas agendadas: (dia, horário, aluno, instrumento, tópico)
+    var lessons = new[] {
+        ("Seg","09:00","Ana Lima",       "Piano",   "Escalas maiores"),
+        ("Seg","11:00","Rafa Souza",     "Teclado", "Acordes básicos"),
+        ("Seg","14:00","Sofia Almeida",  "Piano",   "Clair de Lune"),
+        ("Ter","10:00","Gabriel Nunes",  "Teclado", "Canon in D"),
+        ("Ter","14:00","Sofia Almeida",  "Piano",   "Escalas maiores"),
+        ("Ter","15:00","Lucas Martins",  "Violão",  "Ritmo"),
+        ("Ter","16:30","Beatriz Rocha",  "Piano",   "Leitura"),
+        ("Ter","18:00","Gabriel Nunes",  "Teclado", "Repertório"),
+        ("Qua","09:00","Pedro Torres",   "Violão",  "Acordes de barra"),
+        ("Qua","13:00","Clara Ribeiro",  "Piano",   "Für Elise"),
+        ("Qua","17:00","Rafa Souza",     "Teclado", "Harmonia"),
+        ("Qui","10:00","Ana Lima",       "Piano",   "Técnica"),
+        ("Qui","14:00","Sofia Almeida",  "Piano",   "Clair de Lune"),
+        ("Qui","16:00","Lucas Martins",  "Violão",  "The Scientist"),
+        ("Sex","09:00","Pedro Torres",   "Violão",  "Wonderwall"),
+        ("Sex","11:00","Clara Ribeiro",  "Piano",   "Für Elise"),
+        ("Sex","15:00","Beatriz Rocha",  "Piano",   "River Flows"),
+        ("Sex","19:30","Ana Lima",       "Piano",   "Harmonia"),
+        ("Sáb","10:00","Rafa Souza",     "Teclado", "Improviso"),
+        ("Sáb","11:00","Clara Ribeiro",  "Piano",   "Técnica"),
+    };
+
+    // Indexa aulas por (dia, slot) para lookup rápido
+    var lessonMap = lessons.ToDictionary(
+        l => (l.Item1, l.Item2),
+        l => (student: l.Item3, inst: l.Item4, topic: l.Item5)
+    );
+
+    // Apenas os slots que têm ao menos uma aula em qualquer dia
+    var activeSlots = slots.Where(s => days.Any(d => lessonMap.ContainsKey((d, s)))).ToArray();
+
+    // Dia atual (para destacar)
+    var todayShort = DateTime.Now.DayOfWeek switch {
+        DayOfWeek.Monday    => "Seg",
+        DayOfWeek.Tuesday   => "Ter",
+        DayOfWeek.Wednesday => "Qua",
+        DayOfWeek.Thursday  => "Qui",
+        DayOfWeek.Friday    => "Sex",
+        DayOfWeek.Saturday  => "Sáb",
+        DayOfWeek.Sunday    => "Dom",
+        _                   => ""
+    };
+
+    // Contadores para os stats
+    int lessonsToday  = lessons.Count(l => l.Item1 == todayShort);
+    int lessonsWeek   = lessons.Length;
+}
+
+<div class="stat-strip">
+    <div class="stat-chip"><span class="sc-val">@lessonsToday</span><span class="sc-lbl">Aulas hoje</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">@lessonsWeek</span><span class="sc-lbl">Esta semana</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">45<small>min</small></span><span class="sc-lbl">Duração média</span></div>
+    <div class="sc-sep"></div>
+    <div class="stat-chip"><span class="sc-val">96<small>%</small></span><span class="sc-lbl">Taxa de presença</span></div>
+</div>
+
+<div class="card">
+    <div class="lessons-header">
+        <div>
+            <h3>Grade semanal</h3>
+            <div class="card-sub">Horários definidos · @DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="lessons-nav">
+            <button class="btn-outline-sm" id="prevWeek">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="lessons-week-label" id="weekLabel">Semana atual</span>
+            <button class="btn-outline-sm" id="nextWeek">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="mobile-day-nav">
+        <button class="day-arrow" id="prevDay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="day-pills" id="dayPills">
+            @foreach (var d in days)
+            {
+                <button class="day-pill @(d == todayShort ? "active" : "")" data-day="@d">@d</button>
+            }
+        </div>
+        <button class="day-arrow" id="nextDay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <div class="timetable-scroll">
+        <table class="timetable">
+            <thead>
+                <tr>
+                    <th class="tt-time-col"></th>
+                    @foreach (var day in days)
+                    {
+                        <th class="tt-day-head @(day == todayShort ? "today" : "")">@day</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var slot in activeSlots)
+                {
+                    <tr class="tt-row">
+                        <td class="tt-time">@slot</td>
+                        @foreach (var day in days)
+                        {
+                            if (lessonMap.TryGetValue((day, slot), out var lesson))
+                            {
+                                <td class="tt-cell has-lesson @(day == todayShort ? "today-col" : "")">
+                                    <div class="tt-block @(day == todayShort ? "today-block" : "")">
+                                        <span class="tt-student">@lesson.student</span>
+                                        <span class="tt-inst">@lesson.inst</span>
+                                        <span class="tt-topic">@lesson.topic</span>
+                                    </div>
+                                </td>
+                            }
+                            else
+                            {
+                                <td class="tt-cell empty @(day == todayShort ? "today-col" : "")">
+                                    <button class="tt-add" title="Adicionar aula">+</button>
+                                </td>
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+/* ---- Lessons header ---- */
+.lessons-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+}
+.lessons-nav { display: flex; align-items: center; gap: 10px; }
+.lessons-week-label { font-size: 13.5px; font-weight: 500; color: var(--muted); min-width: 110px; text-align: center; }
+
+.btn-outline-sm {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 100px;
+    background: transparent; border: 1px solid var(--border-soft);
+    color: var(--muted); font-size: 13.5px; cursor: pointer;
+    transition: color .2s, border-color .2s;
+}
+.btn-outline-sm:hover { color: var(--ink); border-color: var(--border); }
+
+/* ---- Timetable ---- */
+.timetable-scroll {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-soft) transparent;
+    border-radius: 12px;
+    border: 1px solid var(--border-soft);
+}
+
+.timetable {
+    width: 100%; border-collapse: collapse;
+    min-width: 520px; /* scroll antes de comprimir */
+    table-layout: fixed;
+}
+
+/* Header row */
+.timetable thead tr { border-bottom: 1px solid var(--border-soft); }
+.tt-time-col { width: 58px; }
+.tt-day-head {
+    padding: 10px 8px; text-align: center;
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+}
+.tt-day-head.today { color: var(--blue-bright); }
+
+/* Body rows */
+.tt-row { border-bottom: 1px solid var(--border-soft); }
+.tt-row:last-child { border-bottom: none; }
+
+.tt-time {
+    padding: 6px 10px; text-align: right;
+    font-family: var(--font-display); font-size: 11.5px;
+    font-weight: 600; color: var(--muted);
+    white-space: nowrap; vertical-align: middle;
+    border-right: 1px solid var(--border-soft);
+}
+
+.tt-cell {
+    padding: 4px 5px; vertical-align: middle;
+    border-right: 1px solid rgba(255,255,255,0.04);
+}
+.tt-cell:last-child { border-right: none; }
+.tt-cell.today-col { background: rgba(46,155,255,0.03); }
+.tt-cell.empty { height: 44px; }
+
+/* Lesson block inside cell */
+.tt-block {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 7px 9px; border-radius: 9px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    cursor: pointer; transition: border-color .15s, background .15s;
+}
+.tt-block:hover { border-color: var(--border); background: rgba(46,155,255,0.06); }
+.tt-block.today-block { border-color: rgba(46,155,255,0.35); background: rgba(46,155,255,0.07); }
+.tt-student { font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-inst    { font-size: 11px; color: var(--blue-bright); font-family: var(--font-display); }
+.tt-topic   { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Add button in empty cell */
+.tt-add {
+    width: 100%; height: 34px; border-radius: 8px;
+    background: transparent; border: 1px dashed rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.15); font-size: 18px; cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+.tt-add:hover { border-color: rgba(46,155,255,0.35); color: var(--blue-bright); }
+
+/* ---- Mobile: navegação por dia ---- */
+.mobile-day-nav {
+    display: none;
+    align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 12px;
+}
+.mobile-day-nav .day-pills {
+    display: flex; gap: 6px; overflow-x: auto;
+    scrollbar-width: none; -ms-overflow-style: none; flex: 1;
+}
+.mobile-day-nav .day-pills::-webkit-scrollbar { display: none; }
+.day-pill {
+    padding: 6px 14px; border-radius: 100px; font-size: 12.5px; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    color: var(--muted); cursor: pointer; white-space: nowrap;
+    transition: color .15s, border-color .15s, background .15s;
+}
+.day-pill.active { color: var(--ink); border-color: var(--blue-bright); background: rgba(46,155,255,0.1); }
+
+.day-arrow {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s;
+}
+.day-arrow:hover { color: var(--ink); border-color: var(--border); }
+.day-arrow:disabled { opacity: 0.3; cursor: default; }
+
+@@media (max-width: 680px) {
+    .mobile-day-nav { display: flex; }
+    .timetable { min-width: 0; table-layout: auto; }
+    .tt-day-head, .tt-cell { display: none; }
+    .tt-day-head.visible, .tt-cell.visible { display: table-cell; }
+    .tt-time-col, .tt-time { display: table-cell !important; }
+}
+</style>
+
+<script>
+(function () {
+    var DAYS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(days));
+    var todayShort = '@todayShort';
+
+    function isMobile() { return window.innerWidth <= 680; }
+
+    function applyVisibility(activeDay) {
+        if (!isMobile()) return;
+        var idx = DAYS.indexOf(activeDay);
+        // cabeçalhos
+        document.querySelectorAll('.tt-day-head').forEach(function (th, i) {
+            th.classList.toggle('visible', i === idx);
+        });
+        // células (cada linha tem 1 td.tt-time + N tt-cell, uma por dia)
+        document.querySelectorAll('.tt-row').forEach(function (row) {
+            var cells = row.querySelectorAll('.tt-cell');
+            cells.forEach(function (cell, i) {
+                cell.classList.toggle('visible', i === idx);
+            });
+        });
+        // pills
+        document.querySelectorAll('.day-pill').forEach(function (p) {
+            p.classList.toggle('active', p.dataset.day === activeDay);
+        });
+    }
+
+    // init
+    var currentDay = todayShort || DAYS[0];
+    applyVisibility(currentDay);
+
+    // pills click
+    document.getElementById('dayPills').addEventListener('click', function (e) {
+        var pill = e.target.closest('.day-pill');
+        if (!pill) return;
+        currentDay = pill.dataset.day;
+        applyVisibility(currentDay);
+        updateArrows();
+    });
+
+    // setas prev/next dia
+    function updateArrows() {
+        var idx = DAYS.indexOf(currentDay);
+        document.getElementById('prevDay').disabled = idx <= 0;
+        document.getElementById('nextDay').disabled = idx >= DAYS.length - 1;
+    }
+    document.getElementById('prevDay').addEventListener('click', function () {
+        var idx = DAYS.indexOf(currentDay);
+        if (idx > 0) { currentDay = DAYS[idx - 1]; applyVisibility(currentDay); updateArrows(); }
+    });
+    document.getElementById('nextDay').addEventListener('click', function () {
+        var idx = DAYS.indexOf(currentDay);
+        if (idx < DAYS.length - 1) { currentDay = DAYS[idx + 1]; applyVisibility(currentDay); updateArrows(); }
+    });
+    updateArrows();
+
+    // week prev/next — apenas atualiza o label por enquanto (dados estáticos)
+    var weekOffset = 0;
+    function updateWeekLabel() {
+        var label = weekOffset === 0 ? 'Semana atual'
+                  : weekOffset > 0  ? 'Semana +' + weekOffset
+                  :                   'Semana ' + weekOffset;
+        document.getElementById('weekLabel').textContent = label;
+    }
+    document.getElementById('prevWeek').addEventListener('click', function () { weekOffset--; updateWeekLabel(); });
+    document.getElementById('nextWeek').addEventListener('click', function () { weekOffset++; updateWeekLabel(); });
+
+    // re-aplicar ao redimensionar
+    window.addEventListener('resize', function () { applyVisibility(currentDay); });
+}());
+</script>

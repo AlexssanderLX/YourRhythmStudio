@@ -15,6 +15,73 @@
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
+    // --- Playable mini digital piano ---
+    // The hero keyboard is interactive: each key plays ITS OWN real pitch when
+    // the user presses it. NO ambient/automatic sound — audio only happens on
+    // a genuine key press (which also satisfies the browser autoplay policy).
+    (function () {
+        var ctx = null, master = null;
+
+        function audioCtx() {
+            if (ctx) return ctx;
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            ctx = new AC();
+            master = ctx.createGain();
+            master.gain.value = 0.6;
+            master.connect(ctx.destination);
+            return ctx;
+        }
+
+        // Note name ("C3", "C#4", "A4") -> frequency in Hz (equal temperament).
+        var SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+        function noteToFreq(name) {
+            var m = /^([A-G])(#?)(\d)$/.exec(name || "");
+            if (!m) return null;
+            var midi = (parseInt(m[3], 10) + 1) * 12 + SEMI[m[1]] + (m[2] === "#" ? 1 : 0);
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        // A soft "digital piano" voice: triangle + sine octave through a lowpass,
+        // with a quick attack and natural exponential decay.
+        function playFreq(f) {
+            var c = audioCtx();
+            if (!c) return;
+            if (c.state === "suspended") { c.resume(); }
+            var t = c.currentTime;
+            var g = c.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.linearRampToValueAtTime(0.6, t + 0.008);
+            g.gain.exponentialRampToValueAtTime(0.0008, t + 1.5);
+            var o1 = c.createOscillator(); o1.type = "triangle"; o1.frequency.value = f;
+            var o2 = c.createOscillator(); o2.type = "sine"; o2.frequency.value = f * 2;
+            var g2 = c.createGain(); g2.gain.value = 0.3; o2.connect(g2);
+            var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600;
+            o1.connect(g); g2.connect(g); g.connect(lp); lp.connect(master);
+            o1.start(t); o2.start(t); o1.stop(t + 1.6); o2.stop(t + 1.6);
+        }
+
+        function strike(keyEl) {
+            var freq = noteToFreq(keyEl.getAttribute("data-note"));
+            if (freq === null) return;
+            playFreq(freq);
+            keyEl.classList.add("press");
+            setTimeout(function () { keyEl.classList.remove("press"); }, 150);
+        }
+
+        var kb = document.getElementById("keyboard");
+        if (kb) {
+            kb.classList.add("playable");
+            kb.addEventListener("pointerdown", function (e) {
+                // Black keys sit on top — prefer them when the press lands there.
+                var key = e.target.closest(".bkey") || e.target.closest(".wkey");
+                if (!key || !kb.contains(key)) return;
+                e.preventDefault();
+                strike(key);
+            });
+        }
+    })();
+
     // Helper: fill a [data-fill] progress bar to its percent width
     function fillBar(el) {
         var pct = el.getAttribute("data-fill") || "0";

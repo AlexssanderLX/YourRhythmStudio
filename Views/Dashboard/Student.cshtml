@@ -1,0 +1,106 @@
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Meu painel";
+    ViewData["Role"] = "student";
+    var first = (User.Identity?.Name ?? "Aluno").Split(' ')[0];
+    ViewData["DashTitle"] = $"Olá, {first} 👋";
+}
+
+<div class="dash-grid cols-3">
+    <div class="card glow span-2">
+        <div class="level-hero">
+            <div class="level-ring">
+                <svg width="120" height="120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="9"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="url(#dg)" stroke-width="9" stroke-linecap="round"
+                            stroke-dasharray="314" stroke-dashoffset="69" transform="rotate(-90 60 60)"/>
+                    <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6BC0FF"/><stop offset="1" stop-color="#1E5BFF"/></linearGradient></defs>
+                </svg>
+                <div class="pct"><b>78%</b><span>do nível</span></div>
+            </div>
+            <div class="level-info">
+                <div class="lvl-num"><small>Nível atual</small>12</div>
+                <div class="xp-track"><i style="width:82%"></i></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted)">
+                    <span>2.450 XP</span><span>Faltam 550 XP para o Nível 13</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Sequência</h3>
+        <div class="card-sub">Não quebre a corrente!</div>
+        <div class="streak-row"><span style="font-size:22px">🔥</span> 7 dias</div>
+        <div class="eq" style="margin-top:16px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card span-2">
+        <h3>Repertório em andamento</h3>
+        <div class="card-sub">Continue de onde parou</div>
+        <div class="row-list">
+            <div class="prow">
+                <div class="pavatar">🎹</div>
+                <div class="pmeta"><div class="pn">Clair de Lune</div><div class="ps">C. Debussy</div><div class="pbar"><i style="width:80%"></i></div></div>
+                <div class="ppct">80%</div>
+            </div>
+            <div class="prow">
+                <div class="pavatar">🎶</div>
+                <div class="pmeta"><div class="pn">River Flows In You</div><div class="ps">Yiruma</div><div class="pbar"><i style="width:45%"></i></div></div>
+                <div class="ppct">45%</div>
+            </div>
+            <div class="prow">
+                <div class="pavatar">🎼</div>
+                <div class="pmeta"><div class="pn">The Scientist</div><div class="ps">Coldplay</div><div class="pbar"><i style="width:60%"></i></div></div>
+                <div class="ppct">60%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Próxima missão</h3>
+        <div class="card-sub">Hoje</div>
+        <div class="mission" style="flex-direction:column;align-items:stretch;gap:12px">
+            <div>
+                <div class="m-label">Praticar escalas maiores</div>
+                <div class="m-title">18 / 30 min</div>
+                <div class="pbar" style="margin-top:10px"><i style="width:60%"></i></div>
+            </div>
+            <div class="m-xp">+90 XP</div>
+        </div>
+    </div>
+</div>
+
+<div class="dash-grid cols-3">
+    <div class="card span-2">
+        <h3>Sua evolução</h3>
+        <div class="card-sub">Minutos de prática · últimas 8 semanas</div>
+        <div class="wchart">
+            <div class="wcol"><i style="height:22%"></i><span>S1</span></div>
+            <div class="wcol"><i style="height:34%"></i><span>S2</span></div>
+            <div class="wcol"><i style="height:30%"></i><span>S3</span></div>
+            <div class="wcol"><i style="height:48%"></i><span>S4</span></div>
+            <div class="wcol"><i style="height:58%"></i><span>S5</span></div>
+            <div class="wcol"><i style="height:70%"></i><span>S6</span></div>
+            <div class="wcol"><i style="height:84%"></i><span>S7</span></div>
+            <div class="wcol"><i style="height:100%"></i><span>S8</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Conquistas</h3>
+        <div class="card-sub">5 de 8 desbloqueadas</div>
+        <div class="achv-grid2">
+            <div class="achv2">🎵</div>
+            <div class="achv2">🎼</div>
+            <div class="achv2">🔥</div>
+            <div class="achv2">⭐</div>
+            <div class="achv2">🏅</div>
+            <div class="achv2 locked">🔒</div>
+            <div class="achv2 locked">🔒</div>
+            <div class="achv2 locked">🔒</div>
+        </div>
+    </div>
+</div>

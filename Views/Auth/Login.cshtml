@@ -44,10 +44,27 @@
             <button type="submit">Entrar</button>
         </form>
 
-        <p class="auth-demo">Demo local: admin@yourrhythm.local / YourRhythm@123</p>
+        <div class="auth-demo">
+            <span>Contas demo (senha <strong>YourRhythm@123</strong>):</span>
+            <button type="button" class="auth-demo-pick" data-email="escola@yourrhythm.local">🏫 escola@yourrhythm.local</button>
+            <button type="button" class="auth-demo-pick" data-email="professor@yourrhythm.local">🎷 professor@yourrhythm.local</button>
+            <button type="button" class="auth-demo-pick" data-email="aluno@yourrhythm.local">🎵 aluno@yourrhythm.local</button>
+        </div>
     </section>
 </main>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Conveniência demo: clicar numa conta preenche e-mail + senha.
+        document.querySelectorAll(".auth-demo-pick").forEach(function (b) {
+            b.addEventListener("click", function () {
+                var email = document.getElementById("Email");
+                var pwd = document.getElementById("Password");
+                if (email) email.value = b.getAttribute("data-email");
+                if (pwd) pwd.value = "YourRhythm@123";
+                if (pwd) pwd.focus();
+            });
+        });
+    </script>
 }
