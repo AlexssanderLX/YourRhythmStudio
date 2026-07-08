@@ -31,6 +31,8 @@ public sealed class YourRhythmDbContext : DbContext
 
     public DbSet<XpEvent> XpEvents => Set<XpEvent>();
 
+    public DbSet<PersistedAccount> PersistedAccounts => Set<PersistedAccount>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -239,6 +241,21 @@ public sealed class YourRhythmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(feedback => feedback.RepertoireItemId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PersistedAccount>(entity =>
+        {
+            entity.ToTable("persisted_accounts");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.DisplayName).HasMaxLength(160).IsRequired();
+            entity.Property(a => a.Email).HasMaxLength(256).IsRequired();
+            entity.Property(a => a.Status).HasMaxLength(40).IsRequired();
+            entity.Property(a => a.PlatformRole).HasMaxLength(40).IsRequired();
+            entity.Property(a => a.PwdAlgorithm).HasMaxLength(40);
+            entity.Property(a => a.PwdSaltBase64).HasMaxLength(256);
+            entity.Property(a => a.PwdHashBase64).HasMaxLength(512);
+            entity.Property(a => a.SecurityStamp).HasMaxLength(64);
+            entity.HasIndex(a => a.Email).IsUnique();
         });
 
         modelBuilder.Entity<XpEvent>(entity =>

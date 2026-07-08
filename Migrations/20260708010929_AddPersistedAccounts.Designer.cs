@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YourRhythmStudio.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using YourRhythmStudio.Infrastructure.Data;
 namespace YourRhythmStudio.Migrations
 {
     [DbContext(typeof(YourRhythmDbContext))]
-    partial class YourRhythmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708010929_AddPersistedAccounts")]
+    partial class AddPersistedAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

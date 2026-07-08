@@ -50,7 +50,7 @@ public static class FoundationServiceCollectionExtensions
             AdminReviewRecipients = []
         });
 
-        services.AddSingleton<IAccountStore, InMemoryAccountStore>();
+        services.AddSingleton<IAccountStore, MySqlBackedAccountStore>();
         services.AddSingleton<ITenantStore, InMemoryTenantStore>();
         services.AddSingleton<ITenantMembershipStore, InMemoryTenantMembershipStore>();
         services.AddSingleton<ISubscriptionPlanStore, InMemorySubscriptionPlanStore>();

@@ -1,12 +1,19 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
+using Foundation.Access.Abstractions;
 using Foundation.Access.Accounts;
 using Foundation.Access.Authentication;
+using Foundation.Access.Security;
 using Foundation.Access.Services;
+using Foundation.Core.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
+using YourRhythmStudio.Domain.Users;
+using YourRhythmStudio.Infrastructure.Data;
 using YourRhythmStudio.Infrastructure.Foundation;
 using YourRhythmStudio.ViewModels.Auth;
 
@@ -19,15 +26,27 @@ public class AuthController : Controller
     private readonly SaasAccessService _saasAccessService;
     private readonly IUserProfileResolver _userProfileResolver;
     private readonly IWebHostEnvironment _environment;
+    private readonly IAccountStore _accountStore;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IClock _clock;
+    private readonly YourRhythmDbContext _db;
 
     public AuthController(
         SaasAccessService saasAccessService,
         IUserProfileResolver userProfileResolver,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IAccountStore accountStore,
+        IPasswordHasher passwordHasher,
+        IClock clock,
+        YourRhythmDbContext db)
     {
         _saasAccessService = saasAccessService;
         _userProfileResolver = userProfileResolver;
         _environment = environment;
+        _accountStore = accountStore;
+        _passwordHasher = passwordHasher;
+        _clock = clock;
+        _db = db;
     }
 
     [HttpGet]
@@ -98,6 +117,114 @@ public class AuthController : Controller
     {
         await HttpContext.SignOutAsync(CookieScheme);
         return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Register() => View(new RegisterViewModel());
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(RegisterViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var emailNorm = model.Email.Trim().ToUpperInvariant();
+
+        var existing = await _accountStore.FindByEmailAsync(emailNorm);
+        if (existing is not null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Este e-mail ja esta em uso.");
+            return View(model);
+        }
+
+        var now = _clock.UtcNow;
+
+        var account = new Account
+        {
+            DisplayName = model.DisplayName.Trim(),
+            Email = emailNorm,
+            Status = AccountStatus.Active,
+            PlatformRole = PlatformAccessRole.None,
+            PasswordCredential = _passwordHasher.HashPassword(model.Password),
+            CreatedAtUtc = now,
+            ActivatedAtUtc = now,
+            SecurityStamp = Guid.NewGuid().ToString("N")
+        };
+
+        await _accountStore.SaveAsync(account);
+
+        var slug = GenerateSlug(model.SchoolName);
+        if (await _db.Schools.AnyAsync(s => s.Slug == slug))
+            slug = slug + "-" + Guid.NewGuid().ToString("N")[..6];
+
+        var school = new School
+        {
+            Name = model.SchoolName.Trim(),
+            Slug = slug,
+            PrimaryEmail = model.Email.Trim().ToLowerInvariant(),
+            OwnerAccountId = account.Id,
+            CreatedAtUtc = now
+        };
+        _db.Schools.Add(school);
+
+        var schoolUser = new SchoolUser
+        {
+            SchoolId = school.Id,
+            AccountId = account.Id,
+            DisplayName = model.DisplayName.Trim(),
+            Email = model.Email.Trim().ToLowerInvariant(),
+            Role = YourRhythmRoles.Teacher,
+            CreatedAtUtc = now
+        };
+        _db.SchoolUsers.Add(schoolUser);
+
+        var teacher = new TeacherProfile
+        {
+            SchoolId = school.Id,
+            SchoolUserId = schoolUser.Id,
+            CanManageStudents = true
+        };
+        _db.TeacherProfiles.Add(teacher);
+
+        await _db.SaveChangesAsync();
+
+        // auto-login
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, account.Id.ToString()),
+            new(ClaimTypes.Name, account.DisplayName),
+            new(ClaimTypes.Email, model.Email.Trim().ToLowerInvariant()),
+            new("SessionId", Guid.NewGuid().ToString()),
+            new("PlatformRole", PlatformAccessRole.None.ToString())
+        };
+        claims.Add(new Claim(UserProfileResolver.RoleClaim, YourRhythmRoles.Teacher));
+        claims.Add(new Claim(ClaimTypes.Role, YourRhythmRoles.Teacher));
+        claims.Add(new Claim(UserProfileResolver.SchoolIdClaim, school.Id.ToString()));
+        claims.Add(new Claim(UserProfileResolver.SchoolUserIdClaim, schoolUser.Id.ToString()));
+        claims.Add(new Claim(UserProfileResolver.TeacherProfileIdClaim, teacher.Id.ToString()));
+
+        var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(CookieScheme, principal, new AuthenticationProperties
+        {
+            IsPersistent = true,
+            ExpiresUtc = now.AddDays(30)
+        });
+
+        return RedirectToAction("Dashboard", "Teacher");
+    }
+
+    private static string GenerateSlug(string name)
+    {
+        var s = name.Trim().ToLowerInvariant();
+        s = Regex.Replace(s, @"[^a-z0-9\s-]", "");
+        s = Regex.Replace(s, @"\s+", "-");
+        s = Regex.Replace(s, @"-+", "-").Trim('-');
+        return s.Length > 80 ? s[..80] : s;
     }
 
     [HttpGet]

@@ -1,0 +1,57 @@
+@model YourRhythmStudio.ViewModels.Auth.RegisterViewModel
+
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = "Criar conta";
+}
+
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="register-title">
+        <div class="auth-brand">
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+            <span>YourRhythm<span>.</span></span>
+        </div>
+
+        <div class="auth-copy">
+            <p class="auth-kicker">Comece gratuitamente</p>
+            <h1 id="register-title">Crie seu studio</h1>
+            <p>Configure sua escola em menos de 1 minuto e comece a acompanhar seus alunos.</p>
+        </div>
+
+        <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
+
+            <label asp-for="DisplayName"></label>
+            <input asp-for="DisplayName" autocomplete="name" placeholder="Ex.: Ana Silva" />
+            <span asp-validation-for="DisplayName" class="field-error"></span>
+
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" placeholder="seu@email.com" />
+            <span asp-validation-for="Email" class="field-error"></span>
+
+            <label asp-for="SchoolName"></label>
+            <input asp-for="SchoolName" autocomplete="organization" placeholder="Ex.: Studio Musica Viva" />
+            <span asp-validation-for="SchoolName" class="field-error"></span>
+
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="new-password" placeholder="Minimo 8 caracteres" />
+            <span asp-validation-for="Password" class="field-error"></span>
+
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword" autocomplete="new-password" placeholder="Repita a senha" />
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+
+            <button type="submit" class="btn-full">Criar conta</button>
+        </form>
+
+        <p class="auth-switch">
+            Ja tem conta? <a asp-controller="Auth" asp-action="Login">Entrar</a>
+        </p>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
