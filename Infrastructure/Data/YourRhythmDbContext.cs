@@ -44,6 +44,7 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(school => school.Name).HasMaxLength(160).IsRequired();
             entity.Property(school => school.Slug).HasMaxLength(180).IsRequired();
             entity.Property(school => school.PrimaryEmail).HasMaxLength(256).IsRequired();
+            entity.Property(school => school.PlanCode).HasMaxLength(40).IsRequired().HasDefaultValue("professor");
             entity.HasIndex(school => school.Slug).IsUnique();
         });
 

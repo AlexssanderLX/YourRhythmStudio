@@ -5,24 +5,151 @@
     ViewData["Title"] = "Criar conta";
 }
 
+<style>
+/* Plan cards */
+.plan-step { margin-bottom: 28px; }
+.plan-step-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+.plan-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.plan-card {
+    position: relative;
+    border: 2px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 18px 16px 16px;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    background: var(--surface);
+    user-select: none;
+}
+.plan-card:hover { border-color: var(--blue-bright); }
+.plan-card input[type=radio] {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+}
+.plan-card.selected {
+    border-color: var(--blue-bright);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue-bright) 18%, transparent);
+    background: color-mix(in srgb, var(--blue-bright) 6%, var(--surface));
+}
+.plan-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+    transition: background .2s, border-color .2s;
+}
+.plan-card.selected .plan-check {
+    background: var(--blue-bright);
+    border-color: var(--blue-bright);
+}
+.plan-check svg { display: none; }
+.plan-card.selected .plan-check svg { display: block; }
+.plan-icon { font-size: 22px; margin-bottom: 8px; }
+.plan-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+.plan-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    line-height: 1.45;
+}
+.plan-price { font-size: 13px; color: var(--text); }
+.plan-price strong { font-size: 20px; font-weight: 800; color: var(--blue-bright); }
+.plan-price span { color: var(--muted); font-size: 12px; }
+.plan-badge {
+    position: absolute;
+    top: -10px; right: 12px;
+    background: var(--blue-bright);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+.plan-error { color: #e53e3e; font-size: 12.5px; margin-top: 6px; }
+
+@@media (max-width: 480px) {
+    .plan-cards { grid-template-columns: 1fr; }
+}
+</style>
+
 <main class="auth-shell">
-    <section class="auth-card" aria-labelledby="register-title">
+    <section class="auth-card" aria-labelledby="register-title" style="max-width:500px">
         <div class="auth-brand">
             <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
             <span>YourRhythm<span>.</span></span>
         </div>
 
         <div class="auth-copy">
-            <p class="auth-kicker">Comece gratuitamente</p>
+            <p class="auth-kicker">Comece gratuitamente · 14 dias gratis</p>
             <h1 id="register-title">Crie seu studio</h1>
-            <p>Configure sua escola em menos de 1 minuto e comece a acompanhar seus alunos.</p>
+            <p>Escolha seu plano e comece a acompanhar seus alunos em minutos.</p>
         </div>
 
-        <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" novalidate>
+        <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" novalidate id="reg-form">
             @Html.AntiForgeryToken()
 
             <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
 
+            <!-- Plano -->
+            <div class="plan-step">
+                <span class="plan-step-label">Escolha seu plano</span>
+                <div class="plan-cards" id="plan-cards">
+
+                    <label class="plan-card" id="card-professor">
+                        <input type="radio" name="PlanCode" value="professor" id="plan-professor" />
+                        <div class="plan-check">
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="plan-icon">🎷</div>
+                        <div class="plan-name">Professor</div>
+                        <div class="plan-desc">Ideal para professores independentes. Ate 30 alunos.</div>
+                        <div class="plan-price"><strong>R$149</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes</span></div>
+                    </label>
+
+                    <label class="plan-card" id="card-escola">
+                        <div class="plan-badge">Popular</div>
+                        <input type="radio" name="PlanCode" value="escola" id="plan-escola" />
+                        <div class="plan-check">
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="plan-icon">🏫</div>
+                        <div class="plan-name">Escola</div>
+                        <div class="plan-desc">Para escolas e studios. Multiplos professores, alunos ilimitados.</div>
+                        <div class="plan-price"><strong>R$249</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes</span></div>
+                    </label>
+
+                </div>
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState["PlanCode"]?.Errors.Count > 0)
+                {
+                    <div class="plan-error">Escolha um plano para continuar.</div>
+                }
+            </div>
+
+            <!-- Dados pessoais -->
             <label asp-for="DisplayName"></label>
             <input asp-for="DisplayName" autocomplete="name" placeholder="Ex.: Ana Silva" />
             <span asp-validation-for="DisplayName" class="field-error"></span>
@@ -43,7 +170,11 @@
             <input asp-for="ConfirmPassword" autocomplete="new-password" placeholder="Repita a senha" />
             <span asp-validation-for="ConfirmPassword" class="field-error"></span>
 
-            <button type="submit" class="btn-full">Criar conta</button>
+            <button type="submit" class="btn-full" id="submit-btn">Criar conta gratis</button>
+
+            <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
+                14 dias gratis &middot; sem cartao &middot; cancele quando quiser
+            </p>
         </form>
 
         <p class="auth-switch">
@@ -54,4 +185,44 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        var cards = document.querySelectorAll('.plan-card');
+        var radios = document.querySelectorAll('input[name="PlanCode"]');
+        var submitBtn = document.getElementById('submit-btn');
+
+        function updateCards() {
+            var anyChecked = false;
+            radios.forEach(function (r) {
+                var card = r.closest('.plan-card');
+                if (r.checked) {
+                    card.classList.add('selected');
+                    anyChecked = true;
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+            if (submitBtn) {
+                submitBtn.textContent = anyChecked ? 'Criar conta gratis' : 'Selecione um plano';
+            }
+        }
+
+        // Restore state if server round-trip (validation error)
+        var preSelected = '@Html.Raw(Model.PlanCode)';
+        if (preSelected) {
+            var pre = document.querySelector('input[name="PlanCode"][value="' + preSelected + '"]');
+            if (pre) { pre.checked = true; }
+        }
+
+        radios.forEach(function (r) { r.addEventListener('change', updateCards); });
+        cards.forEach(function (c) {
+            c.addEventListener('click', function () {
+                var r = c.querySelector('input[type=radio]');
+                if (r) { r.checked = true; updateCards(); }
+            });
+        });
+
+        updateCards();
+    })();
+    </script>
 }

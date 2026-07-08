@@ -4,6 +4,10 @@ namespace YourRhythmStudio.ViewModels.Auth;
 
 public class RegisterViewModel
 {
+    [Required(ErrorMessage = "Escolha um plano.")]
+    [RegularExpression("professor|escola", ErrorMessage = "Plano invalido.")]
+    public string PlanCode { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Informe seu nome.")]
     [MaxLength(160)]
     [Display(Name = "Nome completo")]

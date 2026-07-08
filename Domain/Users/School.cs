@@ -12,6 +12,8 @@ public sealed class School
 
     public Guid? OwnerAccountId { get; set; }
 
+    public string PlanCode { get; set; } = "professor";
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;

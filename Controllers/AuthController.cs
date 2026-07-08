@@ -166,6 +166,7 @@ public class AuthController : Controller
             Slug = slug,
             PrimaryEmail = model.Email.Trim().ToLowerInvariant(),
             OwnerAccountId = account.Id,
+            PlanCode = model.PlanCode,
             CreatedAtUtc = now
         };
         _db.Schools.Add(school);
