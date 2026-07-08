@@ -23,9 +23,9 @@ public sealed class TeacherStudentService
     {
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
 
-        return await QueryTeacherStudents(schoolId, teacherProfileId)
-            .OrderBy(student => student.DisplayName)
-            .ToArrayAsync(cancellationToken);
+        var rows = await QueryBaseStudents(schoolId, teacherProfileId, cancellationToken);
+        var enriched = await EnrichWithRepertoireAsync(rows, schoolId, cancellationToken);
+        return enriched.OrderBy(s => s.DisplayName).ToArray();
     }
 
     public async Task<StudentDetailSummary> GetStudentDetailAsync(
@@ -41,8 +41,10 @@ public sealed class TeacherStudentService
             studentProfileId,
             cancellationToken);
 
-        var student = await QueryTeacherStudents(schoolId, teacherProfileId)
-            .FirstAsync(item => item.StudentProfileId == studentProfileId, cancellationToken);
+        var rows = await QueryBaseStudents(schoolId, teacherProfileId, cancellationToken);
+        var all = await EnrichWithRepertoireAsync(rows, schoolId, cancellationToken);
+        var student = all.FirstOrDefault(item => item.StudentProfileId == studentProfileId)
+            ?? throw new InvalidOperationException("Student not found for this teacher.");
 
         var lessons = await _dbContext.Lessons
             .AsNoTracking()
@@ -171,8 +173,9 @@ public sealed class TeacherStudentService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await QueryTeacherStudents(schoolId, teacherProfileId)
-            .FirstAsync(item => item.StudentProfileId == studentProfile.Id, cancellationToken);
+        var rows = await QueryBaseStudents(schoolId, teacherProfileId, cancellationToken);
+        var all = await EnrichWithRepertoireAsync(rows, schoolId, cancellationToken);
+        return all.First(item => item.StudentProfileId == studentProfile.Id);
     }
 
     public async Task<TeacherDashboardSummary> GetTeacherDashboardAsync(
@@ -181,10 +184,9 @@ public sealed class TeacherStudentService
     {
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
 
-        var students = await QueryTeacherStudents(schoolId, teacherProfileId)
-            .OrderBy(student => student.DisplayName)
-            .Take(4)
-            .ToArrayAsync(cancellationToken);
+        var rows = await QueryBaseStudents(schoolId, teacherProfileId, cancellationToken);
+        var enriched = await EnrichWithRepertoireAsync(rows, schoolId, cancellationToken);
+        var students = enriched.OrderBy(s => s.DisplayName).Take(4).ToArray();
 
         var activeStudentCount = await _dbContext.TeacherStudents.CountAsync(
             link => link.SchoolId == schoolId && link.TeacherProfileId == teacherProfileId && link.IsActive,
@@ -226,34 +228,76 @@ public sealed class TeacherStudentService
             recentLessons);
     }
 
-    private IQueryable<TeacherStudentSummary> QueryTeacherStudents(Guid schoolId, Guid teacherProfileId)
+    private sealed record BaseStudentRow(
+        Guid StudentProfileId,
+        Guid SchoolUserId,
+        string DisplayName,
+        string Email,
+        string Instrument,
+        string Level,
+        int CurrentXp,
+        int CurrentLevel);
+
+    private async Task<List<BaseStudentRow>> QueryBaseStudents(
+        Guid schoolId, Guid teacherProfileId, CancellationToken ct)
     {
-        return from link in _dbContext.TeacherStudents.AsNoTracking()
-               join student in _dbContext.StudentProfiles.AsNoTracking() on link.StudentProfileId equals student.Id
-               join user in _dbContext.SchoolUsers.AsNoTracking() on student.SchoolUserId equals user.Id
-               where link.SchoolId == schoolId
-                   && link.TeacherProfileId == teacherProfileId
-                   && link.IsActive
-                   && user.IsActive
-               select new TeacherStudentSummary(
-                   student.Id,
-                   user.Id,
-                   user.DisplayName,
-                   user.Email,
-                   student.Instrument,
-                   student.Level,
-                   student.CurrentXp,
-                   student.CurrentLevel,
-                   _dbContext.RepertoireItems
-                       .Where(item => item.SchoolId == schoolId && item.StudentProfileId == student.Id)
-                       .OrderByDescending(item => item.UpdatedAtUtc)
-                       .Select(item => (int?)item.ProgressPercent)
-                       .FirstOrDefault() ?? 0,
-                   _dbContext.RepertoireItems
-                       .Where(item => item.SchoolId == schoolId && item.StudentProfileId == student.Id)
-                       .OrderByDescending(item => item.UpdatedAtUtc)
-                       .Select(item => item.Title)
-                       .FirstOrDefault());
+        return await (
+            from link in _dbContext.TeacherStudents.AsNoTracking()
+            join student in _dbContext.StudentProfiles.AsNoTracking() on link.StudentProfileId equals student.Id
+            join user in _dbContext.SchoolUsers.AsNoTracking() on student.SchoolUserId equals user.Id
+            where link.SchoolId == schoolId
+                && link.TeacherProfileId == teacherProfileId
+                && link.IsActive
+                && user.IsActive
+            select new BaseStudentRow(
+                student.Id,
+                user.Id,
+                user.DisplayName,
+                user.Email,
+                student.Instrument,
+                student.Level,
+                student.CurrentXp,
+                student.CurrentLevel))
+            .ToListAsync(ct);
+    }
+
+    private async Task<List<TeacherStudentSummary>> EnrichWithRepertoireAsync(
+        List<BaseStudentRow> rows, Guid schoolId, CancellationToken ct)
+    {
+        if (rows.Count == 0)
+            return [];
+
+        var studentIds = rows.Select(r => r.StudentProfileId).ToList();
+
+        var latestRepertoire = await _dbContext.RepertoireItems
+            .AsNoTracking()
+            .Where(item => item.SchoolId == schoolId && studentIds.Contains(item.StudentProfileId))
+            .GroupBy(item => item.StudentProfileId)
+            .Select(g => new
+            {
+                StudentProfileId = g.Key,
+                Progress = g.OrderByDescending(x => x.UpdatedAtUtc).Select(x => x.ProgressPercent).FirstOrDefault(),
+                Title = g.OrderByDescending(x => x.UpdatedAtUtc).Select(x => x.Title).FirstOrDefault()
+            })
+            .ToListAsync(ct);
+
+        var repertoireByStudent = latestRepertoire.ToDictionary(r => r.StudentProfileId);
+
+        return rows.Select(row =>
+        {
+            repertoireByStudent.TryGetValue(row.StudentProfileId, out var rep);
+            return new TeacherStudentSummary(
+                row.StudentProfileId,
+                row.SchoolUserId,
+                row.DisplayName,
+                row.Email,
+                row.Instrument,
+                row.Level,
+                row.CurrentXp,
+                row.CurrentLevel,
+                rep?.Progress ?? 0,
+                rep?.Title);
+        }).ToList();
     }
 
     private static string RequireText(string value, string name)
