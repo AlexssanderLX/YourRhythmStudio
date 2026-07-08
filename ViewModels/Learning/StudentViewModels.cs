@@ -27,3 +27,13 @@ public sealed class StudentProgressViewModel
     public required ProgressSummary Progress { get; init; }
 }
 
+public sealed class StudentRepertoireDetailViewModel
+{
+    public required RepertoireSummary Item { get; init; }
+}
+
+public sealed class StudentLevelsViewModel
+{
+    public required ProgressSummary Progress { get; init; }
+    public required IReadOnlyCollection<SkillWithMastery> Skills { get; init; }
+}

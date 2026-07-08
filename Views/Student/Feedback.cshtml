@@ -6,29 +6,25 @@
     ViewData["DashTitle"] = "Feedback";
 }
 
-<div class="card">
-    <h3>Feedbacks do professor</h3>
-    <div class="card-sub" style="margin-bottom:16px">@Model.Feedback.Count mensagens</div>
-
-    @if (Model.Feedback.Any())
-    {
-        <div class="sched">
-            @foreach (var item in Model.Feedback.OrderByDescending(f => f.CreatedAtUtc))
-            {
-                <div class="sitem">
-                    <span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
-                    <div class="sinfo">
-                        <b>Professor</b>
-                        <span>@item.Message</span>
-                    </div>
+@if (Model.Feedback.Any()) {
+    <div class="s-sec">
+        <span class="s-sec-title">Feedbacks do professor</span>
+        <span class="s-sec-badge">@Model.Feedback.Count mensagens</span>
+    </div>
+    <div class="fb-list">
+        @foreach (var item in Model.Feedback.OrderByDescending(f => f.CreatedAtUtc)) {
+            <div class="fb-bubble">
+                <div class="fb-head">
+                    <span class="fb-from">Professor</span>
+                    <span class="fb-date">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM · HH:mm")</span>
                 </div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="empty-state">
-            <p>Nenhum feedback recebido ainda.</p>
-        </div>
-    }
-</div>
+                <div class="fb-msg">@item.Message</div>
+            </div>
+        }
+    </div>
+} else {
+    <div class="s-empty">
+        <div class="s-empty-icon">💬</div>
+        <div class="s-empty-msg">Nenhum feedback recebido ainda.<br>Quando seu professor deixar uma mensagem, ela aparecerá aqui.</div>
+    </div>
+}

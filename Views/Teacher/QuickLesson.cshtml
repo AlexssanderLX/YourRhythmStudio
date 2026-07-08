@@ -1,0 +1,52 @@
+@model YourRhythmStudio.ViewModels.Learning.QuickLessonViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Registrar aula";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Registrar aula";
+}
+
+<div class="card" style="max-width:560px">
+    <h3 style="margin-bottom:4px">Nova aula</h3>
+    <p class="card-sub" style="margin-bottom:20px">Selecione o aluno, data e hora.</p>
+
+    <form asp-controller="Teacher" asp-action="QuickLesson" method="post" class="auth-form">
+        @Html.AntiForgeryToken()
+
+        <div>
+            <label asp-for="Form.StudentProfileId">Aluno</label>
+            <select asp-for="Form.StudentProfileId">
+                <option value="">Selecione o aluno</option>
+                @foreach (var student in Model.Students) {
+                    <option value="@student.StudentProfileId">@student.DisplayName - @student.Instrument</option>
+                }
+            </select>
+            <span asp-validation-for="Form.StudentProfileId" class="auth-error"></span>
+        </div>
+
+        <div>
+            <label asp-for="Form.LessonDateUtc">Data e hora</label>
+            <input
+                asp-for="Form.LessonDateUtc"
+                type="datetime-local"
+                asp-format="{0:yyyy-MM-ddTHH:mm}"
+                step="60"
+                value="@Model.Form.LessonDateUtc.ToString("yyyy-MM-ddTHH:mm")" />
+            <span asp-validation-for="Form.LessonDateUtc" class="auth-error"></span>
+        </div>
+
+        <button type="submit">Registrar aula</button>
+    </form>
+</div>
+
+@if (!Model.Students.Any()) {
+    <div class="empty-state" style="margin-top:20px">
+        <p>Voce ainda nao tem alunos cadastrados.<br>
+           <a asp-controller="Teacher" asp-action="CreateStudent" style="color:var(--blue-bright)">Cadastrar primeiro aluno</a>
+        </p>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

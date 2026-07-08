@@ -4,43 +4,157 @@
     ViewData["Title"] = "Meu painel";
     ViewData["Role"] = "student";
     var first = (User.Identity?.Name ?? "Aluno").Split(' ')[0];
-    ViewData["DashTitle"] = $"Olá, {first}";
+    ViewData["DashTitle"] = $"Ola, {first}";
+
+    var xp = Model.Summary.Progress.CurrentXp;
+    var level = Model.Summary.Progress.CurrentLevel;
+    var pending = Model.Summary.Progress.PendingAssignments;
+    var completed = Model.Summary.Progress.CompletedAssignments;
+    var repertoireCount = Model.Summary.RepertoireInProgress.Count;
+    var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
+    var nextAssignment = Model.Summary.PendingAssignments.FirstOrDefault();
+    var nextRepertoire = Model.Summary.RepertoireInProgress.FirstOrDefault();
+    var hasNextMove = nextAssignment is not null || nextRepertoire is not null;
 }
 
-<div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CurrentXp</span><span class="sc-lbl">XP atual</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.PendingAssignments</span><span class="sc-lbl">Missões pendentes</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.Progress.CompletedAssignments</span><span class="sc-lbl">Concluídas</span></div>
-</div>
+<a href="@Url.Action("Levels", "Student")" class="student-command lvl-@level">
+    <div class="student-command-top">
+        <div class="s-lvl-hex">@level</div>
+        <div class="student-command-copy">
+            <span>Jornada atual</span>
+            <strong>@first</strong>
+            <small>Nivel @level - YourRhythm</small>
+        </div>
+        <div class="student-xp-block">
+            <strong>@xp</strong>
+            <span>XP total</span>
+        </div>
+    </div>
 
-<div class="dash-grid cols-3">
-    <div class="card span-2">
-        <h3>Missões pendentes</h3>
-        @foreach (var item in Model.Summary.PendingAssignments)
-        {
-            <div class="mission"><div><div class="m-label">@item.Status</div><div class="m-title">@item.Title</div></div><div class="m-xp">+@item.XpReward XP</div></div>
+    <div class="student-xp-row">
+        @if (level >= 5) {
+            <span>Nivel maximo</span><b>MAX</b>
+        } else {
+            <span><b>@xpIn</b> / @xpNeed XP para o nivel @(level + 1)</span><b>@xpPct%</b>
         }
     </div>
-    <div class="card">
-        <h3>Feedback recente</h3>
-        @foreach (var item in Model.Summary.RecentFeedback)
-        {
-            <div class="sitem"><span class="stime">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span><div class="sinfo"><b>Professor</b><span>@item.Message</span></div></div>
+    <div class="s-xp-track">
+        <div class="s-xp-fill" style="width:@xpPct%"></div>
+    </div>
+</a>
+
+<section class="student-stats-grid">
+    <a class="student-stat-tile" asp-controller="Student" asp-action="Assignments">
+        <span>Pendentes</span>
+        <strong>@pending</strong>
+        <small>Missoes abertas</small>
+    </a>
+    <a class="student-stat-tile done" asp-controller="Student" asp-action="Assignments">
+        <span>Concluidas</span>
+        <strong>@completed</strong>
+        <small>XP conquistado</small>
+    </a>
+    <a class="student-stat-tile rep" asp-controller="Student" asp-action="Repertoire">
+        <span>Repertorio</span>
+        <strong>@repertoireCount</strong>
+        <small>Em estudo</small>
+    </a>
+</section>
+
+<section class="student-next-card">
+    <div>
+        <span class="student-section-kicker">Proxima jogada</span>
+        @if (nextAssignment is not null) {
+            <h2>@nextAssignment.Title</h2>
+            <p>Missao pronta para avancar. Vale +@nextAssignment.XpReward XP.</p>
+        } else if (nextRepertoire is not null) {
+            <h2>@nextRepertoire.Title</h2>
+            <p>Abra a referencia para registrar 50% do estudo.</p>
+        } else {
+            <h2>Tudo em dia</h2>
+            <p>Quando seu professor enviar uma missao ou repertorio, ela aparece aqui.</p>
         }
     </div>
-</div>
+    @if (nextAssignment is not null) {
+        <a class="btn btn-primary btn-sm" asp-controller="Student" asp-action="Assignments">Abrir missoes</a>
+    } else if (nextRepertoire is not null) {
+        <a class="btn btn-primary btn-sm" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@nextRepertoire.Id">Abrir repertorio</a>
+    } else {
+        <a class="btn btn-ghost btn-sm" asp-controller="Student" asp-action="Progress">Ver progresso</a>
+    }
+</section>
 
-<div class="card">
-    <h3>Repertório em andamento</h3>
-    <div class="row-list">
-        @foreach (var item in Model.Summary.RepertoireInProgress)
-        {
-            <div class="prow"><div class="pmeta"><div class="pn">@item.Title</div><div class="ps">@item.ComposerOrArtist</div><div class="pbar"><i style="width:@item.ProgressPercent%"></i></div></div><div class="ppct">@item.ProgressPercent%</div></div>
+<section class="student-dashboard-grid">
+    <div class="student-panel">
+        <div class="student-panel-head">
+            <div>
+                <span class="student-section-kicker">Feedback</span>
+                <h3>Professor</h3>
+            </div>
+            <a asp-controller="Student" asp-action="Feedback">Ver tudo</a>
+        </div>
+        @if (Model.Summary.RecentFeedback.Any()) {
+            <div class="student-feedback-stack">
+                @foreach (var item in Model.Summary.RecentFeedback.Take(2)) {
+                    <div class="student-feedback-card">
+                        <div>
+                            <strong>Professor</strong>
+                            <span>@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
+                        </div>
+                        <p>@item.Message</p>
+                    </div>
+                }
+            </div>
+        } else {
+            <p class="student-muted">Nenhum feedback visivel ainda.</p>
         }
     </div>
-</div>
 
+    <div class="student-panel">
+        <div class="student-panel-head">
+            <div>
+                <span class="student-section-kicker">Repertorio</span>
+                <h3>Em estudo</h3>
+            </div>
+            <a asp-controller="Student" asp-action="Repertoire">Ver tudo</a>
+        </div>
+        @if (Model.Summary.RepertoireInProgress.Any()) {
+            <div class="student-rep-stack">
+                @foreach (var item in Model.Summary.RepertoireInProgress.Take(3)) {
+                    <a class="student-rep-card" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@item.Id">
+                        <div class="rep-ico">YR</div>
+                        <div>
+                            <strong>@item.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(item.ComposerOrArtist)) {
+                                <span>@item.ComposerOrArtist</span>
+                            }
+                            <div class="rep-bar"><i style="width:@item.ProgressPercent%"></i></div>
+                            <small>@item.ProgressPercent% acessado</small>
+                        </div>
+                    </a>
+                }
+            </div>
+        } else {
+            <p class="student-muted">Nenhum repertorio em andamento.</p>
+        }
+    </div>
+</section>
+
+@if (!hasNextMove && !Model.Summary.RecentFeedback.Any() && !Model.Summary.RepertoireInProgress.Any()) {
+    <div class="s-empty">
+        <div class="s-empty-icon">YR</div>
+        <div class="s-empty-msg">Nenhuma atividade ainda.<br>Seu professor em breve criara missoes para voce.</div>
+    </div>
+}
+
+@functions {
+    static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
+        if (level >= 5) return (xp - 1000, 0, 100);
+        int[] starts = { 0, 100, 250, 500 };
+        int[] ends = { 100, 250, 500, 1000 };
+        var i = Math.Max(0, Math.Min(level - 1, 3));
+        var current = xp - starts[i];
+        var need = ends[i] - starts[i];
+        return (current, need, Math.Min(100, need > 0 ? current * 100 / need : 100));
+    }
+}

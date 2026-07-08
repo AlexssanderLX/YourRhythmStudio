@@ -5,58 +5,118 @@
     ViewData["Role"] = "teacher";
     var first = (User.Identity?.Name ?? "Professor").Split(' ')[0];
     ViewData["DashTitle"] = $"Bom dia, {first}";
+
+    var activeStudents = Model.Summary.ActiveStudentCount;
+    var pending = Model.Summary.PendingAssignmentCount;
+    var completed = Model.Summary.RecentCompletedAssignmentCount;
+    var activityScore = Math.Min(100, activeStudents * 25 + completed * 10);
 }
 
-<div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.ActiveStudentCount</span><span class="sc-lbl">Alunos ativos</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.PendingAssignmentCount</span><span class="sc-lbl">Missões pendentes</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Summary.RecentCompletedAssignmentCount</span><span class="sc-lbl">Concluídas recentes</span></div>
-</div>
+<section class="teacher-command">
+    <div class="teacher-command-main">
+        <span class="teacher-kicker">Painel rapido</span>
+        <h2>@first, sua turma esta em movimento.</h2>
+        <p>Priorize alunos, registre a aula e acompanhe missoes recentes sem garimpar telas.</p>
+        <div class="teacher-command-actions">
+            <a class="btn btn-primary btn-sm" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
+            <a class="btn btn-ghost btn-sm" asp-controller="Teacher" asp-action="QuickLesson">Registrar aula</a>
+        </div>
+    </div>
+    <div class="teacher-score-card">
+        <span>Ritmo da turma</span>
+        <strong>@activityScore%</strong>
+        <div class="teacher-score-bar"><i style="width:@activityScore%"></i></div>
+        <small>@activeStudents aluno(s) ativo(s)</small>
+    </div>
+</section>
 
-<div class="dash-grid cols-3">
-    <div class="card span-2">
-        <h3>Alunos recentes</h3>
-        <div class="card-sub">Dados reais vinculados ao professor</div>
-        <div class="row-list">
+<section class="teacher-stat-grid">
+    <a class="teacher-stat-card" asp-controller="Teacher" asp-action="Students">
+        <span class="teacher-stat-label">Alunos ativos</span>
+        <strong>@activeStudents</strong>
+        <small>Gerenciar turma</small>
+    </a>
+    <a class="teacher-stat-card warn" asp-controller="Teacher" asp-action="Students">
+        <span class="teacher-stat-label">Missoes pendentes</span>
+        <strong>@pending</strong>
+        <small>Ver proximas acoes</small>
+    </a>
+    <a class="teacher-stat-card done" asp-controller="Teacher" asp-action="Students">
+        <span class="teacher-stat-label">Concluidas recentes</span>
+        <strong>@completed</strong>
+        <small>Ultimos 14 dias</small>
+    </a>
+</section>
+
+<section class="teacher-overview-grid">
+    <div class="card teacher-panel span-2">
+        <div class="panel-head">
+            <div>
+                <h3>Alunos recentes</h3>
+                <p class="card-sub">Toque para abrir o detalhe e agir rapido.</p>
+            </div>
+            <a class="panel-link" asp-controller="Teacher" asp-action="Students">Ver todos</a>
+        </div>
+
+        <div class="teacher-student-list">
             @foreach (var student in Model.Summary.RecentStudents)
             {
-                <a class="prow" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId" style="text-decoration:none;color:inherit">
+                var repProgress = Math.Clamp(student.RepertoireProgressPercent, 0, 100);
+                <a class="teacher-student-card" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId">
                     <div class="pavatar">@Initials(student.DisplayName)</div>
-                    <div class="pmeta">
-                        <div class="pn">@student.DisplayName</div>
-                        <div class="ps">@student.Instrument · @(student.CurrentRepertoireTitle ?? "Sem repertório")</div>
-                        <div class="pbar"><i style="width:@student.RepertoireProgressPercent%"></i></div>
+                    <div class="teacher-student-info">
+                        <div class="teacher-student-top">
+                            <strong>@student.DisplayName</strong>
+                            <span>Nivel @student.CurrentLevel</span>
+                        </div>
+                        <p>@student.Instrument - @(student.CurrentRepertoireTitle ?? "Sem repertorio")</p>
+                        <div class="teacher-mini-progress">
+                            <i style="width:@repProgress%"></i>
+                        </div>
                     </div>
-                    <span class="pill lvl">Nível @student.CurrentLevel</span>
                 </a>
             }
             @if (!Model.Summary.RecentStudents.Any())
             {
-                <p class="card-sub">Nenhum aluno cadastrado ainda.</p>
+                <div class="teacher-empty-card">
+                    <strong>Nenhum aluno ainda</strong>
+                    <p>Cadastre o primeiro aluno para liberar missoes, repertorio e feedback.</p>
+                    <a class="btn btn-primary btn-sm" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
+                </div>
             }
         </div>
     </div>
 
-    <div class="card">
-        <h3>Aulas recentes</h3>
-        <div class="card-sub">Últimos registros</div>
-        <div class="sched">
+    <div class="card teacher-panel">
+        <div class="panel-head">
+            <div>
+                <h3>Aulas recentes</h3>
+                <p class="card-sub">Ultimos registros</p>
+            </div>
+            <a class="panel-link" asp-controller="Teacher" asp-action="QuickLesson">Nova</a>
+        </div>
+
+        <div class="teacher-timeline">
             @foreach (var lesson in Model.Summary.RecentLessons)
             {
-                <div class="sitem">
-                    <span class="stime">@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
-                    <div class="sinfo"><b>@lesson.Title</b><span>@lesson.Status</span></div>
+                <div class="teacher-lesson-item">
+                    <span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
+                    <div>
+                        <strong>@lesson.Title</strong>
+                        <small>@lesson.Status</small>
+                    </div>
                 </div>
             }
             @if (!Model.Summary.RecentLessons.Any())
             {
-                <p class="card-sub">Nenhuma aula registrada.</p>
+                <div class="teacher-empty-small">
+                    <strong>Nenhuma aula registrada</strong>
+                    <p>Registre data e hora para manter o historico vivo.</p>
+                </div>
             }
         </div>
     </div>
-</div>
+</section>
 
 @functions {
     private static string Initials(string value)
@@ -65,4 +125,3 @@
         return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
     }
 }
-

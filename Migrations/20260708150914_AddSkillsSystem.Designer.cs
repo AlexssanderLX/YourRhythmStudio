@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YourRhythmStudio.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using YourRhythmStudio.Infrastructure.Data;
 namespace YourRhythmStudio.Migrations
 {
     [DbContext(typeof(YourRhythmDbContext))]
-    partial class YourRhythmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708150914_AddSkillsSystem")]
+    partial class AddSkillsSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -473,10 +476,6 @@ namespace YourRhythmStudio.Migrations
                     b.Property<Guid?>("AccountId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("City")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
@@ -492,10 +491,6 @@ namespace YourRhythmStudio.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
 
                     b.Property<string>("Role")
                         .IsRequired()

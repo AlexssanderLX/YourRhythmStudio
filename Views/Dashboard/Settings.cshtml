@@ -1,51 +1,65 @@
-@{
+﻿@{
     Layout = "_DashboardLayout";
-    ViewData["Title"] = "Configurações";
-    ViewData["DashTitle"] = "Configurações";
 
-    var role = (ViewData["Role"] as string) ?? "teacher";
-    // Role já definido pelo layout — reaproveitamos para mostrar seções específicas
-    var isTeacher = User.FindFirst("YourRhythmRole")?.Value == "teacher"
-                 || User.FindFirst("YourRhythmRole")?.Value == "school_owner"
-                 || User.FindFirst("YourRhythmRole")?.Value == "school_admin";
-    var displayName = User.Identity?.Name ?? "Usuário";
-    var email       = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                   ?? User.FindFirst("email")?.Value
-                   ?? "—";
-    var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+    var role = (ViewData["Role"] as string) ?? "school";
+    var isTeacher  = role == "teacher";
+    var isSchool   = role == "school";
+
+    var account    = ViewData["Account"]       as YourRhythmStudio.Application.Users.AccountSettingsDto;
+    var teacherPrf = ViewData["TeacherProfile"] as YourRhythmStudio.Application.Users.TeacherProfileSettingsDto;
+    var schoolInfo = ViewData["SchoolInfo"]     as (string Name, string PlanCode)?;
+
+    var displayName = account?.DisplayName ?? User.Identity?.Name ?? "";
+    var email       = account?.Email ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "—";
+    var phone       = account?.Phone ?? "";
+    var city        = account?.City  ?? "";
+    var initials    = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
         .Take(2).Select(p => char.ToUpperInvariant(p[0])));
+
+    var planLabel = schoolInfo?.PlanCode switch
+    {
+        "escola" => "Escola — R$ 249,90/mes",
+        _ => "Professor — R$ 149,90/mes"
+    };
+
+    var successMsg = TempData["SettingsSuccess"] as string;
+}
+
+@if (!string.IsNullOrEmpty(successMsg))
+{
+    <div class="cfg-banner-ok">@successMsg</div>
 }
 
 <div class="cfg-layout">
 
-    
     <nav class="cfg-nav" id="cfgNav">
-        <a href="#account"       class="cfg-nav-item active" data-section="account">
+        <a href="#account" class="cfg-nav-item active" data-section="account">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
             Conta
         </a>
-        <a href="#notifications" class="cfg-nav-item" data-section="notifications">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            Notificações
-        </a>
-        <a href="#appearance"    class="cfg-nav-item" data-section="appearance">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>
-            Aparência
-        </a>
         @if (isTeacher)
         {
-            <a href="#studio"    class="cfg-nav-item" data-section="studio">
+            <a href="#profile" class="cfg-nav-item" data-section="profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+                Perfil professor
+            </a>
+        }
+        @if (isSchool)
+        {
+            <a href="#studio" class="cfg-nav-item" data-section="studio">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
                 Studio
             </a>
+            <a href="#plan" class="cfg-nav-item" data-section="plan">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                Plano
+            </a>
         }
-        <a href="#security"      class="cfg-nav-item" data-section="security">
+        <a href="#security" class="cfg-nav-item" data-section="security">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Segurança
+            Seguranca
         </a>
-
         <div class="cfg-nav-sep"></div>
-
         <form asp-controller="Auth" asp-action="Logout" method="post">
             @Html.AntiForgeryToken()
             <button type="submit" class="cfg-nav-item cfg-logout">
@@ -55,13 +69,10 @@
         </form>
     </nav>
 
-    
     <div class="cfg-content">
 
-        
         <section class="cfg-section" id="account">
             <h2 class="cfg-section-title">Conta</h2>
-
             <div class="cfg-card">
                 <div class="cfg-avatar-row">
                     <div class="cfg-big-avatar">@initials</div>
@@ -69,198 +80,129 @@
                         <div class="cfg-name">@displayName</div>
                         <div class="cfg-email">@email</div>
                     </div>
-                    <button class="btn-outline-sm" style="margin-left:auto">Trocar foto</button>
                 </div>
             </div>
-
             <div class="cfg-card">
-                <h3 class="cfg-card-title">Informações pessoais</h3>
-                <div class="cfg-field-grid">
-                    <div class="cfg-field">
-                        <label>Nome completo</label>
-                        <input type="text" value="@displayName" placeholder="Seu nome" />
-                    </div>
-                    <div class="cfg-field">
-                        <label>E-mail</label>
-                        <input type="email" value="@email" placeholder="seu@email.com" />
-                    </div>
-                    <div class="cfg-field">
-                        <label>Telefone</label>
-                        <input type="tel" value="" placeholder="(11) 99999-9999" />
-                    </div>
-                    <div class="cfg-field">
-                        <label>Cidade</label>
-                        <input type="text" value="" placeholder="São Paulo, SP" />
-                    </div>
-                </div>
-                <div class="cfg-card-footer">
-                    <button class="btn-primary-sm">Salvar alterações</button>
-                </div>
-            </div>
-        </section>
-
-        
-        <section class="cfg-section hidden" id="notifications">
-            <h2 class="cfg-section-title">Notificações</h2>
-
-            <div class="cfg-card">
-                <h3 class="cfg-card-title">E-mail</h3>
-                @foreach (var (label, desc, val) in new[] {
-                    ("Resumo semanal",      "Receba um resumo do progresso toda segunda-feira", true),
-                    ("Novas missões",       "Quando o professor atribuir uma missão nova",      true),
-                    ("Conquistas",          "Quando desbloquear uma conquista",                 true),
-                    ("Lembretes de prática","Lembrete diário para praticar",                   false),
-                })
-                {
-                    <div class="cfg-toggle-row">
-                        <div>
-                            <div class="cfg-toggle-label">@label</div>
-                            <div class="cfg-toggle-desc">@desc</div>
-                        </div>
-                        <label class="cfg-switch">
-                            <input type="checkbox" @(val ? "checked" : "") />
-                            <span class="cfg-slider"></span>
-                        </label>
-                    </div>
-                }
-            </div>
-
-            <div class="cfg-card">
-                <h3 class="cfg-card-title">Push (app)</h3>
-                @foreach (var (label, desc, val) in new[] {
-                    ("Hora da prática",    "Notificação no horário definido",              true),
-                    ("Feedback do professor","Quando receber um comentário",               true),
-                    ("Streak em risco",    "Aviso quando a sequência está perto de quebrar",true),
-                })
-                {
-                    <div class="cfg-toggle-row">
-                        <div>
-                            <div class="cfg-toggle-label">@label</div>
-                            <div class="cfg-toggle-desc">@desc</div>
-                        </div>
-                        <label class="cfg-switch">
-                            <input type="checkbox" @(val ? "checked" : "") />
-                            <span class="cfg-slider"></span>
-                        </label>
-                    </div>
-                }
-            </div>
-        </section>
-
-        
-        <section class="cfg-section hidden" id="appearance">
-            <h2 class="cfg-section-title">Aparência</h2>
-
-            <div class="cfg-card">
-                <h3 class="cfg-card-title">Tema</h3>
-                <div class="cfg-theme-grid">
-                    <label class="cfg-theme-opt active">
-                        <input type="radio" name="theme" value="dark" checked />
-                        <div class="cfg-theme-preview dark-prev"></div>
-                        <span>Escuro</span>
-                    </label>
-                    <label class="cfg-theme-opt">
-                        <input type="radio" name="theme" value="light" />
-                        <div class="cfg-theme-preview light-prev"></div>
-                        <span>Claro</span>
-                    </label>
-                    <label class="cfg-theme-opt">
-                        <input type="radio" name="theme" value="system" />
-                        <div class="cfg-theme-preview system-prev"></div>
-                        <span>Sistema</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="cfg-card">
-                <h3 class="cfg-card-title">Idioma</h3>
-                <div class="cfg-field" style="max-width:260px">
-                    <select>
-                        <option selected>Português (Brasil)</option>
-                        <option>English</option>
-                        <option>Español</option>
-                    </select>
-                </div>
-            </div>
-        </section>
-
-        
-        @if (isTeacher)
-        {
-            <section class="cfg-section hidden" id="studio">
-                <h2 class="cfg-section-title">Studio</h2>
-
-                <div class="cfg-card">
-                    <h3 class="cfg-card-title">Informações do estúdio</h3>
+                <h3 class="cfg-card-title">Informacoes pessoais</h3>
+                <form action="/Dashboard/Settings/Account" method="post" class="cfg-form">
+                    @Html.AntiForgeryToken()
                     <div class="cfg-field-grid">
-                        <div class="cfg-field">
-                            <label>Nome do estúdio</label>
-                            <input type="text" value="YourRhythm Studio" />
+                        <div class="cfg-field" style="grid-column:1/-1">
+                            <label>Nome completo</label>
+                            <input type="text" name="displayName" value="@displayName" placeholder="Seu nome" required />
+                        </div>
+                        <div class="cfg-field" style="grid-column:1/-1">
+                            <label>E-mail</label>
+                            <input type="email" value="@email" disabled style="opacity:.5;cursor:not-allowed" />
+                            <span class="cfg-field-hint">Autenticacao por magic link — e-mail nao pode ser alterado aqui.</span>
                         </div>
                         <div class="cfg-field">
-                            <label>Endereço</label>
-                            <input type="text" placeholder="Rua, número, cidade" />
+                            <label>Telefone</label>
+                            <input type="tel" name="phone" value="@phone" placeholder="(11) 99999-9999" />
                         </div>
                         <div class="cfg-field">
-                            <label>Capacidade máxima</label>
-                            <input type="number" value="30" min="1" />
-                        </div>
-                        <div class="cfg-field">
-                            <label>Horário de funcionamento</label>
-                            <input type="text" placeholder="Seg–Sex 8h–21h" />
+                            <label>Cidade</label>
+                            <input type="text" name="city" value="@city" placeholder="Sao Paulo, SP" />
                         </div>
                     </div>
                     <div class="cfg-card-footer">
-                        <button class="btn-primary-sm">Salvar</button>
+                        <button type="submit" class="btn-primary-sm">Salvar alteracoes</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        @if (isTeacher)
+        {
+            <section class="cfg-section hidden" id="profile">
+                <h2 class="cfg-section-title">Perfil de professor</h2>
+                <div class="cfg-card">
+                    <h3 class="cfg-card-title">Informacoes profissionais</h3>
+                    <form action="/Dashboard/Settings/TeacherProfile" method="post" class="cfg-form">
+                        @Html.AntiForgeryToken()
+                        <div class="cfg-field-grid">
+                            <div class="cfg-field" style="grid-column:1/-1">
+                                <label>Instrumento principal</label>
+                                <input type="text" name="instrumentFocus" value="@(teacherPrf?.InstrumentFocus ?? "")" placeholder="Ex: Piano, Violao, Bateria" />
+                            </div>
+                            <div class="cfg-field" style="grid-column:1/-1">
+                                <label>Bio / Apresentacao</label>
+                                <textarea name="bio" rows="4" placeholder="Descreva sua experiencia...">@(teacherPrf?.Bio ?? "")</textarea>
+                            </div>
+                        </div>
+                        <div class="cfg-card-footer">
+                            <button type="submit" class="btn-primary-sm">Salvar perfil</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        }
+
+        @if (isSchool)
+        {
+            <section class="cfg-section hidden" id="studio">
+                <h2 class="cfg-section-title">Studio</h2>
+                <div class="cfg-card">
+                    <h3 class="cfg-card-title">Informacoes do estudio</h3>
+                    <form action="/Dashboard/Settings/Studio" method="post" class="cfg-form">
+                        @Html.AntiForgeryToken()
+                        <div class="cfg-field-grid">
+                            <div class="cfg-field" style="grid-column:1/-1">
+                                <label>Nome do estudio</label>
+                                <input type="text" name="schoolName" value="@(schoolInfo?.Name ?? "")" placeholder="YourRhythm Studio" required />
+                            </div>
+                        </div>
+                        <div class="cfg-card-footer">
+                            <button type="submit" class="btn-primary-sm">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="cfg-section hidden" id="plan">
+                <h2 class="cfg-section-title">Plano atual</h2>
+                <div class="cfg-card">
+                    <div class="cfg-plan-row">
+                        <div>
+                            <div class="cfg-plan-name">@planLabel</div>
+                            <div class="cfg-toggle-desc" style="margin-top:4px">Cobranca mensal - renovacao automatica</div>
+                        </div>
+                        <span class="cfg-plan-badge">Ativo</span>
                     </div>
                 </div>
-
                 <div class="cfg-card">
-                    <h3 class="cfg-card-title">Instrumentos oferecidos</h3>
-                    <div class="cfg-tags">
-                        @foreach (var inst in new[] { "Piano", "Violão", "Teclado", "Violino", "Bateria" })
-                        {
-                            <span class="cfg-tag active">@inst</span>
-                        }
-                        <button class="cfg-tag add">+ Adicionar</button>
+                    <h3 class="cfg-card-title">Alterar plano</h3>
+                    <p class="cfg-toggle-desc">Para alterar ou cancelar seu plano, entre em contato com o suporte.</p>
+                    <div class="cfg-card-footer">
+                        <a href="mailto:suporte@yourrhythm.com.br" class="btn-outline-sm">Contatar suporte</a>
                     </div>
                 </div>
             </section>
         }
 
-        
         <section class="cfg-section hidden" id="security">
-            <h2 class="cfg-section-title">Segurança</h2>
-
+            <h2 class="cfg-section-title">Seguranca</h2>
             <div class="cfg-card">
-                <h3 class="cfg-card-title">Alterar senha</h3>
-                <div class="cfg-field-grid" style="max-width:420px">
-                    <div class="cfg-field" style="grid-column:1/-1">
-                        <label>Senha atual</label>
-                        <input type="password" placeholder="••••••••" />
+                <h3 class="cfg-card-title">Metodo de autenticacao</h3>
+                <div class="cfg-toggle-row" style="border:none;padding:0">
+                    <div>
+                        <div class="cfg-toggle-label">Magic Link por e-mail</div>
+                        <div class="cfg-toggle-desc">Voce acessa o YourRhythm Studio atraves de um link enviado ao seu e-mail, sem necessidade de senha.</div>
                     </div>
-                    <div class="cfg-field">
-                        <label>Nova senha</label>
-                        <input type="password" placeholder="••••••••" />
-                    </div>
-                    <div class="cfg-field">
-                        <label>Confirmar nova senha</label>
-                        <input type="password" placeholder="••••••••" />
-                    </div>
-                </div>
-                <div class="cfg-card-footer">
-                    <button class="btn-primary-sm">Atualizar senha</button>
+                    <span class="cfg-plan-badge" style="flex-shrink:0">Ativo</span>
                 </div>
             </div>
-
-            <div class="cfg-card cfg-danger-zone">
-                <h3 class="cfg-card-title" style="color:#ff8a8a">Zona de perigo</h3>
+            <div class="cfg-card">
+                <h3 class="cfg-card-title">Sessao atual</h3>
                 <div class="cfg-toggle-row">
                     <div>
-                        <div class="cfg-toggle-label">Excluir conta</div>
-                        <div class="cfg-toggle-desc">Remove permanentemente todos os dados. Essa ação não pode ser desfeita.</div>
+                        <div class="cfg-toggle-label">Encerrar sessao</div>
+                        <div class="cfg-toggle-desc">Saira da conta neste dispositivo.</div>
                     </div>
-                    <button class="btn-danger-sm">Excluir</button>
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn-outline-sm">Sair agora</button>
+                    </form>
                 </div>
             </div>
         </section>
@@ -269,156 +211,48 @@
 </div>
 
 <style>
-/* ---- Layout ---- */
 .cfg-layout { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: start; }
-
-/* ---- Sidebar nav ---- */
-.cfg-nav {
-    display: flex; flex-direction: column; gap: 2px;
-    position: sticky; top: 100px;
-    background: var(--surface); border: 1px solid var(--border-soft);
-    border-radius: 16px; padding: 10px;
-}
-.cfg-nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 10px;
-    font-size: 13.5px; font-weight: 500; color: var(--muted);
-    text-decoration: none; border: none; background: transparent;
-    cursor: pointer; width: 100%; text-align: left;
-    transition: color .15s, background .15s;
-}
+.cfg-nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 100px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; padding: 10px; }
+.cfg-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--muted); text-decoration: none; border: none; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: color .15s, background .15s; }
 .cfg-nav-item:hover  { color: var(--ink); background: rgba(255,255,255,0.05); }
 .cfg-nav-item.active { color: var(--ink); background: rgba(46,155,255,0.1); }
 .cfg-nav-item.active svg { color: var(--blue-bright); }
 .cfg-nav-sep { height: 1px; background: var(--border-soft); margin: 6px 0; }
 .cfg-logout { color: var(--muted) !important; }
 .cfg-logout:hover { color: #ff8a8a !important; background: rgba(255,138,138,0.08) !important; }
-
-/* ---- Content ---- */
 .cfg-content { display: flex; flex-direction: column; gap: 0; }
 .cfg-section { display: flex; flex-direction: column; gap: 16px; }
 .cfg-section.hidden { display: none; }
 .cfg-section-title { font-family: var(--font-display); font-weight: 700; font-size: 20px; margin-bottom: 4px; }
-
-/* ---- Cards ---- */
-.cfg-card {
-    background: linear-gradient(180deg, rgba(16,22,40,0.7), rgba(9,12,22,0.8));
-    border: 1px solid var(--border-soft); border-radius: 16px; padding: 20px;
-    display: flex; flex-direction: column; gap: 16px;
-}
+.cfg-card { background: linear-gradient(180deg, rgba(16,22,40,0.7), rgba(9,12,22,0.8)); border: 1px solid var(--border-soft); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 .cfg-card-title { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; }
 .cfg-card-footer { display: flex; justify-content: flex-end; padding-top: 4px; }
-.cfg-danger-zone { border-color: rgba(255,138,138,0.2); }
-
-/* ---- Avatar row ---- */
 .cfg-avatar-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.cfg-big-avatar {
-    width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
-    display: grid; place-items: center;
-    font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff;
-    background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
-}
+.cfg-big-avatar { width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff; background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep)); }
 .cfg-name  { font-size: 15px; font-weight: 600; }
 .cfg-email { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-/* ---- Fields ---- */
+.cfg-form { display: flex; flex-direction: column; gap: 16px; }
 .cfg-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .cfg-field { display: flex; flex-direction: column; gap: 6px; }
 .cfg-field label { font-size: 12.5px; font-weight: 500; color: var(--muted); }
-.cfg-field input,
-.cfg-field select {
-    padding: 10px 14px; border-radius: 10px;
-    background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft);
-    color: var(--ink); font-size: 14px; outline: none;
-    transition: border-color .2s;
-}
-.cfg-field input:focus,
-.cfg-field select:focus { border-color: var(--blue-bright); }
-.cfg-field select { cursor: pointer; }
-
-/* ---- Toggle rows ---- */
-.cfg-toggle-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 10px 0; border-bottom: 1px solid var(--border-soft);
-}
+.cfg-field input, .cfg-field select, .cfg-field textarea { padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); color: var(--ink); font-size: 14px; outline: none; transition: border-color .2s; font-family: inherit; resize: vertical; }
+.cfg-field input:focus, .cfg-field select:focus, .cfg-field textarea:focus { border-color: var(--blue-bright); }
+.cfg-field-hint { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.cfg-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
 .cfg-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
 .cfg-toggle-label { font-size: 14px; font-weight: 500; }
 .cfg-toggle-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-/* Toggle switch */
-.cfg-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
-.cfg-switch input { opacity: 0; width: 0; height: 0; }
-.cfg-slider {
-    position: absolute; inset: 0; border-radius: 100px; cursor: pointer;
-    background: rgba(255,255,255,0.12); transition: background .2s;
-}
-.cfg-slider::before {
-    content: ''; position: absolute;
-    width: 18px; height: 18px; border-radius: 50%;
-    left: 3px; top: 3px; background: #fff;
-    transition: transform .2s;
-}
-.cfg-switch input:checked + .cfg-slider { background: var(--blue-bright); }
-.cfg-switch input:checked + .cfg-slider::before { transform: translateX(20px); }
-
-/* ---- Theme picker ---- */
-.cfg-theme-grid { display: flex; gap: 12px; flex-wrap: wrap; }
-.cfg-theme-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-.cfg-theme-opt input { display: none; }
-.cfg-theme-preview {
-    width: 80px; height: 52px; border-radius: 10px; border: 2px solid var(--border-soft);
-    transition: border-color .15s;
-}
-.cfg-theme-opt.active .cfg-theme-preview,
-.cfg-theme-opt:has(input:checked) .cfg-theme-preview { border-color: var(--blue-bright); }
-.dark-prev   { background: #07090f; }
-.light-prev  { background: #f0f2f5; }
-.system-prev { background: linear-gradient(135deg, #07090f 50%, #f0f2f5 50%); }
-.cfg-theme-opt span { font-size: 12.5px; color: var(--muted); }
-
-/* ---- Tags ---- */
-.cfg-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.cfg-tag {
-    padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 500;
-    border: 1px solid var(--border-soft); background: var(--surface); color: var(--muted);
-    cursor: pointer; transition: all .15s;
-}
-.cfg-tag.active { color: var(--ink); border-color: var(--blue-bright); background: rgba(46,155,255,0.1); }
-.cfg-tag.add { color: var(--blue-bright); border-color: rgba(46,155,255,0.3); border-style: dashed; background: transparent; }
-
-/* ---- Buttons ---- */
-.btn-primary-sm {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 18px; border-radius: 100px;
-    background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
-    border: none; color: #fff; font-size: 13.5px; font-weight: 500; cursor: pointer;
-    transition: opacity .2s;
-}
+.cfg-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cfg-plan-name { font-size: 15px; font-weight: 600; }
+.cfg-plan-badge { padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; background: rgba(46,155,255,0.12); color: var(--blue-bright); border: 1px solid rgba(46,155,255,0.25); white-space: nowrap; }
+.btn-primary-sm { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 100px; background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep)); border: none; color: #fff; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: opacity .2s; }
 .btn-primary-sm:hover { opacity: 0.88; }
-.btn-outline-sm {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: 100px;
-    background: transparent; border: 1px solid var(--border-soft);
-    color: var(--muted); font-size: 13.5px; cursor: pointer;
-    transition: color .2s, border-color .2s;
-}
+.btn-outline-sm { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 100px; background: transparent; border: 1px solid var(--border-soft); color: var(--muted); font-size: 13.5px; cursor: pointer; text-decoration: none; transition: color .2s, border-color .2s; }
 .btn-outline-sm:hover { color: var(--ink); border-color: var(--border); }
-.btn-danger-sm {
-    padding: 8px 16px; border-radius: 100px; flex-shrink: 0;
-    background: rgba(255,138,138,0.12); border: 1px solid rgba(255,138,138,0.3);
-    color: #ff8a8a; font-size: 13px; font-weight: 500; cursor: pointer;
-    transition: background .2s;
-}
-.btn-danger-sm:hover { background: rgba(255,138,138,0.22); }
-
-/* ---- Mobile ---- */
+.cfg-banner-ok { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #4ade80; padding: 12px 18px; border-radius: 12px; font-size: 13.5px; font-weight: 500; margin-bottom: 16px; }
 @@media (max-width: 680px) {
     .cfg-layout { grid-template-columns: 1fr; }
-    .cfg-nav {
-        flex-direction: row; overflow-x: auto; position: static;
-        scrollbar-width: none; border-radius: 12px; padding: 6px 8px;
-        gap: 4px;
-    }
+    .cfg-nav { flex-direction: row; overflow-x: auto; position: static; scrollbar-width: none; border-radius: 12px; padding: 6px 8px; gap: 4px; }
     .cfg-nav::-webkit-scrollbar { display: none; }
     .cfg-nav-item { white-space: nowrap; flex-shrink: 0; padding: 8px 12px; }
     .cfg-nav-sep { width: 1px; height: auto; margin: 4px 2px; }
@@ -429,24 +263,17 @@
 
 <script>
 (function () {
-    var navItems = document.querySelectorAll('.cfg-nav-item[data-section]');
-    var sections = document.querySelectorAll('.cfg-section');
-
+    var items = document.querySelectorAll('.cfg-nav-item[data-section]');
+    var secs  = document.querySelectorAll('.cfg-section');
     function activate(id) {
-        navItems.forEach(function (n) { n.classList.toggle('active', n.dataset.section === id); });
-        sections.forEach(function (s) { s.classList.toggle('hidden', s.id !== id); });
+        items.forEach(function(n){ n.classList.toggle('active', n.dataset.section === id); });
+        secs.forEach(function(s){ s.classList.toggle('hidden', s.id !== id); });
         history.replaceState(null, '', '#' + id);
     }
-
-    navItems.forEach(function (n) {
-        n.addEventListener('click', function (e) {
-            e.preventDefault();
-            activate(this.dataset.section);
-        });
+    items.forEach(function(n){
+        n.addEventListener('click', function(e){ e.preventDefault(); activate(this.dataset.section); });
     });
-
-    // Abre seção pela hash da URL
-    var hash = location.hash.replace('#', '');
+    var hash = location.hash.replace('#','');
     if (hash && document.getElementById(hash)) activate(hash);
 }());
 </script>

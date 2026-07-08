@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using YourRhythmStudio.Application.Learning;
 
 namespace YourRhythmStudio.ViewModels.Learning;
@@ -53,6 +53,7 @@ public sealed class CreateLessonViewModel
     public string Title { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Data da aula e obrigatoria.")]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime LessonDateUtc { get; set; } = DateTime.UtcNow;
 
     [StringLength(2000)]
@@ -98,6 +99,7 @@ public sealed class CreateAssignmentViewModel
     [StringLength(2000)]
     public string Description { get; set; } = string.Empty;
 
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? DueAtUtc { get; set; }
 
     [Range(0, 600)]
@@ -117,5 +119,52 @@ public sealed class CreateFeedbackViewModel
     public string Message { get; set; } = string.Empty;
 
     public bool VisibleToStudent { get; set; } = true;
+}
+
+public sealed class TeacherSkillsViewModel
+{
+    public required IReadOnlyCollection<SkillSummary> Skills { get; init; }
+    public DefineSkillViewModel NewSkill { get; set; } = new();
+}
+
+public sealed class DefineSkillViewModel
+{
+    [Required(ErrorMessage = "Nome da habilidade Ã© obrigatÃ³rio.")]
+    [StringLength(200)]
+    public string Name { get; set; } = string.Empty;
+
+    [StringLength(1000)]
+    public string? Description { get; set; }
+
+    [Range(1, 5)]
+    public int RequiredLevel { get; set; } = 1;
+}
+
+public sealed class TeacherStudentDetailWithSkillsViewModel
+{
+    public required TeacherStudentDetailViewModel Base { get; init; }
+    public required IReadOnlyCollection<SkillWithMastery> Skills { get; init; }
+}
+
+public sealed class QuickLessonViewModel
+{
+    public required IReadOnlyCollection<TeacherStudentSummary> Students { get; init; }
+    public QuickLessonFormViewModel Form { get; set; } = new();
+}
+
+public sealed class QuickLessonFormViewModel
+{
+    [Required]
+    public Guid StudentProfileId { get; set; }
+
+    [StringLength(180)]
+    public string Title { get; set; } = string.Empty;
+
+    [Required]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime LessonDateUtc { get; set; } = DateTime.Now;
+
+    [StringLength(2000)]
+    public string? Notes { get; set; }
 }
 

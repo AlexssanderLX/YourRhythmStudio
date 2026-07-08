@@ -4,76 +4,71 @@
     ViewData["Title"] = "Missões";
     ViewData["Role"] = "student";
     ViewData["DashTitle"] = "Missões";
+    var pending    = Model.Assignments.Count(a => a.Status.ToString() == "Pending");
+    var inProgress = Model.Assignments.Count(a => a.Status.ToString() == "InProgress");
+    var completed  = Model.Assignments.Count(a => a.Status.ToString() == "Completed");
 }
 
-<div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "Pending")</span><span class="sc-lbl">Pendentes</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "InProgress")</span><span class="sc-lbl">Em andamento</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Assignments.Count(a => a.Status.ToString() == "Completed")</span><span class="sc-lbl">Concluídas</span></div>
+<div class="s-chips">
+    <div class="s-chip">
+        <span class="s-chip-val">@inProgress</span>
+        <span class="s-chip-lbl">Em andamento</span>
+    </div>
+    <div class="s-chip">
+        <span class="s-chip-val">@pending</span>
+        <span class="s-chip-lbl">Pendentes</span>
+    </div>
+    <div class="s-chip">
+        <span class="s-chip-val">@completed</span>
+        <span class="s-chip-lbl">Concluídas</span>
+    </div>
 </div>
 
-<div class="card">
-    <h3>Minhas missões</h3>
-    <div class="card-sub" style="margin-bottom:16px">@Model.Assignments.Count missões no total</div>
-
-    @if (Model.Assignments.Any())
-    {
-        @foreach (var item in Model.Assignments.OrderBy(a => a.Status.ToString() == "Completed" ? 2 : a.Status.ToString() == "InProgress" ? 0 : 1))
-        {
-            var statusLabel = item.Status.ToString() switch
-            {
-                "Pending"    => "Pendente",
-                "InProgress" => "Em andamento",
-                "Completed"  => "Concluída",
-                "Skipped"    => "Ignorada",
-                _            => item.Status.ToString()
-            };
-            var statusCss = item.Status.ToString() switch
-            {
-                "Pending"    => "pending",
-                "InProgress" => "in-progress",
-                "Completed"  => "completed",
-                "Skipped"    => "skipped",
-                _            => ""
-            };
-            <div class="assignment-card @(item.Status.ToString() is "Completed" or "Skipped" ? "is-completed" : "")">
-                <div class="asgn-top">
-                    <div class="asgn-info">
-                        <div class="asgn-status @statusCss">@statusLabel</div>
-                        <div class="asgn-title">@item.Title</div>
-                        @if (!string.IsNullOrEmpty(item.Description))
-                        {
-                            <div class="asgn-desc">@item.Description</div>
-                        }
-                    </div>
-                    <div class="asgn-xp">+@item.XpReward XP</div>
-                </div>
-
-                @if (item.Status.ToString() is not "Completed" and not "Skipped")
-                {
-                    <div class="asgn-actions">
-                        @if (item.Status.ToString() == "Pending")
-                        {
-                            <form asp-controller="Student" asp-action="StartAssignment" asp-route-assignmentId="@item.Id" method="post">
+@if (Model.Assignments.Any()) {
+    <div class="s-sec">
+        <span class="s-sec-title">Minhas missões</span>
+        <span class="s-sec-badge">@Model.Assignments.Count total</span>
+    </div>
+    <div class="quest-list">
+        @foreach (var item in Model.Assignments.OrderBy(a => a.Status.ToString() == "Completed" ? 2 : a.Status.ToString() == "InProgress" ? 0 : 1)) {
+            var st    = item.Status.ToString();
+            var css   = st == "InProgress" ? "q-on"  : st == "Completed" ? "q-ok" : "q-pend";
+            var icss  = st == "InProgress" ? "qi-on" : st == "Completed" ? "qi-ok" : "qi-pend";
+            var icon  = st == "InProgress" ? "⚡" : st == "Completed" ? "✓" : "○";
+            var slbl  = st == "InProgress" ? "Em andamento" : st == "Completed" ? "Concluída" : "Pendente";
+            var scss  = st == "InProgress" ? "qs-on" : st == "Completed" ? "qs-ok" : "qs-pend";
+            <div class="quest-card @css">
+                <div class="q-icon @icss">@icon</div>
+                <div class="q-body">
+                    <div class="q-status @scss">@slbl</div>
+                    <div class="q-title">@item.Title</div>
+                    @if (!string.IsNullOrEmpty(item.Description)) {
+                        <div class="q-desc">@item.Description</div>
+                    }
+                    @if (st is not "Completed" and not "Skipped") {
+                        <div class="q-actions">
+                            @if (st == "Pending") {
+                                <form asp-controller="Student" asp-action="StartAssignment" asp-route-assignmentId="@item.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-ghost btn-sm">Iniciar</button>
+                                </form>
+                            }
+                            <form asp-controller="Student" asp-action="CompleteAssignment" asp-route-assignmentId="@item.Id" method="post">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-ghost btn-sm">Iniciar</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Concluir</button>
                             </form>
-                        }
-                        <form asp-controller="Student" asp-action="CompleteAssignment" asp-route-assignmentId="@item.Id" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-primary btn-sm">Concluir</button>
-                        </form>
-                    </div>
-                }
+                        </div>
+                    }
+                </div>
+                <div class="q-side">
+                    <span class="xp-chip">+@item.XpReward XP</span>
+                </div>
             </div>
         }
-    }
-    else
-    {
-        <div class="empty-state">
-            <p>Seu professor ainda não criou nenhuma missão.</p>
-        </div>
-    }
-</div>
+    </div>
+} else {
+    <div class="s-empty">
+        <div class="s-empty-icon">🎯</div>
+        <div class="s-empty-msg">Seu professor ainda não criou nenhuma missão.<br>Fique de olho!</div>
+    </div>
+}

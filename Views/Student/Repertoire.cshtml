@@ -4,40 +4,60 @@
     ViewData["Title"] = "Meu repertório";
     ViewData["Role"] = "student";
     ViewData["DashTitle"] = "Repertório";
+    var avgPct = Model.Repertoire.Any() ? (int)Model.Repertoire.Average(r => r.ProgressPercent) : 0;
+    var done   = Model.Repertoire.Count(r => r.Status.ToString() == "Learned");
 }
 
-<div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Repertoire.Count</span><span class="sc-lbl">Músicas</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Repertoire.Count(r => r.Status.ToString() == "Completed")</span><span class="sc-lbl">Concluídas</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@(Model.Repertoire.Any() ? (int)Model.Repertoire.Average(r => r.ProgressPercent) : 0)<small>%</small></span><span class="sc-lbl">Progresso médio</span></div>
+<div class="s-chips">
+    <div class="s-chip">
+        <span class="s-chip-val">@Model.Repertoire.Count</span>
+        <span class="s-chip-lbl">Músicas</span>
+    </div>
+    <div class="s-chip">
+        <span class="s-chip-val">@done</span>
+        <span class="s-chip-lbl">Concluídas</span>
+    </div>
+    <div class="s-chip">
+        <span class="s-chip-val">@avgPct<small style="font-size:13px">%</small></span>
+        <span class="s-chip-lbl">Progresso médio</span>
+    </div>
 </div>
 
-<div class="card">
-    <h3>Meu repertório</h3>
-    <div class="card-sub" style="margin-bottom:16px">Músicas atribuídas pelo professor</div>
-
-    @if (Model.Repertoire.Any())
-    {
-        <div class="row-list">
-            @foreach (var item in Model.Repertoire)
-            {
-                <div class="prow">
-                    <div class="pmeta">
-                        <div class="pn">@item.Title</div>
-                        <div class="ps">@item.ComposerOrArtist · @item.Status</div>
-                        <div class="pbar" style="margin-top:6px"><i style="width:@item.ProgressPercent%"></i></div>
+@if (Model.Repertoire.Any()) {
+    <div class="s-sec">
+        <span class="s-sec-title">Meu repertório</span>
+        <span class="s-sec-badge">pelo professor</span>
+    </div>
+    <div class="rep-list">
+        @foreach (var item in Model.Repertoire) {
+            var statusLabel = item.Status.ToString() switch {
+                "NotStarted" => "Não acessada",
+                "Practicing" => "Acessada",
+                "Learned" => "Concluída",
+                "Archived" => "Arquivada",
+                _ => item.Status.ToString()
+            };
+            <a class="rep-track rep-track-link" href="@Url.Action("RepertoireDetail", "Student", new { id = item.Id })">
+                <div class="rep-ico">🎵</div>
+                <div class="rep-body">
+                    <div class="rep-title">@item.Title</div>
+                    @if (!string.IsNullOrEmpty(item.ComposerOrArtist)) {
+                        <div class="rep-artist">@item.ComposerOrArtist</div>
+                    }
+                    <div class="rep-bar-wrap">
+                        <div class="rep-bar"><i style="width:@item.ProgressPercent%"></i></div>
+                        <div class="rep-bar-footer">
+                            <span>@statusLabel</span>
+                            <span>@item.ProgressPercent%</span>
+                        </div>
                     </div>
-                    <div class="ppct">@item.ProgressPercent%</div>
                 </div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="empty-state">
-            <p>Nenhuma música adicionada ao repertório ainda.</p>
-        </div>
-    }
-</div>
+            </a>
+        }
+    </div>
+} else {
+    <div class="s-empty">
+        <div class="s-empty-icon">🎶</div>
+        <div class="s-empty-msg">Nenhuma música no repertório ainda.<br>Seu professor irá adicionar em breve.</div>
+    </div>
+}

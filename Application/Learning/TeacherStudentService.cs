@@ -145,7 +145,7 @@ public sealed class TeacherStudentService
                 Instrument = OptionalText(request.Instrument) ?? string.Empty,
                 Level = OptionalText(request.Level) ?? string.Empty,
                 Notes = OptionalText(request.Notes) ?? string.Empty,
-                CurrentLevel = 1
+                CurrentLevel = ParseInitialLevel(request.Level)
             };
 
             _dbContext.SchoolUsers.Add(schoolUser);
@@ -313,4 +313,16 @@ public sealed class TeacherStudentService
     private static string? OptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string NormalizeEmail(string email) => RequireText(email, nameof(email)).ToUpperInvariant();
+
+    private static int ParseInitialLevel(string? level)
+    {
+        if (string.IsNullOrWhiteSpace(level))
+            return 1;
+
+        var digits = new string(level.Where(char.IsDigit).ToArray());
+        if (int.TryParse(digits, out var parsed))
+            return Math.Clamp(parsed, 1, 5);
+
+        return 1;
+    }
 }

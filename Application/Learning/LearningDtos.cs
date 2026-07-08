@@ -124,3 +124,18 @@ public sealed record CreateFeedbackRequest(
     string Message,
     bool VisibleToStudent);
 
+public sealed record SkillSummary(
+    Guid Id,
+    string Name,
+    string? Description,
+    int RequiredLevel,
+    DateTime CreatedAtUtc);
+
+public sealed record SkillWithMastery(
+    Guid Id,
+    string Name,
+    string? Description,
+    int RequiredLevel,
+    bool Mastered,
+    DateTime? MasteredAtUtc,
+    bool InferredFromCurrentLevel);

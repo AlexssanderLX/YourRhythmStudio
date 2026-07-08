@@ -38,12 +38,18 @@
     border-color: var(--border);
 }
 .dash-nav-item.active svg { color: var(--blue-bright); }
+.dash-nav-settings { display: none !important; }
 
 .dash-user {
     display: flex; align-items: center; gap: 11px;
     padding: 12px; border-radius: 14px; margin-top: 8px;
     background: var(--surface); border: 1px solid var(--border-soft);
+    text-decoration: none; color: inherit;
+    transition: border-color .15s, background .15s; cursor: pointer;
 }
+.dash-user:hover { border-color: var(--border); background: rgba(255,255,255,0.04); }
+.dash-user-active { border-color: var(--blue-bright) !important; background: rgba(46,155,255,0.06) !important; }
+.dash-user-caret { color: var(--muted); flex-shrink: 0; }
 .dash-avatar {
     width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
     display: grid; place-items: center;
@@ -321,21 +327,26 @@
 .mob-topbar { display: none; }
 
 @media (max-width: 900px) {
-    .dash-shell { grid-template-columns: 1fr; }
+    .dash-shell {
+        display: block !important;
+        grid-template-columns: none !important;
+        min-height: 100vh !important;
+    }
 
     .dash-sidebar {
-        position: sticky; top: 0; z-index: 100;
-        height: auto; width: 100%; max-width: 100vw;
-        flex-direction: column; align-items: stretch; gap: 0;
-        padding: 0;
-        border-right: none; border-bottom: 1px solid var(--border-soft);
-        overflow-x: clip;
-        background: linear-gradient(180deg, #0a0e1a, #07090f);
+        position: sticky !important; top: 0 !important; z-index: 100 !important;
+        height: auto !important; width: 100% !important; max-width: 100vw !important;
+        flex-direction: column !important; align-items: stretch !important; gap: 0 !important;
+        padding: 0 !important;
+        border-right: none !important; border-bottom: 1px solid var(--border-soft) !important;
+        overflow: hidden !important;
+        background: linear-gradient(180deg, #0a0e1a, #07090f) !important;
     }
 
     /* Desktop brand some, mobile topbar aparece */
-    .dash-sidebar > .dash-brand { display: none; }
-    .dash-user { display: none; }
+    .dash-sidebar > .dash-brand { display: none !important; }
+    .dash-user { display: none !important; }
+    .dash-nav-settings { display: flex !important; }
 
     /* ---- Topbar linha 1: logo + ações rápidas ---- */
     .mob-topbar {
@@ -367,19 +378,21 @@
     .mob-action-btn.active { color: var(--ink); border-color: var(--blue-bright); }
     .mob-action-btn.active { background: rgba(46,155,255,0.1); color: var(--blue-bright); }
 
-    .mob-avatar-btn { text-decoration: none; }
+    .mob-avatar-btn { text-decoration: none; border-radius: 10px; }
+    .mob-avatar-active .mob-avatar { outline: 2px solid var(--blue-bright); outline-offset: 2px; }
     .mob-avatar { width: 36px !important; height: 36px !important; font-size: 12px !important; border-radius: 10px !important; cursor: pointer; }
 
     /* ---- Nav tab bar linha 2 ---- */
     .dash-nav-wrap { position: relative; overflow: hidden; }
     .dash-nav {
-        display: flex; flex-direction: row; flex-wrap: nowrap;
-        overflow-x: auto; gap: 0;
-        scrollbar-width: none; -ms-overflow-style: none;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+        overflow-x: auto !important; gap: 0 !important;
+        scrollbar-width: none !important; -ms-overflow-style: none !important;
         touch-action: pan-x;
         -webkit-overflow-scrolling: touch;
-        padding: 0 8px;
-        border-bottom: 2px solid var(--border-soft);
+        padding: 0 8px !important;
+        border-bottom: 2px solid var(--border-soft) !important;
+        height: auto !important; max-height: none !important;
     }
     /* Scrollbar fino visível — igual ZeroPaper */
     .dash-nav { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
@@ -388,13 +401,15 @@
     .dash-nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(255,255,255,0.2); }
 
     .dash-nav-item {
-        flex: 0 0 auto; min-width: max-content;
-        white-space: nowrap; padding: 11px 14px;
-        border-radius: 0; border: none;
-        box-shadow: inset 0 -2px 0 transparent;
-        margin-bottom: -2px;
-        background: transparent; font-size: 13px; gap: 6px;
-        color: var(--muted); transition: color .2s, box-shadow .2s;
+        flex: 0 0 auto !important; min-width: max-content !important;
+        white-space: nowrap !important; padding: 11px 14px !important;
+        border-radius: 0 !important; border: none !important;
+        box-shadow: inset 0 -2px 0 transparent !important;
+        margin-bottom: -2px !important;
+        background: transparent !important; font-size: 13px !important; gap: 6px !important;
+        color: var(--muted) !important; transition: color .2s, box-shadow .2s !important;
+        height: auto !important; width: auto !important;
+        flex-direction: row !important;
     }
     .dash-nav-item:hover  { color: var(--ink); background: transparent; }
     .dash-nav-item.active {
@@ -427,4 +442,330 @@
     .action-tabs { gap: 6px; }
     .action-tab-btn { padding: 8px 13px; font-size: 12.5px; }
     .asgn-actions { flex-wrap: wrap; }
+}
+
+@media (max-width: 900px) {
+    .dash-sidebar {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1000 !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.26) !important;
+    }
+
+    .dash-nav-wrap {
+        position: relative !important;
+        overflow: hidden !important;
+        background: linear-gradient(180deg, #0a0e1a, #07090f) !important;
+    }
+
+    .dash-nav {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-x: contain !important;
+        touch-action: pan-x !important;
+        scroll-snap-type: x proximity !important;
+        scroll-padding-inline: 12px !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(107,192,255,0.45) transparent !important;
+        -ms-overflow-style: auto !important;
+        padding: 0 34px 4px 8px !important;
+    }
+
+    .dash-nav::after {
+        content: "";
+        flex: 0 0 20px;
+        height: 1px;
+    }
+
+    .dash-nav::-webkit-scrollbar {
+        height: 3px !important;
+        display: block !important;
+    }
+
+    .dash-nav::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+
+    .dash-nav::-webkit-scrollbar-thumb {
+        border-radius: 999px !important;
+        background: linear-gradient(90deg, var(--blue-bright), var(--blue-deep)) !important;
+    }
+
+    .dash-nav-item {
+        scroll-snap-align: start !important;
+    }
+}
+
+/* ---------- Teacher overview: command dashboard ---------- */
+.teacher-command {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 16px;
+    align-items: stretch;
+    padding: 20px;
+    border: 1px solid rgba(107,192,255,0.18);
+    border-radius: 22px;
+    background:
+        linear-gradient(135deg, rgba(46,155,255,0.12), rgba(8,12,24,0.92)),
+        linear-gradient(180deg, rgba(16,22,40,0.82), rgba(9,12,22,0.92));
+}
+.teacher-kicker,
+.student-section-kicker {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--blue-bright);
+}
+.teacher-command h2 {
+    margin: 8px 0 6px;
+    font-family: var(--font-display);
+    font-size: clamp(24px, 4vw, 40px);
+    line-height: 1.02;
+}
+.teacher-command p {
+    max-width: 560px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+.teacher-command-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+.teacher-score-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid var(--border-soft);
+}
+.teacher-score-card span,
+.teacher-score-card small {
+    color: var(--muted);
+    font-size: 12px;
+}
+.teacher-score-card strong {
+    font-family: var(--font-display);
+    font-size: 42px;
+    line-height: 1;
+}
+.teacher-score-bar {
+    height: 9px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+}
+.teacher-score-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue-bright), var(--blue-deep));
+}
+.teacher-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.teacher-stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 116px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid var(--border-soft);
+    color: inherit;
+    text-decoration: none;
+    background: linear-gradient(180deg, rgba(16,22,40,0.72), rgba(9,12,22,0.86));
+}
+.teacher-stat-card strong {
+    font-family: var(--font-display);
+    font-size: 34px;
+    line-height: 1;
+}
+.teacher-stat-card small,
+.teacher-stat-label {
+    color: var(--muted);
+    font-size: 12px;
+}
+.teacher-stat-card.warn strong { color: #FFB020; }
+.teacher-stat-card.done strong { color: #22D07A; }
+.teacher-overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+    gap: 18px;
+}
+.teacher-panel { min-width: 0; }
+.panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.panel-head h3 { margin-bottom: 2px; }
+.panel-link,
+.student-panel-head a {
+    color: var(--blue-bright);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.teacher-student-list,
+.teacher-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.teacher-student-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,255,255,0.035);
+    color: inherit;
+    text-decoration: none;
+}
+.teacher-student-card:hover { border-color: var(--border); }
+.teacher-student-info { flex: 1; min-width: 0; }
+.teacher-student-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.teacher-student-top strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.teacher-student-top span {
+    flex-shrink: 0;
+    color: var(--blue-bright);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+.teacher-student-info p {
+    margin: 3px 0 8px;
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.teacher-mini-progress {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+}
+.teacher-mini-progress i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue-bright), var(--blue-deep));
+}
+.teacher-lesson-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,255,255,0.035);
+}
+.teacher-lesson-item > span {
+    width: 48px;
+    flex-shrink: 0;
+    color: var(--blue-bright);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 13px;
+}
+.teacher-lesson-item div {
+    min-width: 0;
+}
+.teacher-lesson-item strong {
+    display: block;
+    font-size: 13.5px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.teacher-lesson-item small {
+    color: var(--muted);
+    font-size: 12px;
+}
+.teacher-empty-card,
+.teacher-empty-small {
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+}
+.teacher-empty-card strong,
+.teacher-empty-small strong {
+    display: block;
+    color: var(--ink);
+    margin-bottom: 4px;
+}
+.teacher-empty-card p,
+.teacher-empty-small p {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+    .teacher-command,
+    .teacher-overview-grid {
+        grid-template-columns: 1fr;
+    }
+    .teacher-score-card {
+        min-height: 132px;
+    }
+}
+
+@media (max-width: 560px) {
+    .teacher-command {
+        padding: 16px;
+        border-radius: 18px;
+    }
+    .teacher-command-actions .btn {
+        flex: 1;
+        min-width: 0;
+    }
+    .teacher-stat-grid {
+        grid-template-columns: repeat(3, minmax(118px, 1fr));
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+    }
+    .teacher-stat-grid::-webkit-scrollbar { display: none; }
+    .teacher-stat-card {
+        min-height: 104px;
+        padding: 14px;
+    }
+    .teacher-stat-card strong { font-size: 28px; }
+    .teacher-student-card {
+        align-items: flex-start;
+    }
+    .teacher-student-top {
+        align-items: flex-start;
+    }
 }

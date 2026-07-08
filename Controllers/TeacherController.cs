@@ -1,3 +1,5 @@
+using Foundation.SecureLinks.Models;
+using Foundation.SecureLinks.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YourRhythmStudio.Application.Learning;
@@ -17,6 +19,8 @@ public sealed class TeacherController : Controller
     private readonly RepertoireService _repertoireService;
     private readonly AssignmentService _assignmentService;
     private readonly FeedbackService _feedbackService;
+    private readonly SecureLinkService _secureLinkService;
+    private readonly SkillService _skillService;
 
     public TeacherController(
         IUserProfileResolver profileResolver,
@@ -24,7 +28,9 @@ public sealed class TeacherController : Controller
         LessonService lessonService,
         RepertoireService repertoireService,
         AssignmentService assignmentService,
-        FeedbackService feedbackService)
+        FeedbackService feedbackService,
+        SecureLinkService secureLinkService,
+        SkillService skillService)
     {
         _profileResolver = profileResolver;
         _teacherStudentService = teacherStudentService;
@@ -32,6 +38,8 @@ public sealed class TeacherController : Controller
         _repertoireService = repertoireService;
         _assignmentService = assignmentService;
         _feedbackService = feedbackService;
+        _secureLinkService = secureLinkService;
+        _skillService = skillService;
     }
 
     [HttpGet("")]
@@ -84,7 +92,10 @@ public sealed class TeacherController : Controller
     public async Task<IActionResult> StudentDetail(Guid studentId, CancellationToken cancellationToken)
     {
         var detail = await LoadStudentDetail(studentId, cancellationToken);
-        return detail is null ? Forbid() : View(detail);
+        if (detail is null) return Forbid();
+        var profile = await CurrentProfile(cancellationToken);
+        var skills = await _skillService.GetStudentSkillsAsync(profile, studentId, cancellationToken);
+        return View(new TeacherStudentDetailWithSkillsViewModel { Base = detail, Skills = skills });
     }
 
     [HttpPost("Students/{studentId:guid}/Lessons")]
@@ -186,6 +197,104 @@ public sealed class TeacherController : Controller
             cancellationToken);
 
         return RedirectToAction(nameof(StudentDetail), new { studentId });
+    }
+
+    [HttpGet("Students/{studentId:guid}/AccessLink")]
+    public async Task<IActionResult> GenerateStudentAccessLink(Guid studentId, CancellationToken cancellationToken)
+    {
+        var detail = await LoadStudentDetail(studentId, cancellationToken);
+        if (detail is null)
+            return Forbid();
+
+        var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
+        var result = await _secureLinkService.CreateAsync(
+            baseUri,
+            new CreateSecureLinkRequest(
+                Label: $"Acesso aluno {detail.Detail.Student.DisplayName}",
+                ResourceKey: studentId.ToString(),
+                RelativePath: "/Auth/StudentAccess"),
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            TempData["Error"] = "Nao foi possivel gerar o link.";
+            return RedirectToAction(nameof(StudentDetail), new { studentId });
+        }
+
+        var issued = result.Value!;
+        var accessUrl = $"{Request.Scheme}://{Request.Host}/Auth/StudentAccess?code={issued.PublicCode}";
+        TempData["StudentAccessLink"] = accessUrl;
+        return RedirectToAction(nameof(StudentDetail), new { studentId });
+    }
+
+    [HttpGet("Skills")]
+    public async Task<IActionResult> Skills(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
+        return View(new TeacherSkillsViewModel { Skills = skills });
+    }
+
+    [HttpPost("Skills")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateSkill([Bind(Prefix = "NewSkill")] DefineSkillViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            var profile2 = await CurrentProfile(cancellationToken);
+            var skills2 = await _skillService.ListSkillsAsync(profile2, cancellationToken);
+            return View(new TeacherSkillsViewModel { Skills = skills2, NewSkill = model });
+        }
+        var profile = await CurrentProfile(cancellationToken);
+        await _skillService.CreateSkillAsync(profile, model.Name, model.Description, model.RequiredLevel, cancellationToken);
+        return RedirectToAction(nameof(Skills));
+    }
+
+    [HttpPost("Skills/{skillId:guid}/Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteSkill(Guid skillId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        await _skillService.DeleteSkillAsync(profile, skillId, cancellationToken);
+        return RedirectToAction(nameof(Skills));
+    }
+
+    [HttpPost("Students/{studentId:guid}/Skills/{skillId:guid}/Toggle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleSkillMastery(Guid studentId, Guid skillId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        await _skillService.ToggleMasteryAsync(profile, studentId, skillId, cancellationToken);
+        return RedirectToAction(nameof(StudentDetail), new { studentId });
+    }
+
+    [HttpGet("QuickLesson")]
+    public async Task<IActionResult> QuickLesson(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+        return View(new QuickLessonViewModel { Students = students });
+    }
+
+    [HttpPost("QuickLesson")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> QuickLesson([Bind(Prefix = "Form")] QuickLessonFormViewModel model, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        if (!ModelState.IsValid)
+        {
+            var students2 = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+            return View(new QuickLessonViewModel { Students = students2, Form = model });
+        }
+        var lessonTitle = string.IsNullOrWhiteSpace(model.Title)
+            ? $"Aula - {model.LessonDateUtc:dd/MM/yyyy HH:mm}"
+            : model.Title.Trim();
+
+        await _lessonService.CreateLessonAsync(
+            profile,
+            new CreateLessonRequest(model.StudentProfileId, lessonTitle, model.LessonDateUtc.ToUniversalTime(), model.Notes),
+            cancellationToken);
+        return RedirectToAction(nameof(StudentDetail), new { studentId = model.StudentProfileId });
     }
 
     private async Task<TeacherStudentDetailViewModel?> LoadStudentDetail(Guid studentId, CancellationToken cancellationToken)

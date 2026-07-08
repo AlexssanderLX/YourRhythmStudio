@@ -31,6 +31,10 @@ public sealed class YourRhythmDbContext : DbContext
 
     public DbSet<XpEvent> XpEvents => Set<XpEvent>();
 
+    public DbSet<Skill> Skills => Set<Skill>();
+
+    public DbSet<StudentSkillMastery> StudentSkillMasteries => Set<StudentSkillMastery>();
+
     public DbSet<PersistedAccount> PersistedAccounts => Set<PersistedAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -55,6 +59,8 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(user => user.DisplayName).HasMaxLength(160).IsRequired();
             entity.Property(user => user.Email).HasMaxLength(256).IsRequired();
             entity.Property(user => user.Role).HasMaxLength(40).IsRequired();
+            entity.Property(user => user.Phone).HasMaxLength(40);
+            entity.Property(user => user.City).HasMaxLength(120);
             entity.HasIndex(user => new { user.SchoolId, user.Email }).IsUnique();
             entity.HasOne(user => user.School)
                 .WithMany(school => school.Users)
@@ -242,6 +248,42 @@ public sealed class YourRhythmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(feedback => feedback.RepertoireItemId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Skill>(entity =>
+        {
+            entity.ToTable("skills");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Name).HasMaxLength(200).IsRequired();
+            entity.Property(s => s.Description).HasMaxLength(1000);
+            entity.HasIndex(s => new { s.SchoolId, s.TeacherProfileId, s.RequiredLevel });
+            entity.HasOne<School>()
+                .WithMany()
+                .HasForeignKey(s => s.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<TeacherProfile>()
+                .WithMany()
+                .HasForeignKey(s => s.TeacherProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudentSkillMastery>(entity =>
+        {
+            entity.ToTable("student_skill_masteries");
+            entity.HasKey(m => m.Id);
+            entity.HasIndex(m => new { m.SchoolId, m.StudentProfileId, m.SkillId }).IsUnique();
+            entity.HasOne<School>()
+                .WithMany()
+                .HasForeignKey(m => m.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Skill>()
+                .WithMany()
+                .HasForeignKey(m => m.SkillId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<StudentProfile>()
+                .WithMany()
+                .HasForeignKey(m => m.StudentProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PersistedAccount>(entity =>

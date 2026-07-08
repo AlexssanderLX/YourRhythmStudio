@@ -6,6 +6,7 @@ using Foundation.Access.Authentication;
 using Foundation.Access.Security;
 using Foundation.Access.Services;
 using Foundation.Core.Abstractions;
+using Foundation.SecureLinks.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +31,7 @@ public class AuthController : Controller
     private readonly IPasswordHasher _passwordHasher;
     private readonly IClock _clock;
     private readonly YourRhythmDbContext _db;
+    private readonly SecureLinkService _secureLinkService;
 
     public AuthController(
         SaasAccessService saasAccessService,
@@ -38,7 +40,8 @@ public class AuthController : Controller
         IAccountStore accountStore,
         IPasswordHasher passwordHasher,
         IClock clock,
-        YourRhythmDbContext db)
+        YourRhythmDbContext db,
+        SecureLinkService secureLinkService)
     {
         _saasAccessService = saasAccessService;
         _userProfileResolver = userProfileResolver;
@@ -47,6 +50,7 @@ public class AuthController : Controller
         _passwordHasher = passwordHasher;
         _clock = clock;
         _db = db;
+        _secureLinkService = secureLinkService;
     }
 
     [HttpGet]
@@ -226,6 +230,51 @@ public class AuthController : Controller
         s = Regex.Replace(s, @"\s+", "-");
         s = Regex.Replace(s, @"-+", "-").Trim('-');
         return s.Length > 80 ? s[..80] : s;
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> StudentAccess(string code, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return RedirectToAction(nameof(Login));
+
+        var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
+        var resolution = await _secureLinkService.ResolveAsync(baseUri, code, cancellationToken);
+
+        if (resolution.IsFailure || !Guid.TryParse(resolution.Value?.ResourceKey, out var studentProfileId))
+            return RedirectToAction(nameof(Login));
+
+        var student = await _db.StudentProfiles
+            .AsNoTracking()
+            .Include(s => s.SchoolUser)
+            .FirstOrDefaultAsync(s => s.Id == studentProfileId, cancellationToken);
+
+        if (student?.SchoolUser is null)
+            return RedirectToAction(nameof(Login));
+
+        var schoolUser = student.SchoolUser;
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, schoolUser.Id.ToString()),
+            new(ClaimTypes.Name, schoolUser.DisplayName),
+            new(ClaimTypes.Email, schoolUser.Email),
+            new("SessionId", Guid.NewGuid().ToString()),
+            new("PlatformRole", PlatformAccessRole.None.ToString()),
+            new(UserProfileResolver.RoleClaim, YourRhythmRoles.Student),
+            new(ClaimTypes.Role, YourRhythmRoles.Student),
+            new(UserProfileResolver.SchoolIdClaim, student.SchoolId.ToString()),
+            new(UserProfileResolver.SchoolUserIdClaim, schoolUser.Id.ToString()),
+            new(UserProfileResolver.StudentProfileIdClaim, student.Id.ToString())
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
+        await HttpContext.SignInAsync(
+            CookieScheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
+
+        return RedirectToAction("Dashboard", "Student");
     }
 
     [HttpGet]

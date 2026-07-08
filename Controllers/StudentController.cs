@@ -16,19 +16,22 @@ public sealed class StudentController : Controller
     private readonly RepertoireService _repertoireService;
     private readonly FeedbackService _feedbackService;
     private readonly ProgressService _progressService;
+    private readonly SkillService _skillService;
 
     public StudentController(
         IUserProfileResolver profileResolver,
         AssignmentService assignmentService,
         RepertoireService repertoireService,
         FeedbackService feedbackService,
-        ProgressService progressService)
+        ProgressService progressService,
+        SkillService skillService)
     {
         _profileResolver = profileResolver;
         _assignmentService = assignmentService;
         _repertoireService = repertoireService;
         _feedbackService = feedbackService;
         _progressService = progressService;
+        _skillService = skillService;
     }
 
     [HttpGet("")]
@@ -90,9 +93,49 @@ public sealed class StudentController : Controller
         return View(new StudentProgressViewModel { Progress = progress });
     }
 
+    [HttpGet("Repertoire/{id:guid}")]
+    public async Task<IActionResult> RepertoireDetail(Guid id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var item = await _repertoireService.GetByIdForCurrentStudentAsync(profile, id, cancellationToken);
+        if (item is null) return NotFound();
+        return View(new StudentRepertoireDetailViewModel { Item = item });
+    }
+
+    [HttpGet("Repertoire/{id:guid}/OpenReference")]
+    public async Task<IActionResult> OpenRepertoireReference(Guid id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var referenceUrl = await _repertoireService.OpenReferenceForCurrentStudentAsync(profile, id, cancellationToken);
+        if (referenceUrl is null) return NotFound();
+        return Redirect(referenceUrl);
+    }
+
+    [HttpPost("Repertoire/{id:guid}/Complete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CompleteRepertoire(Guid id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var completed = await _repertoireService.CompleteForCurrentStudentAsync(profile, id, cancellationToken);
+        if (!completed) return NotFound();
+        return RedirectToAction(nameof(RepertoireDetail), new { id });
+    }
+
+    [HttpGet("Levels")]
+    public async Task<IActionResult> Levels(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var progress = await _progressService.GetCurrentStudentProgressAsync(profile, cancellationToken);
+        var skills = await _skillService.GetStudentSkillsForStudentAsync(profile, cancellationToken);
+        return View(new StudentLevelsViewModel
+        {
+            Progress = progress,
+            Skills = skills
+        });
+    }
+
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)
     {
         return _profileResolver.ResolveCurrentAsync(User, cancellationToken);
     }
 }
-

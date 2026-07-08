@@ -16,6 +16,10 @@ public sealed class SchoolUser
 
     public string Role { get; set; } = YourRhythmRoles.Student;
 
+    public string? Phone { get; set; }
+
+    public string? City { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;

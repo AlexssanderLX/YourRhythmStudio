@@ -4,23 +4,81 @@
     ViewData["Title"] = "Progresso";
     ViewData["Role"] = "student";
     ViewData["DashTitle"] = "Progresso";
+
+    var xp    = Model.Progress.CurrentXp;
+    var level = Model.Progress.CurrentLevel;
+    var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
 }
 
-<div class="stat-strip">
-    <div class="stat-chip"><span class="sc-val">@Model.Progress.CurrentXp</span><span class="sc-lbl">XP</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Progress.CurrentLevel</span><span class="sc-lbl">Nível</span></div>
-    <div class="sc-sep"></div>
-    <div class="stat-chip"><span class="sc-val">@Model.Progress.CompletedAssignments</span><span class="sc-lbl">Missões concluídas</span></div>
-</div>
+<div class="s-prog-hero">
+    <div class="s-ph-eyebrow">Nível atual</div>
+    <div class="s-ph-hex">@level</div>
+    <div class="s-ph-xp-big">@xp</div>
+    <div class="s-ph-xp-lbl">XP Total</div>
 
-<div class="card">
-    <h3>Histórico de XP</h3>
-    <div class="sched">
-        @foreach (var item in Model.Progress.RecentXpEvents)
-        {
-            <div class="sitem"><span class="stime">+@item.Points</span><div class="sinfo"><b>@item.Description</b><span>@item.CreatedAtUtc.ToLocalTime().ToString("g")</span></div></div>
-        }
+    <div style="margin:16px 0 0;padding:0 4px;position:relative;z-index:1">
+        <div class="s-bar-labels" style="margin-bottom:5px">
+            @if (level >= 5) {
+                <span style="color:var(--xp)">Nível máximo atingido!</span>
+                <b style="color:var(--xp)">MAX</b>
+            } else {
+                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP → nível @(level+1)</span>
+                <span style="color:var(--muted)">@xpPct%</span>
+            }
+        </div>
+        <div class="s-xp-track">
+            <div class="s-xp-fill" style="width:@xpPct%"></div>
+        </div>
+    </div>
+
+    <div class="s-ph-stats">
+        <div class="s-ph-stat">
+            <span class="s-ph-stat-val">@level</span>
+            <span class="s-ph-stat-lbl">Nível</span>
+        </div>
+        <div class="s-ph-stat">
+            <span class="s-ph-stat-val">@Model.Progress.CompletedAssignments</span>
+            <span class="s-ph-stat-lbl">Missões concluídas</span>
+        </div>
+        <div class="s-ph-stat">
+            <span class="s-ph-stat-val">@Model.Progress.RecentXpEvents.Count</span>
+            <span class="s-ph-stat-lbl">Eventos XP</span>
+        </div>
     </div>
 </div>
 
+@if (Model.Progress.RecentXpEvents.Any()) {
+    <div class="s-sec" style="margin-top:4px">
+        <span class="s-sec-title">Histórico de XP</span>
+    </div>
+    <div class="s-card">
+        <div class="xp-feed">
+            @foreach (var item in Model.Progress.RecentXpEvents) {
+                <div class="xp-ev">
+                    <div class="xp-ev-badge">+@item.Points</div>
+                    <div class="xp-ev-body">
+                        <div class="xp-ev-title">@item.Description</div>
+                        <div class="xp-ev-date">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM · HH:mm")</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+} else {
+    <div class="s-empty">
+        <div class="s-empty-icon">⭐</div>
+        <div class="s-empty-msg">Nenhum XP ganho ainda.<br>Complete missões para ver seu progresso aqui!</div>
+    </div>
+}
+
+@functions {
+    static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
+        if (level >= 5) return (xp - 1000, 0, 100);
+        int[] starts = { 0, 100, 250, 500 };
+        int[] ends   = { 100, 250, 500, 1000 };
+        var i = Math.Max(0, Math.Min(level - 1, 3));
+        var inn  = xp - starts[i];
+        var need = ends[i] - starts[i];
+        return (inn, need, Math.Min(100, need > 0 ? inn * 100 / need : 100));
+    }
+}

@@ -1,0 +1,113 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentRepertoireDetailViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model.Item.Title;
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Repertorio";
+
+    var item = Model.Item;
+    var isAccessed = item.ProgressPercent >= 50;
+    var isCompleted = item.ProgressPercent >= 100 || item.Status.ToString() == "Learned";
+    var statusLabel = item.Status.ToString() switch
+    {
+        "NotStarted" => "Referencia nao acessada",
+        "Practicing" => "Referencia acessada",
+        "Learned" => "Estudo concluido",
+        "Archived" => "Arquivada",
+        _ => item.Status.ToString()
+    };
+}
+
+<a href="@Url.Action("Repertoire", "Student")" class="s-back-link">← Voltar ao repertorio</a>
+
+<section class="rep-quest lvl-@Math.Clamp(item.ProgressPercent / 25 + 1, 1, 5)">
+    <div class="rep-quest-top">
+        <div class="rep-orb">♪</div>
+        <div class="rep-quest-copy">
+            <div class="rep-kicker">Desafio de repertorio</div>
+            <h1>@item.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(item.ComposerOrArtist))
+            {
+                <p>@item.ComposerOrArtist</p>
+            }
+        </div>
+        <div class="rep-score">
+            <strong>@item.ProgressPercent%</strong>
+            <span>@statusLabel</span>
+        </div>
+    </div>
+
+    <div class="rep-quest-bar">
+        <i style="width:@item.ProgressPercent%"></i>
+    </div>
+
+    <div class="rep-steps">
+            <div class="rep-step @(isAccessed ? "done" : "active")">
+            <span>1</span>
+            <div>
+                <strong>Abrir referencia</strong>
+                <small>Registra acesso e libera 50%</small>
+            </div>
+        </div>
+        <div class="rep-step @(isCompleted ? "done" : isAccessed ? "active" : "")">
+            <span>2</span>
+            <div>
+                <strong>Concluir estudo</strong>
+                <small>Aluno confirma que estudou a referencia</small>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="rep-actions-grid">
+    @if (!string.IsNullOrWhiteSpace(item.ReferenceUrl))
+    {
+        <a class="rep-action-card primary" href="@Url.Action("OpenRepertoireReference", "Student", new { id = item.Id })" target="_blank" rel="noopener">
+            <span class="rep-action-icon">↗</span>
+            <strong>Abrir referencia</strong>
+            <small>@(isAccessed ? "Referencia acessada · 50% registrado" : "Clique para acessar o material de estudo")</small>
+        </a>
+    }
+    else
+    {
+        <div class="rep-action-card disabled">
+            <span class="rep-action-icon">–</span>
+            <strong>Sem referencia</strong>
+            <small>O professor ainda nao adicionou link</small>
+        </div>
+    }
+
+    <form asp-controller="Student" asp-action="CompleteRepertoire" asp-route-id="@item.Id" method="post" class="rep-action-form">
+        @Html.AntiForgeryToken()
+        <button class="rep-action-card complete" type="submit" @(isCompleted ? "disabled" : "")>
+            <span class="rep-action-icon">✓</span>
+            <strong>@(isCompleted ? "Estudo concluido" : "Marcar estudo como concluido")</strong>
+            <small>@(isCompleted ? "O aluno confirmou esta referencia" : "Use depois de estudar o link")</small>
+        </button>
+    </form>
+</section>
+
+<section class="rep-detail-grid game-grid">
+    @if (!string.IsNullOrWhiteSpace(item.Instrument))
+    {
+        <div class="rep-detail-info-card">
+            <div class="rep-detail-info-lbl">Classe</div>
+            <div class="rep-detail-info-val">@item.Instrument</div>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(item.Level))
+    {
+        <div class="rep-detail-info-card">
+            <div class="rep-detail-info-lbl">Rank tecnico</div>
+            <div class="rep-detail-info-val">@item.Level</div>
+        </div>
+    }
+</section>
+
+@if (!string.IsNullOrWhiteSpace(item.Notes))
+{
+    <section class="s-card rep-professor-note">
+        <div class="s-sec-title">Dica do professor</div>
+        <p>@item.Notes</p>
+    </section>
+}

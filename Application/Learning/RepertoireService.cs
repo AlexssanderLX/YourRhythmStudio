@@ -81,6 +81,68 @@ public sealed class RepertoireService
         return await QueryRepertoire(schoolId, studentProfileId, null).ToArrayAsync(cancellationToken);
     }
 
+    public async Task<RepertoireSummary?> GetByIdForCurrentStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, studentProfileId) = LearningAuthorization.RequireStudent(profile);
+        var item = await _dbContext.RepertoireItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.SchoolId == schoolId
+                && r.StudentProfileId == studentProfileId
+                && r.Id == id, cancellationToken);
+        return item is null ? null : ToSummary(item);
+    }
+
+    public async Task<string?> OpenReferenceForCurrentStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, studentProfileId) = LearningAuthorization.RequireStudent(profile);
+        var item = await _dbContext.RepertoireItems.FirstOrDefaultAsync(
+            repertoire => repertoire.SchoolId == schoolId
+                && repertoire.StudentProfileId == studentProfileId
+                && repertoire.Id == id,
+            cancellationToken);
+
+        if (item is null)
+        {
+            return null;
+        }
+
+        if (item.ProgressPercent < 50)
+        {
+            item.UpdateProgress(50, DateTime.UtcNow);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return item.ReferenceUrl;
+    }
+
+    public async Task<bool> CompleteForCurrentStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, studentProfileId) = LearningAuthorization.RequireStudent(profile);
+        var item = await _dbContext.RepertoireItems.FirstOrDefaultAsync(
+            repertoire => repertoire.SchoolId == schoolId
+                && repertoire.StudentProfileId == studentProfileId
+                && repertoire.Id == id,
+            cancellationToken);
+
+        if (item is null)
+        {
+            return false;
+        }
+
+        item.UpdateProgress(100, DateTime.UtcNow);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task UpdateProgressAsync(
         AuthenticatedUserProfile profile,
         UpdateRepertoireProgressRequest request,
