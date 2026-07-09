@@ -102,7 +102,9 @@ public sealed class SkillService
 
         var teacherLink = await _db.TeacherStudents
             .AsNoTracking()
-            .FirstOrDefaultAsync(ts => ts.SchoolId == schoolId && ts.StudentProfileId == studentProfileId,
+            .FirstOrDefaultAsync(ts => ts.SchoolId == schoolId
+                && ts.StudentProfileId == studentProfileId
+                && ts.IsActive,
                 cancellationToken);
         if (teacherLink is null) return Array.Empty<SkillWithMastery>();
 

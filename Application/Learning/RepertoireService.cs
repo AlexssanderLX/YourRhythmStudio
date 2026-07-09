@@ -28,6 +28,7 @@ public sealed class RepertoireService
             cancellationToken);
 
         var now = DateTime.UtcNow;
+        var referenceUrl = NormalizeReferenceUrl(request.ReferenceUrl);
         var item = new RepertoireItem(
             schoolId,
             teacherProfileId,
@@ -38,7 +39,7 @@ public sealed class RepertoireService
             request.Level,
             now);
 
-        if (!string.IsNullOrWhiteSpace(request.Notes) || !string.IsNullOrWhiteSpace(request.ReferenceUrl))
+        if (!string.IsNullOrWhiteSpace(request.Notes) || !string.IsNullOrWhiteSpace(referenceUrl))
         {
             item.UpdateDetails(
                 request.Title,
@@ -46,7 +47,7 @@ public sealed class RepertoireService
                 request.Instrument,
                 request.Level,
                 request.Notes,
-                request.ReferenceUrl,
+                referenceUrl,
                 now);
         }
 
@@ -118,7 +119,7 @@ public sealed class RepertoireService
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        return item.ReferenceUrl;
+        return IsSafeReferenceUrl(item.ReferenceUrl) ? item.ReferenceUrl : null;
     }
 
     public async Task<bool> CompleteForCurrentStudentAsync(
@@ -208,5 +209,27 @@ public sealed class RepertoireService
             item.ProgressPercent,
             item.Notes,
             item.ReferenceUrl);
+    }
+
+    private static string? NormalizeReferenceUrl(string? referenceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(referenceUrl))
+        {
+            return null;
+        }
+
+        var trimmed = referenceUrl.Trim();
+        if (!IsSafeReferenceUrl(trimmed))
+        {
+            throw new ArgumentException("Reference URL must use http or https.", nameof(referenceUrl));
+        }
+
+        return trimmed;
+    }
+
+    private static bool IsSafeReferenceUrl(string? referenceUrl)
+    {
+        return Uri.TryCreate(referenceUrl, UriKind.Absolute, out var uri)
+            && uri.Scheme is "http" or "https";
     }
 }
