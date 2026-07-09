@@ -473,6 +473,94 @@
 .back-link:hover { color: var(--ink); }
 
 /* ================================================================
+   MISSIONS (ASSIGNMENTS) PAGE
+   ================================================================ */
+.quest-list { display: flex; flex-direction: column; gap: 10px; }
+
+.quest-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  border-left-width: 4px;
+  transition: transform .2s, border-color .2s;
+}
+.quest-card:hover { transform: translateY(-2px); }
+.quest-card.q-on   { border-left-color: var(--q-on,#FF7A30); }
+.quest-card.q-ok   { border-left-color: var(--q-ok,#22D07A); opacity: .75; }
+.quest-card.q-pend { border-left-color: var(--border); }
+
+/* Icon circle */
+.q-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 50%; display: grid; place-items: center;
+  font-size: 17px; font-weight: 700; line-height: 1;
+}
+.q-icon.qi-on   { background: rgba(255,122,48,.15); color: var(--q-on,#FF7A30); border: 1.5px solid rgba(255,122,48,.3); }
+.q-icon.qi-ok   { background: rgba(34,208,122,.12); color: var(--q-ok,#22D07A); border: 1.5px solid rgba(34,208,122,.25); }
+.q-icon.qi-pend { background: rgba(255,255,255,.05); color: var(--muted); border: 1.5px solid var(--border-soft); }
+
+/* Body */
+.q-body { flex: 1; min-width: 0; }
+.q-status {
+  display: inline-block; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 100px; margin-bottom: 5px;
+}
+.q-status.qs-on   { background: rgba(255,122,48,.12); color: var(--q-on,#FF7A30); }
+.q-status.qs-ok   { background: rgba(34,208,122,.10); color: var(--q-ok,#22D07A); }
+.q-status.qs-pend { background: rgba(255,255,255,.06); color: var(--muted); }
+.q-title  { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.q-desc   { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+
+.q-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Side XP chip */
+.q-side  { flex-shrink: 0; display: flex; align-items: flex-start; padding-top: 2px; }
+.xp-chip {
+  font-size: 12px; font-weight: 700;
+  padding: 4px 10px; border-radius: 100px;
+  background: var(--xp-dim,rgba(255,176,32,.12));
+  color: var(--xp,#FFB020);
+  border: 1px solid rgba(255,176,32,.2);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   FEEDBACK PAGE
+   ================================================================ */
+.fb-list { display: flex; flex-direction: column; gap: 12px; }
+
+.fb-bubble {
+  padding: 16px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  transition: border-color .2s;
+}
+.fb-bubble:hover { border-color: var(--border); }
+
+.fb-head {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.fb-avatar {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; display: grid; place-items: center;
+  font-size: 15px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, var(--blue-bright,#3d8eff), #1d4ed8);
+}
+.fb-meta { display: flex; flex-direction: column; gap: 2px; }
+.fb-from { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.fb-date { font-size: 11.5px; color: var(--muted); }
+.fb-msg  {
+  font-size: 14px; line-height: 1.65; color: var(--text);
+  padding: 12px 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+}
+
+/* ================================================================
    REPERTOIRE LIST PAGE
    ================================================================ */
 .rep-list { display: flex; flex-direction: column; gap: 10px; }

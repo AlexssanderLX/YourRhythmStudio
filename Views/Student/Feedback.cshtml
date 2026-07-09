@@ -15,8 +15,11 @@
         @foreach (var item in Model.Feedback.OrderByDescending(f => f.CreatedAtUtc)) {
             <div class="fb-bubble">
                 <div class="fb-head">
-                    <span class="fb-from">Professor</span>
-                    <span class="fb-date">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM · HH:mm")</span>
+                    <div class="fb-avatar">P</div>
+                    <div class="fb-meta">
+                        <span class="fb-from">Professor</span>
+                        <span class="fb-date">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM · HH:mm")</span>
+                    </div>
                 </div>
                 <div class="fb-msg">@item.Message</div>
             </div>
@@ -24,7 +27,7 @@
     </div>
 } else {
     <div class="s-empty">
-        <div class="s-empty-icon">💬</div>
+        <div class="s-empty-icon">&#128172;</div>
         <div class="s-empty-msg">Nenhum feedback recebido ainda.<br>Quando seu professor deixar uma mensagem, ela aparecerá aqui.</div>
     </div>
 }

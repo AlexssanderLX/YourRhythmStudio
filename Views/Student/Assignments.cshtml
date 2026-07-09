@@ -34,11 +34,11 @@
             var st    = item.Status.ToString();
             var css   = st == "InProgress" ? "q-on"  : st == "Completed" ? "q-ok" : "q-pend";
             var icss  = st == "InProgress" ? "qi-on" : st == "Completed" ? "qi-ok" : "qi-pend";
-            var icon  = st == "InProgress" ? "⚡" : st == "Completed" ? "✓" : "○";
+            var icon  = st == "InProgress" ? "&#9889;" : st == "Completed" ? "&#10003;" : "&#9675;";
             var slbl  = st == "InProgress" ? "Em andamento" : st == "Completed" ? "Concluída" : "Pendente";
             var scss  = st == "InProgress" ? "qs-on" : st == "Completed" ? "qs-ok" : "qs-pend";
             <div class="quest-card @css">
-                <div class="q-icon @icss">@icon</div>
+                <div class="q-icon @icss">@Html.Raw(icon)</div>
                 <div class="q-body">
                     <div class="q-status @scss">@slbl</div>
                     <div class="q-title">@item.Title</div>
