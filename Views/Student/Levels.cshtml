@@ -1,4 +1,5 @@
 @using YourRhythmStudio.Domain.Learning.Enums
+@using YourRhythmStudio.Application.Learning
 @model YourRhythmStudio.ViewModels.Learning.StudentLevelsViewModel
 @{
     Layout = "_DashboardLayout";
@@ -8,7 +9,10 @@
     var xp    = Model.Progress.CurrentXp;
     var level = Model.Progress.CurrentLevel;
 
-    var (xpIn, xpNeed, xpPct, waitingPromotion) = XpProgress(xp, level);
+    var xpIn = Model.Progress.XpInCurrentLevel;
+    var xpNeed = Model.Progress.XpRequiredForCurrentLevel;
+    var xpPct = Model.Progress.CurrentLevelProgressPercent;
+    var waitingPromotion = Model.Progress.AwaitingPromotion;
 
     var masteredCount = Model.Skills.Count(s => s.Mastered);
     var totalSkills   = Model.Skills.Count;
@@ -16,13 +20,7 @@
         ? Model.Skills.FirstOrDefault(s => s.SkillType == SkillType.PromotionRequired && s.RequiredLevel == level)
         : null;
 
-    var tiers = new[] {
-        (Num:1, Name:"Iniciante",     XpStart:0,      XpEnd:500),
-        (Num:2, Name:"Aprendiz",      XpStart:500,    XpEnd:2000),
-        (Num:3, Name:"Intermediário", XpStart:2000,   XpEnd:8000),
-        (Num:4, Name:"Avançado",      XpStart:8000,   XpEnd:25000),
-        (Num:5, Name:"Mestre",        XpStart:25000,  XpEnd:99999),
-    };
+    var tiers = LearningLevelCalculator.Levels;
 }
 
 @* ── Progress Hero ──────────────────────────────────────────────────── *@
@@ -40,7 +38,7 @@
                 <span style="color:var(--lvl-a,var(--xp))">XP suficiente — aguardando promoção do professor</span>
                 <b style="color:var(--lvl-a,var(--xp))">100%</b>
             } else {
-                <span style="color:var(--muted)"><b style="color:var(--lvl-a,var(--xp))">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
+                <span style="color:var(--muted)"><b style="color:var(--lvl-a,var(--xp))">@xpIn</b> / @xpNeed XP para @Model.Progress.NextLevelName</span>
                 <span style="color:var(--muted)">@xpPct%</span>
             }
         </div>
@@ -113,20 +111,20 @@
         @{ int tierIdx = 0; }
         @foreach (var tier in tiers) {
             tierIdx++;
-            var tierSkills   = Model.Skills.Where(s => s.RequiredLevel == tier.Num).ToList();
+            var tierSkills   = Model.Skills.Where(s => s.RequiredLevel == tier.Level).ToList();
             var tierMastered = tierSkills.Count(s => s.Mastered);
-            var isCurrent    = level == tier.Num;
-            var isUnlocked   = level >= tier.Num;
+            var isCurrent    = level == tier.Level;
+            var isUnlocked   = level >= tier.Level;
             var tierPct      = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
             var delay        = (0.30 + tierIdx * 0.07).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-            <div class="lvl-tier lvl-@tier.Num @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
+            <div class="lvl-tier lvl-@tier.Level @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
                  data-yr-reveal style="--d:@(delay)s" data-tier-pct="@tierPct">
                 <div class="lvl-tier-left">
                     <div class="lvl-tier-badge">
-                        @if (isUnlocked) { <span>@tier.Num</span> }
+                        @if (isUnlocked) { <span>@tier.Level</span> }
                         else { <span style="opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> }
                     </div>
-                    @if (tier.Num < 5) {
+                    @if (tier.Level < 5) {
                         <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
                     }
                 </div>
@@ -134,13 +132,13 @@
                 <div class="lvl-tier-body">
                     <div class="lvl-tier-head">
                         <div>
-                            <div class="lvl-tier-name">Nível @tier.Num — @tier.Name</div>
+                            <div class="lvl-tier-name">Nível @tier.Level — @tier.Name</div>
                             <div class="lvl-tier-range">
                                 @tierMastered/@tierSkills.Count habilidades
-                                @if (tier.Num < 5) {
-                                    <span>· @tier.XpStart.ToString("N0") – @(tier.XpEnd - 1).ToString("N0") XP</span>
+                                @if (tier.Level < 5) {
+                                    <span>· @tier.MinXp.ToString("N0") – @tier.MaxXp.ToString("N0") XP</span>
                                 } else {
-                                    <span>· @tier.XpStart.ToString("N0")+ XP</span>
+                                    <span>· @tier.MinXp.ToString("N0") – @tier.MaxXp.ToString("N0") XP</span>
                                 }
                             </div>
                         </div>
@@ -216,20 +214,6 @@
 .s-xp-fill-full { background: linear-gradient(90deg, var(--lvl-a, var(--xp)), var(--lvl-b, var(--xp))); animation: yr-xp-pulse 2s ease-in-out infinite; }
 @@keyframes yr-xp-pulse { 0%,100%{opacity:1} 50%{opacity:.75} }
 </style>
-
-@functions {
-    // Returns progress toward the XP threshold that makes the student
-    // eligible for promotion FROM their current level to the next.
-    static (int xpIn, int xpNeed, int pct, bool waiting) XpProgress(int xp, int level) {
-        if (level >= 5) return (xp, 0, 100, false);
-        // XP required for each level's promotion eligibility (index = currentLevel).
-        int[] promotionXp = { 0, 500, 2_000, 8_000, 25_000 };
-        var need    = promotionXp[Math.Min(level, 4)];
-        var pct     = need > 0 ? Math.Min(100, xp * 100 / need) : 100;
-        var waiting = pct >= 100;
-        return (xp, need, waiting ? 100 : pct, waiting);
-    }
-}
 
 @section Scripts {
 <script>

@@ -60,19 +60,16 @@
 }
 
 /* ── Reveal system ─────────────────────────────────────────────── */
-[data-yr-reveal] {
+/* Only hide elements on high-tier — everything else renders immediately */
+:root[data-yr="high"] [data-yr-reveal] {
   opacity: 0;
   transform: translateY(22px);
   transition: opacity .55s cubic-bezier(.22,1,.36,1),
               transform .55s cubic-bezier(.22,1,.36,1);
   transition-delay: var(--d, 0s);
 }
-[data-yr-reveal].yr-visible {
+:root[data-yr="high"] [data-yr-reveal].yr-visible {
   opacity: 1; transform: none;
-}
-[data-html][data-yr="low"] [data-yr-reveal],
-:root[data-yr="low"] [data-yr-reveal] {
-  opacity: 1 !important; transform: none !important; transition: none !important;
 }
 
 /* ── XP global tokens ─────────────────────────────────────────── */

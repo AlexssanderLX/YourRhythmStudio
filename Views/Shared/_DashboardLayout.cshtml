@@ -198,34 +198,7 @@
     setTimeout(updateFades, 50);
 }());
 </script>
-@RenderSection("Scripts", required: false)
 <script>
-/* YR Reveal observer */
-(function(){
-  function revealAll() {
-    document.querySelectorAll('[data-yr-reveal]').forEach(function(el){
-      el.classList.add('yr-visible');
-    });
-  }
-
-  /* Low-tier or no animation support → show everything immediately */
-  if (window.yrTier === 'low' || !window.IntersectionObserver) {
-    revealAll();
-    return;
-  }
-
-  var io = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if (e.isIntersecting) { e.target.classList.add('yr-visible'); io.unobserve(e.target); }
-    });
-  }, { threshold: 0, rootMargin: '0px 0px 40px 0px' });
-
-  document.querySelectorAll('[data-yr-reveal]').forEach(function(el){ io.observe(el); });
-
-  /* Safety net: reveal anything still hidden after 900ms */
-  setTimeout(revealAll, 900);
-}());
-
 /* YR Count-up — only high/mid */
 window.yrCountUp = function(el, target, duration){
   if (window.yrTier === 'low') { el.textContent = target; return; }
@@ -246,6 +219,34 @@ window.yrBarAnimate = function(fill, pct){
   if (window.yrTier === 'low') { fill.style.width = pct + '%'; return; }
   setTimeout(function(){ fill.style.width = pct + '%'; }, 180);
 };
+</script>
+@RenderSection("Scripts", required: false)
+<script>
+/* YR Reveal observer */
+(function(){
+  function revealAll() {
+    document.querySelectorAll('[data-yr-reveal]').forEach(function(el){
+      el.classList.add('yr-visible');
+    });
+  }
+
+  /* Low-tier, mid-tier, or no animation support → show everything immediately */
+  if (window.yrTier === 'low' || window.yrTier === 'mid' || !window.IntersectionObserver) {
+    revealAll();
+    return;
+  }
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) { e.target.classList.add('yr-visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0, rootMargin: '0px 0px 40px 0px' });
+
+  document.querySelectorAll('[data-yr-reveal]').forEach(function(el){ io.observe(el); });
+
+  /* Safety net: reveal anything still hidden after 600ms */
+  setTimeout(revealAll, 600);
+}());
 </script>
 </body>
 </html>
