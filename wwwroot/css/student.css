@@ -405,14 +405,13 @@
   color: var(--muted);
 }
 
-/* Per-level badge animation */
+/* Per-level badge animation — heavy effects only on yr-high */
 [data-yr="high"] .lvl-tier-unlocked.lvl-2 .lvl-tier-badge { animation: yr-pulse-ring 2.5s ease-out infinite; }
-[data-yr="high"] .lvl-tier-unlocked.lvl-3 .lvl-tier-badge,
-[data-yr="mid"]  .lvl-tier-unlocked.lvl-3 .lvl-tier-badge { animation: yr-pulse-ring 2.8s ease-out infinite; }
-[data-yr="high"] .lvl-tier-unlocked.lvl-4 .lvl-tier-badge,
-[data-yr="mid"]  .lvl-tier-unlocked.lvl-4 .lvl-tier-badge { animation: yr-float-up 3s ease-in-out infinite; filter: drop-shadow(0 0 8px var(--lvl-glow)); }
-[data-yr="high"] .lvl-tier-unlocked.lvl-5 .lvl-tier-badge,
-[data-yr="mid"]  .lvl-tier-unlocked.lvl-5 .lvl-tier-badge { animation: yr-badge-glow 2s ease-in-out infinite, yr-float-up 3.5s ease-in-out infinite; }
+[data-yr="high"] .lvl-tier-unlocked.lvl-3 .lvl-tier-badge { animation: yr-pulse-ring 2.8s ease-out infinite; }
+[data-yr="high"] .lvl-tier-unlocked.lvl-4 .lvl-tier-badge { animation: yr-float-up 3s ease-in-out infinite; filter: drop-shadow(0 0 8px var(--lvl-glow)); }
+[data-yr="high"] .lvl-tier-unlocked.lvl-5 .lvl-tier-badge { animation: yr-badge-glow 2s ease-in-out infinite, yr-float-up 3.5s ease-in-out infinite; }
+/* mid-tier: glow box-shadow only, no float/pulse animations */
+[data-yr="mid"] .lvl-tier-unlocked .lvl-tier-badge { box-shadow: 0 0 14px var(--lvl-glow); }
 
 /* Tier connector line */
 .lvl-tier-line { flex: 1; width: 2px; background: var(--border-soft); margin-top: 4px; min-height: 24px; border-radius: 1px; }

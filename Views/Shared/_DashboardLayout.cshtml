@@ -75,14 +75,16 @@
     <script>
     /* YR Performance detection — runs sync to stamp class before first paint */
     (function(){
-      var c  = navigator.hardwareConcurrency || 2;
-      var m  = navigator.deviceMemory       || 2;
-      var rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var c    = navigator.hardwareConcurrency || 2;
+      var m    = navigator.deviceMemory       || 2;
+      var rm   = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       var conn = navigator.connection || {};
       var slow = /^(2g|slow-2g)$/.test(conn.effectiveType || '');
+      /* Mobile heuristic: small screen + few cores → low */
+      var smallScreen = window.innerWidth < 480 && window.innerHeight < 900;
       var tier = 'high';
       if (rm || slow || (c <= 2 && m <= 1)) tier = 'low';
-      else if (c < 4 || m < 4)             tier = 'mid';
+      else if (c < 4 || m < 4 || smallScreen) tier = 'mid';
       document.documentElement.dataset.yr = tier;
       window.yrTier = tier;
     }());
@@ -198,21 +200,30 @@
 </script>
 @RenderSection("Scripts", required: false)
 <script>
-/* YR Reveal observer — skipped on yr-low */
+/* YR Reveal observer */
 (function(){
-  if (window.yrTier === 'low') {
+  function revealAll() {
     document.querySelectorAll('[data-yr-reveal]').forEach(function(el){
       el.classList.add('yr-visible');
     });
+  }
+
+  /* Low-tier or no animation support → show everything immediately */
+  if (window.yrTier === 'low' || !window.IntersectionObserver) {
+    revealAll();
     return;
   }
-  if (!window.IntersectionObserver) return;
+
   var io = new IntersectionObserver(function(entries){
     entries.forEach(function(e){
       if (e.isIntersecting) { e.target.classList.add('yr-visible'); io.unobserve(e.target); }
     });
-  }, { threshold: 0.08 });
+  }, { threshold: 0, rootMargin: '0px 0px 40px 0px' });
+
   document.querySelectorAll('[data-yr-reveal]').forEach(function(el){ io.observe(el); });
+
+  /* Safety net: reveal anything still hidden after 900ms */
+  setTimeout(revealAll, 900);
 }());
 
 /* YR Count-up — only high/mid */
