@@ -4,14 +4,19 @@
     ViewData["Role"] = "student";
     ViewData["DashTitle"] = "Missões";
 
+    const string _icoNote   = "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 18V5l12-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='18' cy='16' r='3'/></svg>";
+    const string _icoTarget = "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='4'/></svg>";
+    const string _icoCheck  = "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20,6 9,17 4,12'/></svg>";
+    const string _icoZap    = "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='13,2 3,14 12,14 11,22 21,10 12,10'/></svg>";
+
     var missions = new[] {
-        new { Icon="🎹", Title="Praticar escalas maiores",          Desc="30 min de prática contínua",       Xp=90,  Status="em-andamento", Progress=60, Deadline="Hoje",     Category="Técnica"    },
-        new { Icon="🎵", Title="Memorizar Clair de Lune (1–16)",    Desc="Compassos 1 a 16 sem partitura",    Xp=120, Status="em-andamento", Progress=30, Deadline="Amanhã",   Category="Repertório" },
-        new { Icon="👂", Title="Treino de ouvido — intervalos",     Desc="10 exercícios de intervalo",        Xp=50,  Status="pendente",     Progress=0,  Deadline="Qui",      Category="Percepção"  },
-        new { Icon="🎼", Title="Leitura à primeira vista",          Desc="Etude nº 3 — leitura completa",     Xp=80,  Status="pendente",     Progress=0,  Deadline="Sex",      Category="Leitura"    },
-        new { Icon="🔥", Title="7 dias seguidos de prática",        Desc="Pratique todos os dias da semana",  Xp=200, Status="em-andamento", Progress=71, Deadline="Dom",      Category="Streak"     },
-        new { Icon="✅", Title="Aprender River Flows — parte A",    Desc="Mão direita completa",              Xp=100, Status="concluida",    Progress=100,Deadline="Ontem",    Category="Repertório" },
-        new { Icon="✅", Title="Praticar 20 min por dia",           Desc="Missão diária concluída",           Xp=30,  Status="concluida",    Progress=100,Deadline="Ontem",    Category="Técnica"    },
+        new { Icon=_icoNote,   Title="Praticar escalas maiores",          Desc="30 min de prática contínua",       Xp=90,  Status="em-andamento", Progress=60, Deadline="Hoje",     Category="Técnica"    },
+        new { Icon=_icoNote,   Title="Memorizar Clair de Lune (1–16)",    Desc="Compassos 1 a 16 sem partitura",    Xp=120, Status="em-andamento", Progress=30, Deadline="Amanhã",   Category="Repertório" },
+        new { Icon=_icoTarget, Title="Treino de ouvido — intervalos",     Desc="10 exercícios de intervalo",        Xp=50,  Status="pendente",     Progress=0,  Deadline="Qui",      Category="Percepção"  },
+        new { Icon=_icoNote,   Title="Leitura à primeira vista",          Desc="Etude nº 3 — leitura completa",     Xp=80,  Status="pendente",     Progress=0,  Deadline="Sex",      Category="Leitura"    },
+        new { Icon=_icoZap,    Title="7 dias seguidos de prática",        Desc="Pratique todos os dias da semana",  Xp=200, Status="em-andamento", Progress=71, Deadline="Dom",      Category="Streak"     },
+        new { Icon=_icoCheck,  Title="Aprender River Flows — parte A",    Desc="Mão direita completa",              Xp=100, Status="concluida",    Progress=100,Deadline="Ontem",    Category="Repertório" },
+        new { Icon=_icoCheck,  Title="Praticar 20 min por dia",           Desc="Missão diária concluída",           Xp=30,  Status="concluida",    Progress=100,Deadline="Ontem",    Category="Técnica"    },
     };
 
     int totalXp    = missions.Where(m => m.Status == "concluida").Sum(m => m.Xp);
@@ -66,7 +71,7 @@
                     _              => "Pendente"
                 };
                 <div class="ms-row" data-status="@m.Status">
-                    <div class="ms-icon @m.Status">@m.Icon</div>
+                    <div class="ms-icon @m.Status">@Html.Raw(m.Icon)</div>
                     <div class="ms-info">
                         <div class="ms-title-row">
                             <span class="ms-title">@m.Title</span>
@@ -80,7 +85,7 @@
                     </div>
                     <div class="ms-right">
                         <span class="ms-xp">+@(m.Xp) XP</span>
-                        <span class="ms-deadline">⏱ @m.Deadline</span>
+                        <span class="ms-deadline">@m.Deadline</span>
                         <span class="mission-status @m.Status">@statusLabel</span>
                     </div>
                 </div>
@@ -118,7 +123,7 @@
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-soft);">
             <div class="card-sub" style="margin-bottom:10px">Próxima recompensa</div>
             <div class="next-reward">
-                <span class="next-reward-icon">🏆</span>
+                <span class="next-reward-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3"/><path d="M17 6h3v2a3 3 0 0 1-3 3"/><path d="M9 17h6"/><path d="M12 13v4"/></svg></span>
                 <div>
                     <div style="font-size:13.5px;font-weight:600">500 XP acumulados</div>
                     <div style="font-size:12px;color:var(--muted);margin-top:2px">Faltam @(500 - totalXp) XP</div>

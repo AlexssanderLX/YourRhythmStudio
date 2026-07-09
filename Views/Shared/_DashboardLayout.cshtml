@@ -55,6 +55,7 @@
 
     var settingsUrl = Url.Action("Settings", "Dashboard")!;
     var isSettings  = currentAction == "settings";
+    var hideDashTopbar = ViewData["HideDashTopbar"] as bool? == true;
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -140,7 +141,7 @@
         </aside>
 
         <main class="dash-main">
-            @if (role != "student" && !isSettings) {
+            @if (role != "student" && !isSettings && !hideDashTopbar) {
             <header class="dash-topbar">
                 <div>
                     <p class="dash-kicker">@roleLabel · YourRhythm Studio</p>

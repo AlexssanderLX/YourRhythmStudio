@@ -732,3 +732,19 @@
   .s-chip { padding: 10px 8px; }
   .s-chip-val { font-size: 19px; }
 }
+
+/* ── SVG icon helpers ─────────────────────────────────────────── */
+.s-chip-ico { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+.s-chip-ico svg { display: block; flex-shrink: 0; }
+.s-empty-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; opacity: .55; }
+.s-empty-icon svg { display: block; }
+.rep-ico { display: flex; align-items: center; justify-content: center; }
+.rep-ico svg { display: block; }
+.rep-orb svg { display: block; }
+.rep-action-icon { display: flex; align-items: center; justify-content: center; }
+.rep-action-icon svg { display: block; }
+.q-icon svg { display: block; }
+.lvl-skill-dot { display: inline-flex; align-items: center; justify-content: center; }
+.lvl-skill-dot svg { display: block; flex-shrink: 0; }
+.s-back-link { display: inline-flex; align-items: center; gap: 6px; }
+.s-back-link svg { flex-shrink: 0; }

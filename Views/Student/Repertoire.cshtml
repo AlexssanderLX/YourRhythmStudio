@@ -38,7 +38,7 @@
                 _ => item.Status.ToString()
             };
             <a class="rep-track rep-track-link" href="@Url.Action("RepertoireDetail", "Student", new { id = item.Id })">
-                <div class="rep-ico">🎵</div>
+                <div class="rep-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                 <div class="rep-body">
                     <div class="rep-title">@item.Title</div>
                     @if (!string.IsNullOrEmpty(item.ComposerOrArtist)) {
@@ -57,7 +57,7 @@
     </div>
 } else {
     <div class="s-empty">
-        <div class="s-empty-icon">🎶</div>
+        <div class="s-empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="s-empty-msg">Nenhuma música no repertório ainda.<br>Seu professor irá adicionar em breve.</div>
     </div>
 }

@@ -46,17 +46,17 @@
 @* ── Stat chips ─────────────────────────────────────────────────────── *@
 <div class="s-chips" style="margin-bottom:20px">
     <div class="s-chip s-chip-ok" data-yr-reveal style="--d:.08s">
-        <div class="s-chip-ico">⭐</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></div>
         <div class="s-chip-val" data-count="@masteredCount">@masteredCount</div>
         <div class="s-chip-lbl">Habilidades</div>
     </div>
     <div class="s-chip s-chip-blue" data-yr-reveal style="--d:.14s">
-        <div class="s-chip-ico">📋</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="s-chip-val" data-count="@totalSkills">@totalSkills</div>
         <div class="s-chip-lbl">Total definidas</div>
     </div>
     <div class="s-chip s-chip-warn" data-yr-reveal style="--d:.20s">
-        <div class="s-chip-ico">🔒</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
         <div class="s-chip-val" data-count="@nextPending">@nextPending</div>
         <div class="s-chip-lbl">Próx. nível</div>
     </div>
@@ -70,7 +70,7 @@
 
 @if (!Model.Skills.Any()) {
     <div class="s-empty" data-yr-reveal style="--d:.32s">
-        <div class="s-empty-icon">📜</div>
+        <div class="s-empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="s-empty-msg">Seu professor ainda não definiu as habilidades por nível.</div>
     </div>
 } else {
@@ -89,7 +89,7 @@
                 <div class="lvl-tier-left">
                     <div class="lvl-tier-badge">
                         @if (isUnlocked) { <span>@tier.Num</span> }
-                        else { <span style="font-size:14px;opacity:.5">🔒</span> }
+                        else { <span style="opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> }
                     </div>
                     @if (tier.Num < 5) {
                         <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
@@ -128,7 +128,7 @@
                                         ? skill.MasteredAtUtc.Value.ToLocalTime().ToString("dd/MM/yy")
                                         : "pendente";
                                 <div class="lvl-skill @(skill.Mastered ? "lvl-skill-mastered" : "lvl-skill-pending")">
-                                    <span class="lvl-skill-dot">@(skill.Mastered ? "✓" : "–")</span>
+                                    <span class="lvl-skill-dot">@if(skill.Mastered){<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>}else{<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>}</span>
                                     <span class="lvl-skill-name">@skill.Name</span>
                                     <span style="margin-left:auto;font-size:11px;color:var(--muted)">@src</span>
                                 </div>

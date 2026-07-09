@@ -59,7 +59,7 @@
                     </div>
                     <div class="mc-right">
                         <span class="mc-xp">@m.Xp</span>
-                        <span class="mc-deadline">⏱ @m.Deadline</span>
+                        <span class="mc-deadline">@m.Deadline</span>
                         <span class="mission-status @m.Status">@statusLabel</span>
                     </div>
                 </div>
@@ -71,17 +71,19 @@
         <h3>Modelos rápidos</h3>
         <div class="card-sub">Clique para atribuir a um aluno</div>
         <div class="template-list">
+            @{ const string _icoN = "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 18V5l12-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='18' cy='16' r='3'/></svg>"; }
+            @{ const string _icoT = "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='4'/></svg>"; }
             @foreach (var t in new[] {
-                new { Icon="🎹", Title="Prática diária 20min",     Xp="+10 XP" },
-                new { Icon="🎸", Title="Aprender nova música",      Xp="+30 XP" },
-                new { Icon="🎯", Title="Técnica específica",         Xp="+15 XP" },
-                new { Icon="👂", Title="Treino de ouvido",           Xp="+20 XP" },
-                new { Icon="📖", Title="Leitura à primeira vista",   Xp="+25 XP" },
-                new { Icon="🎵", Title="Memorização de trecho",      Xp="+20 XP" },
+                new { Icon=_icoN, Title="Prática diária 20min",     Xp="+10 XP" },
+                new { Icon=_icoN, Title="Aprender nova música",      Xp="+30 XP" },
+                new { Icon=_icoT, Title="Técnica específica",         Xp="+15 XP" },
+                new { Icon=_icoN, Title="Treino de ouvido",           Xp="+20 XP" },
+                new { Icon=_icoN, Title="Leitura à primeira vista",   Xp="+25 XP" },
+                new { Icon=_icoN, Title="Memorização de trecho",      Xp="+20 XP" },
             })
             {
                 <div class="template-item">
-                    <span class="tmpl-icon">@t.Icon</span>
+                    <span class="tmpl-icon">@Html.Raw(t.Icon)</span>
                     <div class="tmpl-meta">
                         <span class="tmpl-title">@t.Title</span>
                         <span class="tmpl-xp">@t.Xp</span>

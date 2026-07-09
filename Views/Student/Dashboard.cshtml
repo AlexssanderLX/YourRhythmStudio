@@ -78,19 +78,19 @@
 <div class="s-chips">
     <a class="s-chip s-chip-warn" asp-controller="Student" asp-action="Assignments"
        data-yr-reveal style="--d:.08s">
-        <div class="s-chip-ico">🎯</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></div>
         <div class="s-chip-val" data-count="@pending">@pending</div>
         <div class="s-chip-lbl">Missões abertas</div>
     </a>
     <a class="s-chip s-chip-ok" asp-controller="Student" asp-action="Assignments"
        data-yr-reveal style="--d:.14s">
-        <div class="s-chip-ico">✅</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg></div>
         <div class="s-chip-val" data-count="@completed">@completed</div>
         <div class="s-chip-lbl">Concluídas</div>
     </a>
     <a class="s-chip s-chip-blue" asp-controller="Student" asp-action="Repertoire"
        data-yr-reveal style="--d:.20s">
-        <div class="s-chip-ico">🎵</div>
+        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="s-chip-val" data-count="@repCount">@repCount</div>
         <div class="s-chip-lbl">Em repertório</div>
     </a>
@@ -144,7 +144,7 @@
             }
         } else {
             <div class="s-empty">
-                <div class="s-empty-icon">💬</div>
+                <div class="s-empty-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                 <div class="s-empty-msg">Nenhum feedback visível ainda.</div>
             </div>
         }
@@ -178,7 +178,7 @@
             }
         } else {
             <div class="s-empty">
-                <div class="s-empty-icon">🎵</div>
+                <div class="s-empty-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                 <div class="s-empty-msg">Nenhum repertório em andamento.</div>
             </div>
         }

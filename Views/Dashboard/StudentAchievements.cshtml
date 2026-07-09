@@ -4,15 +4,21 @@
     ViewData["Role"] = "student";
     ViewData["DashTitle"] = "Conquistas";
 
+    const string _icoNote   = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 18V5l12-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='18' cy='16' r='3'/></svg>";
+    const string _icoStar   = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26'/></svg>";
+    const string _icoTrophy = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 4h10v4a5 5 0 0 1-10 0z'/><path d='M7 6H4v2a3 3 0 0 0 3 3'/><path d='M17 6h3v2a3 3 0 0 1-3 3'/><path d='M9 17h6'/><path d='M12 13v4'/></svg>";
+    const string _icoZap    = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='13,2 3,14 12,14 11,22 21,10 12,10'/></svg>";
+    const string _icoCheck  = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20,6 9,17 4,12'/></svg>";
+
     var achievements = new[] {
-        new { Icon="🎵", Name="Primeira nota",        Desc="Complete sua primeira missão",               Xp=50,  Unlocked=true,  Date="Jan 2024", Category="Início"    },
-        new { Icon="🎼", Name="Leitor de partitura",  Desc="Leia uma música completa à primeira vista",  Xp=80,  Unlocked=true,  Date="Fev 2024", Category="Leitura"   },
-        new { Icon="🔥", Name="Semana de fogo",        Desc="7 dias seguidos de prática",                 Xp=120, Unlocked=true,  Date="Mar 2024", Category="Streak"    },
-        new { Icon="⭐", Name="Nível 10",              Desc="Alcance o nível 10",                         Xp=200, Unlocked=true,  Date="Abr 2024", Category="Nível"     },
-        new { Icon="🏅", Name="Repertório rico",       Desc="Adicione 5 músicas ao repertório",           Xp=100, Unlocked=true,  Date="Mai 2024", Category="Repertório"},
-        new { Icon="🎹", Name="Pianista dedicado",     Desc="100h totais de prática registradas",         Xp=300, Unlocked=false, Date="",         Category="Prática"   },
-        new { Icon="🏆", Name="Mestre das escalas",    Desc="Conclua todas as missões de escalas",        Xp=250, Unlocked=false, Date="",         Category="Técnica"   },
-        new { Icon="🌟", Name="Lenda do estúdio",      Desc="Alcance o nível 20",                         Xp=500, Unlocked=false, Date="",         Category="Nível"     },
+        new { Icon=_icoNote,   Name="Primeira nota",        Desc="Complete sua primeira missão",               Xp=50,  Unlocked=true,  Date="Jan 2024", Category="Início"    },
+        new { Icon=_icoNote,   Name="Leitor de partitura",  Desc="Leia uma música completa à primeira vista",  Xp=80,  Unlocked=true,  Date="Fev 2024", Category="Leitura"   },
+        new { Icon=_icoZap,    Name="Semana de fogo",        Desc="7 dias seguidos de prática",                 Xp=120, Unlocked=true,  Date="Mar 2024", Category="Streak"    },
+        new { Icon=_icoStar,   Name="Nível 10",              Desc="Alcance o nível 10",                         Xp=200, Unlocked=true,  Date="Abr 2024", Category="Nível"     },
+        new { Icon=_icoCheck,  Name="Repertório rico",       Desc="Adicione 5 músicas ao repertório",           Xp=100, Unlocked=true,  Date="Mai 2024", Category="Repertório"},
+        new { Icon=_icoNote,   Name="Músico dedicado",       Desc="100h totais de prática registradas",         Xp=300, Unlocked=false, Date="",         Category="Prática"   },
+        new { Icon=_icoTrophy, Name="Mestre das escalas",    Desc="Conclua todas as missões de escalas",        Xp=250, Unlocked=false, Date="",         Category="Técnica"   },
+        new { Icon=_icoStar,   Name="Lenda do estúdio",      Desc="Alcance o nível 20",                         Xp=500, Unlocked=false, Date="",         Category="Nível"     },
     };
 
     int unlockedCount = achievements.Count(a => a.Unlocked);
@@ -21,7 +27,7 @@
 
 <div class="cols-4-scroll"><div class="dash-grid cols-4">
     <div class="card stat">
-        <div class="stat-top"><div class="stat-ic">🏅</div><span class="stat-trend" style="color:#5fd0a0">@unlockedCount/@achievements.Length</span></div>
+        <div class="stat-top"><div class="stat-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3"/><path d="M17 6h3v2a3 3 0 0 1-3 3"/><path d="M9 17h6"/><path d="M12 13v4"/></svg></div><span class="stat-trend" style="color:#5fd0a0">@unlockedCount/@achievements.Length</span></div>
         <div class="stat-val">@unlockedCount</div>
         <div class="stat-label">Desbloqueadas</div>
     </div>
@@ -31,12 +37,12 @@
         <div class="stat-label">XP de conquistas</div>
     </div>
     <div class="card stat">
-        <div class="stat-top"><div class="stat-ic">🔒</div></div>
+        <div class="stat-top"><div class="stat-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div></div>
         <div class="stat-val">@(achievements.Length - unlockedCount)</div>
         <div class="stat-label">A desbloquear</div>
     </div>
     <div class="card stat">
-        <div class="stat-top"><div class="stat-ic">📊</div></div>
+        <div class="stat-top"><div class="stat-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div></div>
         <div class="stat-val">@(unlockedCount * 100 / achievements.Length)%</div>
         <div class="stat-label">Completado</div>
     </div>
@@ -55,7 +61,7 @@
             @foreach (var a in achievements)
             {
                 <div class="ach-card @(a.Unlocked ? "unlocked" : "locked")">
-                    <div class="ach-icon">@a.Icon</div>
+                    <div class="ach-icon">@Html.Raw(a.Icon)</div>
                     <div class="ach-info">
                         <span class="ach-name">@a.Name</span>
                         <span class="ach-desc">@a.Desc</span>
@@ -75,7 +81,7 @@
                         }
                         else
                         {
-                            <span style="font-size:14px;color:var(--muted)">🔒</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                         }
                     </div>
                 </div>
