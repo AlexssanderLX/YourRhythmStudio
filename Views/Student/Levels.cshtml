@@ -106,45 +106,43 @@
         <div class="s-empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="s-empty-msg">Seu professor ainda não definiu as habilidades por nível.</div>
     </div>
-} else {
-    <div class="lvl-journey">
-        @{ int tierIdx = 0; }
-        @foreach (var tier in tiers) {
-            tierIdx++;
-            var tierSkills   = Model.Skills.Where(s => s.RequiredLevel == tier.Level).ToList();
-            var tierMastered = tierSkills.Count(s => s.Mastered);
-            var isCurrent    = level == tier.Level;
-            var isUnlocked   = level >= tier.Level;
-            var tierPct      = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
-            var delay        = (0.30 + tierIdx * 0.07).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-            <div class="lvl-tier lvl-@tier.Level @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
-                 data-yr-reveal style="--d:@(delay)s" data-tier-pct="@tierPct">
-                <div class="lvl-tier-left">
-                    <div class="lvl-tier-badge">
-                        @if (isUnlocked) { <span>@tier.Level</span> }
-                        else { <span style="opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> }
-                    </div>
-                    @if (tier.Level < 5) {
-                        <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
-                    }
-                </div>
+}
 
-                <div class="lvl-tier-body">
-                    <div class="lvl-tier-head">
-                        <div>
-                            <div class="lvl-tier-name">Nível @tier.Level — @tier.Name</div>
-                            <div class="lvl-tier-range">
-                                @tierMastered/@tierSkills.Count habilidades
-                                @if (tier.Level < 5) {
-                                    <span>· @tier.MinXp.ToString("N0") – @tier.MaxXp.ToString("N0") XP</span>
-                                } else {
-                                    <span>· @tier.MinXp.ToString("N0") – @tier.MaxXp.ToString("N0") XP</span>
-                                }
-                            </div>
+<div class="lvl-journey">
+    @{ int tierIdx = 0; }
+    @foreach (var tier in tiers) {
+        tierIdx++;
+        var tierSkills   = Model.Skills.Where(s => s.RequiredLevel == tier.Level).ToList();
+        var tierMastered = tierSkills.Count(s => s.Mastered);
+        var isCurrent    = level == tier.Level;
+        var isUnlocked   = level >= tier.Level;
+        var tierPct      = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
+        var delay        = (0.30 + tierIdx * 0.07).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        var xpRangeLabel = $"{tier.MinXp:N0} - {tier.MaxXp:N0} XP";
+        <div class="lvl-tier lvl-@tier.Level @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
+             data-yr-reveal style="--d:@(delay)s" data-tier-pct="@tierPct">
+            <div class="lvl-tier-left">
+                <div class="lvl-tier-badge">
+                    @if (isUnlocked) { <span>@tier.Level</span> }
+                    else { <span style="opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> }
+                </div>
+                @if (tier.Level < 5) {
+                    <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
+                }
+            </div>
+
+            <div class="lvl-tier-body">
+                <div class="lvl-tier-head">
+                    <div>
+                        <div class="lvl-tier-name">Nível @tier.Level — @tier.Name</div>
+                        <div class="lvl-tier-range">
+                            @tierMastered/@tierSkills.Count habilidades
+                            <span>&middot; @xpRangeLabel</span>
                         </div>
-                        @if (isCurrent)      { <span class="lvl-tier-tag">Atual</span> }
-                        else if (isUnlocked) { <span class="lvl-tier-tag lvl-tier-done">Possui</span> }
                     </div>
+                    @if (isCurrent)      { <span class="lvl-tier-tag">Atual</span> }
+                    else if (isUnlocked) { <span class="lvl-tier-tag lvl-tier-done">Possui</span> }
+                </div>
 
                     <div class="lvl-tier-bar-wrap">
                         <div class="lvl-tier-bar">
@@ -182,11 +180,10 @@
                     } else {
                         <p class="s-muted" style="margin:8px 0 0;font-size:13px">Nenhuma habilidade definida para este nível.</p>
                     }
-                </div>
             </div>
-        }
-    </div>
-}
+        </div>
+    }
+</div>
 
 <style>
 .promo-callout {
@@ -218,19 +215,38 @@
 @section Scripts {
 <script>
 (function(){
-    var bigEl = document.getElementById('lvlXpBig');
-    if (bigEl) window.yrCountUp(bigEl, parseInt(bigEl.dataset.count || '0', 10), 900);
-    window.yrBarAnimate(document.getElementById('lvlXpFill'), @xpPct);
-
-    document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
-        window.yrCountUp(el, parseInt(el.dataset.count || '0', 10), 700);
+    document.querySelectorAll('[data-yr-reveal]').forEach(function(el){
+        el.classList.add('yr-visible');
     });
 
-    if (!window.IntersectionObserver || window.yrTier === 'low') {
+    var bigEl = document.getElementById('lvlXpBig');
+    if (bigEl && window.yrCountUp) {
+        window.yrCountUp(bigEl, parseInt(bigEl.dataset.count || '0', 10), 900);
+    }
+
+    if (window.yrBarAnimate) {
+        window.yrBarAnimate(document.getElementById('lvlXpFill'), @xpPct);
+    } else {
+        var xpFill = document.getElementById('lvlXpFill');
+        if (xpFill) xpFill.style.width = '@xpPct%';
+    }
+
+    document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
+        if (window.yrCountUp) {
+            window.yrCountUp(el, parseInt(el.dataset.count || '0', 10), 700);
+        }
+    });
+
+    function fillTierBars() {
         document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(tier){
             var fill = tier.querySelector('.lvl-tier-bar-fill');
             if (fill) fill.style.width = tier.dataset.tierPct + '%';
         });
+    }
+
+    fillTierBars();
+
+    if (!window.IntersectionObserver || window.yrTier === 'low') {
         return;
     }
 
