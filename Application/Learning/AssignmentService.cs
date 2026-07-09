@@ -37,7 +37,8 @@ public sealed class AssignmentService
             request.Description,
             request.DueAtUtc,
             request.XpReward,
-            now);
+            now,
+            rarity: request.Rarity);
 
         assignment.UpdateDetails(
             request.Title,
@@ -118,12 +119,10 @@ public sealed class AssignmentService
 
         assignment.Complete(DateTime.UtcNow);
 
+        // XP accumulates freely; level-up is gated behind a PromotionRequired skill (see SkillService).
         if (!assignment.XpGranted && assignment.XpReward > 0)
         {
             student.CurrentXp += assignment.XpReward;
-            student.CurrentLevel = Math.Max(
-                student.CurrentLevel,
-                LearningLevelCalculator.CalculateLevel(student.CurrentXp));
             assignment.MarkXpGranted();
 
             _dbContext.XpEvents.Add(new XpEvent(
@@ -131,7 +130,7 @@ public sealed class AssignmentService
                 studentProfileId,
                 XpEventType.AssignmentCompleted,
                 assignment.XpReward,
-                $"Missao concluida: {assignment.Title}",
+                $"Missão concluída: {assignment.Title}",
                 DateTime.UtcNow,
                 assignment.TeacherProfileId,
                 assignment.Id));
@@ -162,7 +161,8 @@ public sealed class AssignmentService
                 assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
-                assignment.XpGranted));
+                assignment.XpGranted,
+                assignment.Rarity));
     }
 
     private static AssignmentSummary ToSummary(Assignment assignment)
@@ -176,6 +176,7 @@ public sealed class AssignmentService
             assignment.TargetMinutes,
             assignment.CompletedAtUtc,
             assignment.XpReward,
-            assignment.XpGranted);
+            assignment.XpGranted,
+            assignment.Rarity);
     }
 }

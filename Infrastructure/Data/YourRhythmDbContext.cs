@@ -185,6 +185,7 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(assignment => assignment.Title).HasMaxLength(180).IsRequired();
             entity.Property(assignment => assignment.Description).HasMaxLength(2000).IsRequired();
             entity.Property(assignment => assignment.Status).HasConversion<int>();
+            entity.Property(assignment => assignment.Rarity).HasConversion<int>().HasDefaultValue(Domain.Learning.Enums.AssignmentRarity.Comum);
             entity.HasIndex(assignment => assignment.SchoolId);
             entity.HasIndex(assignment => assignment.TeacherProfileId);
             entity.HasIndex(assignment => assignment.StudentProfileId);
@@ -257,6 +258,8 @@ public sealed class YourRhythmDbContext : DbContext
             entity.HasKey(s => s.Id);
             entity.Property(s => s.Name).HasMaxLength(200).IsRequired();
             entity.Property(s => s.Description).HasMaxLength(1000);
+            entity.Property(s => s.SkillType).HasConversion<int>().HasDefaultValue(Domain.Learning.Enums.SkillType.ProfessorSpecial);
+            entity.Property(s => s.IconName).HasMaxLength(80);
             entity.HasIndex(s => new { s.SchoolId, s.TeacherProfileId, s.RequiredLevel });
             entity.HasOne<School>()
                 .WithMany()

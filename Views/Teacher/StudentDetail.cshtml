@@ -114,6 +114,16 @@
                         <label asp-for="Base.Assignment.Description">Descrição opcional</label>
                         <textarea asp-for="Base.Assignment.Description" placeholder="O que o aluno deve fazer?"></textarea>
                     </div>
+                    <div>
+                        <label asp-for="Base.Assignment.Rarity">Raridade</label>
+                        <select asp-for="Base.Assignment.Rarity" id="assignRarity">
+                            <option value="Comum">Comum — 100 XP</option>
+                            <option value="Rara">Rara — 400 XP</option>
+                            <option value="MuitoRara">Muito Rara — 1.500 XP</option>
+                            <option value="Epica">Épica — 5.000 XP</option>
+                            <option value="Lendaria">Lendária — 25.000 XP</option>
+                        </select>
+                    </div>
                     <div class="form-grid-compact">
                         <div>
                             <label asp-for="Base.Assignment.DueAtUtc">Prazo</label>
@@ -125,7 +135,7 @@
                         </div>
                         <div>
                             <label asp-for="Base.Assignment.XpReward">XP</label>
-                            <input asp-for="Base.Assignment.XpReward" type="number" min="0" placeholder="50" />
+                            <input asp-for="Base.Assignment.XpReward" id="assignXp" type="number" min="0" max="50000" placeholder="100" />
                         </div>
                     </div>
                     <button type="submit">Criar missão</button>
@@ -398,5 +408,17 @@
             fallbackCopy();
         }
     }
+
+    // Auto-fill XP when rarity changes
+    (function(){
+        var rarSel = document.getElementById('assignRarity');
+        var xpIn   = document.getElementById('assignXp');
+        var xpMap  = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
+        if (rarSel && xpIn) {
+            rarSel.addEventListener('change', function(){
+                xpIn.value = xpMap[rarSel.value] || 100;
+            });
+        }
+    }());
     </script>
 }

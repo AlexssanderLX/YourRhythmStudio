@@ -18,7 +18,8 @@ public sealed class Assignment
         int xpReward,
         DateTime utcNow,
         Guid? lessonId = null,
-        Guid? repertoireItemId = null)
+        Guid? repertoireItemId = null,
+        AssignmentRarity rarity = AssignmentRarity.Comum)
     {
         if (schoolId == Guid.Empty)
             throw new ArgumentException("SchoolId is required.", nameof(schoolId));
@@ -48,6 +49,7 @@ public sealed class Assignment
         Description = description.Trim();
         DueAtUtc = dueAtUtc;
         XpReward = xpReward;
+        Rarity = rarity;
         Status = AssignmentStatus.Pending;
         CreatedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
@@ -80,6 +82,8 @@ public sealed class Assignment
     public int XpReward { get; private set; }
 
     public bool XpGranted { get; private set; }
+
+    public AssignmentRarity Rarity { get; private set; }
 
     public DateTime CreatedAtUtc { get; private set; }
 

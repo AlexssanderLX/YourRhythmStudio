@@ -99,7 +99,8 @@ public sealed class TeacherStudentService
                 assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
-                assignment.XpGranted))
+                assignment.XpGranted,
+                assignment.Rarity))
             .ToArrayAsync(cancellationToken);
 
         var feedback = await _dbContext.FeedbackEntries

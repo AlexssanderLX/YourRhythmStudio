@@ -1,3 +1,4 @@
+@using YourRhythmStudio.Domain.Learning.Enums
 @model YourRhythmStudio.ViewModels.Learning.TeacherSkillsViewModel
 @{
     Layout = "_DashboardLayout";
@@ -5,13 +6,13 @@
     ViewData["Role"] = "teacher";
     ViewData["DashTitle"] = "Habilidades";
 
-    var levelNames = new[] { "", "Iniciante", "Aprendiz", "Intermediário", "Avançado", "Mestre" };
+    var levelNames  = new[] { "", "Iniciante", "Aprendiz", "Intermediário", "Avançado", "Mestre" };
     var levelColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
 }
 
 <div class="card" style="margin-bottom:20px">
     <h3 style="margin-bottom:4px">Definir nova habilidade</h3>
-    <p class="card-sub" style="margin-bottom:16px">Habilidades definem o que o aluno precisa dominar para avançar de nível.</p>
+    <p class="card-sub" style="margin-bottom:16px">Habilidades definem conquistas que o aluno deve dominar para avançar de nível.</p>
     <form asp-controller="Teacher" asp-action="CreateSkill" method="post" class="auth-form">
         @Html.AntiForgeryToken()
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -21,7 +22,7 @@
                 <span asp-validation-for="NewSkill.Name" class="auth-error"></span>
             </div>
             <div>
-                <label asp-for="NewSkill.RequiredLevel">Nível necessário (1–5)</label>
+                <label asp-for="NewSkill.RequiredLevel">Nível (1–5)</label>
                 <select asp-for="NewSkill.RequiredLevel">
                     @for (var i = 1; i <= 5; i++) {
                         <option value="@i">Nível @i · @levelNames[i]</option>
@@ -29,11 +30,22 @@
                 </select>
             </div>
         </div>
-        <div>
-            <label asp-for="NewSkill.Description">Descrição (opcional)</label>
-            <textarea asp-for="NewSkill.Description" placeholder="Descreva o critério de domínio…"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+            <div>
+                <label asp-for="NewSkill.SkillType">Tipo</label>
+                <select asp-for="NewSkill.SkillType">
+                    <option value="@((int)SkillType.PromotionRequired)">Promoção obrigatória — desbloqueia o próximo nível</option>
+                    <option value="@((int)SkillType.MissionReward)" selected>Recompensa lendária — ganho ao completar missão épica</option>
+                    <option value="@((int)SkillType.ProfessorSpecial)">Especial do professor — concedida livremente</option>
+                </select>
+                <span class="auth-error" id="skillTypeHint" style="color:var(--muted);font-size:12px;margin-top:4px;display:block"></span>
+            </div>
+            <div>
+                <label asp-for="NewSkill.Description">Descrição (opcional)</label>
+                <input asp-for="NewSkill.Description" placeholder="Critério de domínio…" />
+            </div>
         </div>
-        <button type="submit">Adicionar habilidade</button>
+        <button type="submit" style="margin-top:4px">Adicionar habilidade</button>
     </form>
 </div>
 
@@ -51,9 +63,22 @@
             </div>
             <div class="row-list">
                 @foreach (var skill in levelSkills) {
-                    <div class="prow" style="justify-content:space-between">
-                        <div class="pmeta">
-                            <div class="pn">@skill.Name</div>
+                    var typeLbl = skill.SkillType switch {
+                        SkillType.PromotionRequired => "Promoção",
+                        SkillType.MissionReward     => "Lendária",
+                        _                            => "Especial"
+                    };
+                    var typeCss = skill.SkillType switch {
+                        SkillType.PromotionRequired => "skill-type-promo",
+                        SkillType.MissionReward     => "skill-type-legend",
+                        _                            => "skill-type-special"
+                    };
+                    <div class="prow" style="justify-content:space-between;gap:10px">
+                        <div class="pmeta" style="min-width:0">
+                            <div class="pn" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                @skill.Name
+                                <span class="skill-type-badge @typeCss">@typeLbl</span>
+                            </div>
                             @if (!string.IsNullOrEmpty(skill.Description)) {
                                 <div class="ps">@skill.Description</div>
                             }
@@ -75,3 +100,28 @@
         <p>Nenhuma habilidade definida ainda.<br>Crie habilidades acima para cada nível de progressão.</p>
     </div>
 }
+
+<style>
+.skill-type-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 6px; flex-shrink: 0;
+}
+.skill-type-promo  { background: rgba(255,176,32,.12);  color: #ffb020; border: 1px solid rgba(255,176,32,.2);  }
+.skill-type-legend { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2);  }
+.skill-type-special{ background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
+</style>
+
+<script>
+(function(){
+    var sel  = document.querySelector('select[name="NewSkill.SkillType"]');
+    var hint = document.getElementById('skillTypeHint');
+    var hints = {
+        '@((int)SkillType.PromotionRequired)': 'Apenas uma por nível. O aluno só avança quando essa habilidade for concedida e houver XP suficiente.',
+        '@((int)SkillType.MissionReward)':     'Concedida como recompensa por completar uma missão épica ou lendária.',
+        '@((int)SkillType.ProfessorSpecial)':  'Você pode conceder e revogar a qualquer momento, sem restrições de XP.',
+    };
+    function update() { if (hint) hint.textContent = hints[sel.value] || ''; }
+    if (sel) { sel.addEventListener('change', update); update(); }
+}());
+</script>

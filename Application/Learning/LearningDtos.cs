@@ -55,7 +55,8 @@ public sealed record AssignmentSummary(
     int TargetMinutes,
     DateTime? CompletedAtUtc,
     int XpReward,
-    bool XpGranted);
+    bool XpGranted,
+    AssignmentRarity Rarity);
 
 public sealed record FeedbackSummary(
     Guid Id,
@@ -124,7 +125,8 @@ public sealed record CreateAssignmentRequest(
     string Description,
     DateTime? DueAtUtc,
     int TargetMinutes,
-    int XpReward);
+    int XpReward,
+    AssignmentRarity Rarity = AssignmentRarity.Comum);
 
 public sealed record CreateFeedbackRequest(
     Guid StudentProfileId,
@@ -136,6 +138,8 @@ public sealed record SkillSummary(
     string Name,
     string? Description,
     int RequiredLevel,
+    SkillType SkillType,
+    string? IconName,
     DateTime CreatedAtUtc);
 
 public sealed record SkillWithMastery(
@@ -143,6 +147,8 @@ public sealed record SkillWithMastery(
     string Name,
     string? Description,
     int RequiredLevel,
+    SkillType SkillType,
+    string? IconName,
     bool Mastered,
     DateTime? MasteredAtUtc,
     bool InferredFromCurrentLevel);

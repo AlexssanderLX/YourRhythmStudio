@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using YourRhythmStudio.Application.Learning;
+using YourRhythmStudio.Domain.Learning.Enums;
 
 namespace YourRhythmStudio.ViewModels.Learning;
 
@@ -112,8 +113,10 @@ public sealed class CreateAssignmentViewModel
     [Range(0, 600)]
     public int TargetMinutes { get; set; }
 
-    [Range(0, 10000)]
-    public int XpReward { get; set; } = 50;
+    [Range(0, 50000)]
+    public int XpReward { get; set; } = 100;
+
+    public AssignmentRarity Rarity { get; set; } = AssignmentRarity.Comum;
 }
 
 public sealed class CreateFeedbackViewModel
@@ -136,7 +139,7 @@ public sealed class TeacherSkillsViewModel
 
 public sealed class DefineSkillViewModel
 {
-    [Required(ErrorMessage = "Nome da habilidade Ã© obrigatÃ³rio.")]
+    [Required(ErrorMessage = "Nome da habilidade é obrigatório.")]
     [StringLength(200)]
     public string Name { get; set; } = string.Empty;
 
@@ -145,6 +148,11 @@ public sealed class DefineSkillViewModel
 
     [Range(1, 5)]
     public int RequiredLevel { get; set; } = 1;
+
+    public SkillType SkillType { get; set; } = SkillType.ProfessorSpecial;
+
+    [StringLength(80)]
+    public string? IconName { get; set; }
 }
 
 public sealed class TeacherStudentDetailWithSkillsViewModel

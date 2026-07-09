@@ -1,10 +1,20 @@
+using YourRhythmStudio.Domain.Learning.Enums;
+
 namespace YourRhythmStudio.Domain.Learning;
 
 public sealed class Skill
 {
     private Skill() { }
 
-    public Skill(Guid schoolId, Guid teacherProfileId, string name, string? description, int requiredLevel, DateTime utcNow)
+    public Skill(
+        Guid schoolId,
+        Guid teacherProfileId,
+        string name,
+        string? description,
+        int requiredLevel,
+        SkillType skillType,
+        string? iconName,
+        DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
         if (requiredLevel is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(requiredLevel));
@@ -15,6 +25,8 @@ public sealed class Skill
         Name = name.Trim();
         Description = description?.Trim();
         RequiredLevel = requiredLevel;
+        SkillType = skillType;
+        IconName = iconName?.Trim();
         CreatedAtUtc = utcNow;
     }
 
@@ -24,5 +36,7 @@ public sealed class Skill
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public int RequiredLevel { get; private set; }
+    public SkillType SkillType { get; private set; }
+    public string? IconName { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 }

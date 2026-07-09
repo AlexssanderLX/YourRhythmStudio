@@ -22,7 +22,7 @@
                 <span style="color:var(--xp)">Nível máximo atingido!</span>
                 <b style="color:var(--xp)">MAX</b>
             } else {
-                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP → nível @(level+1)</span>
+                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
                 <span style="color:var(--muted)">@xpPct%</span>
             }
         </div>
@@ -73,12 +73,10 @@
 
 @functions {
     static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
-        if (level >= 5) return (xp - 1000, 0, 100);
-        int[] starts = { 0, 100, 250, 500 };
-        int[] ends   = { 100, 250, 500, 1000 };
-        var i = Math.Max(0, Math.Min(level - 1, 3));
-        var inn  = Math.Max(0, xp - starts[i]);
-        var need = ends[i] - starts[i];
-        return (inn, need, Math.Min(100, need > 0 ? inn * 100 / need : 100));
+        if (level >= 5) return (xp, 0, 100);
+        int[] promotionXp = { 0, 500, 2_000, 8_000, 25_000 };
+        var need = promotionXp[Math.Min(level, 4)];
+        var pct  = need > 0 ? Math.Min(100, xp * 100 / need) : 100;
+        return (xp, need, pct);
     }
 }

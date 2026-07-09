@@ -62,7 +62,8 @@ public sealed class ProgressService
                 assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
-                assignment.XpGranted))
+                assignment.XpGranted,
+                assignment.Rarity))
             .ToArrayAsync(cancellationToken);
 
         var completed = await _dbContext.Assignments
@@ -81,7 +82,8 @@ public sealed class ProgressService
                 assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
-                assignment.XpGranted))
+                assignment.XpGranted,
+                assignment.Rarity))
             .ToArrayAsync(cancellationToken);
 
         var repertoire = await _dbContext.RepertoireItems

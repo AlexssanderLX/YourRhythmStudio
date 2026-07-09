@@ -1,4 +1,5 @@
 using Foundation.SecureLinks.Models;
+using YourRhythmStudio.Domain.Learning.Enums;
 using Foundation.SecureLinks.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -218,7 +219,8 @@ public sealed class TeacherController : Controller
                     string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
                     model.DueAtUtc,
                     model.TargetMinutes,
-                    model.XpReward),
+                    model.XpReward,
+                    model.Rarity),
                 cancellationToken);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -302,7 +304,7 @@ public sealed class TeacherController : Controller
             return View(new TeacherSkillsViewModel { Skills = skills2, NewSkill = model });
         }
         var profile = await CurrentProfile(cancellationToken);
-        await _skillService.CreateSkillAsync(profile, model.Name, model.Description, model.RequiredLevel, cancellationToken);
+        await _skillService.CreateSkillAsync(profile, model.Name, model.Description, model.RequiredLevel, model.SkillType, model.IconName, cancellationToken);
         return RedirectToAction(nameof(Skills));
     }
 
@@ -421,7 +423,8 @@ public sealed class TeacherController : Controller
             Description = ReadString(current.Description, "Base.Assignment.Description", "Assignment.Description"),
             DueAtUtc = ReadDateTime(current.DueAtUtc, "Base.Assignment.DueAtUtc", "Assignment.DueAtUtc"),
             TargetMinutes = ReadInt(current.TargetMinutes, "Base.Assignment.TargetMinutes", "Assignment.TargetMinutes"),
-            XpReward = ReadInt(current.XpReward, "Base.Assignment.XpReward", "Assignment.XpReward")
+            XpReward = ReadInt(current.XpReward, "Base.Assignment.XpReward", "Assignment.XpReward"),
+            Rarity = ReadEnum(current.Rarity, "Base.Assignment.Rarity", "Assignment.Rarity"),
         };
     }
 
@@ -484,6 +487,16 @@ public sealed class TeacherController : Controller
                 return parsed;
         }
 
+        return fallback;
+    }
+
+    private TEnum ReadEnum<TEnum>(TEnum fallback, params string[] keys) where TEnum : struct, Enum
+    {
+        foreach (var key in keys)
+        {
+            if (Request.Form.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value.ToString(), out var parsed))
+                return parsed;
+        }
         return fallback;
     }
 
