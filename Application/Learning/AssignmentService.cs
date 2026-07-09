@@ -121,7 +121,9 @@ public sealed class AssignmentService
         if (!assignment.XpGranted && assignment.XpReward > 0)
         {
             student.CurrentXp += assignment.XpReward;
-            student.CurrentLevel = LearningLevelCalculator.CalculateLevel(student.CurrentXp);
+            student.CurrentLevel = Math.Max(
+                student.CurrentLevel,
+                LearningLevelCalculator.CalculateLevel(student.CurrentXp));
             assignment.MarkXpGranted();
 
             _dbContext.XpEvents.Add(new XpEvent(

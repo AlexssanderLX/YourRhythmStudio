@@ -13,7 +13,7 @@
 
 <div class="card" style="max-width:560px">
     <h3 style="margin-bottom:4px">Novo aluno</h3>
-    <div class="card-sub" style="margin-bottom:20px">O aluno receberá um convite por e-mail para acessar o app.</div>
+    <div class="card-sub" style="margin-bottom:20px">Cadastre o aluno para liberar o acompanhamento no app.</div>
 
     <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form">
         @Html.AntiForgeryToken()
@@ -33,17 +33,23 @@
 
         <div>
             <label asp-for="Instrument">Instrumento</label>
-            <input asp-for="Instrument" placeholder="Ex: Piano, Violão, Teclado…" />
+            <input asp-for="Instrument" placeholder="Ex: Piano, Violao, Teclado..." />
         </div>
 
         <div>
-            <label asp-for="Level">Nível inicial</label>
-            <input asp-for="Level" type="number" min="1" placeholder="1" />
+            <label asp-for="Level">Nivel inicial</label>
+            <select asp-for="Level">
+                <option value="1">Nivel 1</option>
+                <option value="2">Nivel 2</option>
+                <option value="3">Nivel 3</option>
+                <option value="4">Nivel 4</option>
+                <option value="5">Nivel 5</option>
+            </select>
         </div>
 
         <div>
-            <label asp-for="Notes">Observações (opcional)</label>
-            <textarea asp-for="Notes" placeholder="Histórico, objetivos, dificuldades…"></textarea>
+            <label asp-for="Notes">Observacoes (opcional)</label>
+            <textarea asp-for="Notes" placeholder="Historico, objetivos, dificuldades..."></textarea>
         </div>
 
         <button type="submit" class="btn-full">Cadastrar aluno</button>

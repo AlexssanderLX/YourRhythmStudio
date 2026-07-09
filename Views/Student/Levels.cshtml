@@ -1,125 +1,144 @@
-@model YourRhythmStudio.ViewModels.Learning.StudentLevelsViewModel
+﻿@model YourRhythmStudio.ViewModels.Learning.StudentLevelsViewModel
 @{
     Layout = "_DashboardLayout";
-    ViewData["Title"] = "Niveis";
+    ViewData["Title"] = "Níveis";
     ViewData["Role"] = "student";
-    ViewData["DashTitle"] = "Niveis";
 
-    var xp = Model.Progress.CurrentXp;
-    var level = Model.Progress.CurrentLevel;
-    var masteredCount = Model.Skills.Count(skill => skill.Mastered);
-    var totalSkills = Model.Skills.Count;
-    var nextLevel = level < 5 ? level + 1 : 5;
-    var nextLevelSkills = Model.Skills.Count(skill => skill.RequiredLevel == nextLevel && !skill.Mastered);
+    var xp            = Model.Progress.CurrentXp;
+    var level         = Model.Progress.CurrentLevel;
+    var masteredCount = Model.Skills.Count(s => s.Mastered);
+    var totalSkills   = Model.Skills.Count;
+    var nextLevel     = level < 5 ? level + 1 : 5;
+    var nextPending   = Model.Skills.Count(s => s.RequiredLevel == nextLevel && !s.Mastered);
     var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
 
     var tiers = new[] {
-        (Num: 1, Name: "Iniciante", XpStart: 0, XpEnd: 100),
-        (Num: 2, Name: "Aprendiz", XpStart: 100, XpEnd: 250),
-        (Num: 3, Name: "Intermediario", XpStart: 250, XpEnd: 500),
-        (Num: 4, Name: "Avancado", XpStart: 500, XpEnd: 1000),
-        (Num: 5, Name: "Mestre", XpStart: 1000, XpEnd: 9999),
+        (Num:1, Name:"Iniciante",     XpStart:0,    XpEnd:100),
+        (Num:2, Name:"Aprendiz",      XpStart:100,  XpEnd:250),
+        (Num:3, Name:"Intermediário", XpStart:250,  XpEnd:500),
+        (Num:4, Name:"Avançado",      XpStart:500,  XpEnd:1000),
+        (Num:5, Name:"Mestre",        XpStart:1000, XpEnd:9999),
     };
 }
 
-<div class="s-prog-hero lvl-@level" style="margin-bottom:20px">
-    <div class="s-ph-eyebrow">Classificacao atual</div>
+@* ── Progress Hero ────────────────────────────────────────────────── *@
+<div class="s-prog-hero lvl-@level" data-yr-reveal style="--d:0s">
+    <div class="s-ph-eyebrow">Classificação atual</div>
     <div class="s-ph-hex">@level</div>
-    <div class="s-ph-xp-big">@xp</div>
+    <div class="s-ph-xp-big" id="lvlXpBig" data-count="@xp">@xp</div>
     <div class="s-ph-xp-lbl">XP total</div>
 
     <div style="margin:16px 0 0;padding:0 4px;position:relative;z-index:1">
         <div class="s-bar-labels" style="margin-bottom:5px">
             @if (level >= 5) {
-                <span style="color:var(--xp)">Nivel maximo atingido</span>
-                <b style="color:var(--xp)">MAX</b>
+                <span style="color:var(--xp)">Nível máximo atingido</span><b style="color:var(--xp)">MAX</b>
             } else {
-                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP para o nivel @(level + 1)</span>
+                <span style="color:var(--muted)"><b style="color:var(--lvl-a,var(--xp))">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
                 <span style="color:var(--muted)">@xpPct%</span>
             }
         </div>
         <div class="s-xp-track">
-            <div class="s-xp-fill" style="width:@xpPct%"></div>
+            <div class="s-xp-fill" id="lvlXpFill" style="width:0"></div>
         </div>
     </div>
 </div>
 
-<div class="dash-grid cols-3" style="margin-bottom:20px">
-    <div class="card">
-        <div class="stat-chip"><span class="sc-val">@masteredCount</span><span class="sc-lbl">Habilidades possuidas</span></div>
+@* ── Stat chips ─────────────────────────────────────────────────────── *@
+<div class="s-chips" style="margin-bottom:20px">
+    <div class="s-chip s-chip-ok" data-yr-reveal style="--d:.08s">
+        <div class="s-chip-ico">⭐</div>
+        <div class="s-chip-val" data-count="@masteredCount">@masteredCount</div>
+        <div class="s-chip-lbl">Habilidades</div>
     </div>
-    <div class="card">
-        <div class="stat-chip"><span class="sc-val">@totalSkills</span><span class="sc-lbl">Requisitos definidos</span></div>
+    <div class="s-chip s-chip-blue" data-yr-reveal style="--d:.14s">
+        <div class="s-chip-ico">📋</div>
+        <div class="s-chip-val" data-count="@totalSkills">@totalSkills</div>
+        <div class="s-chip-lbl">Total definidas</div>
     </div>
-    <div class="card">
-        <div class="stat-chip"><span class="sc-val">@nextLevelSkills</span><span class="sc-lbl">Pendentes no proximo nivel</span></div>
+    <div class="s-chip s-chip-warn" data-yr-reveal style="--d:.20s">
+        <div class="s-chip-ico">🔒</div>
+        <div class="s-chip-val" data-count="@nextPending">@nextPending</div>
+        <div class="s-chip-lbl">Próx. nível</div>
     </div>
 </div>
 
-<div class="s-sec">
-    <span class="s-sec-title">Habilidades por nivel</span>
-    <span class="s-sec-badge">professor</span>
+@* ── Journey ─────────────────────────────────────────────────────────── *@
+<div class="s-sec" data-yr-reveal style="--d:.26s">
+    <span class="s-sec-title">Habilidades por nível</span>
+    <span class="s-sec-badge">definido pelo professor</span>
 </div>
 
 @if (!Model.Skills.Any()) {
-    <div class="s-empty">
-        <div class="s-empty-icon">N</div>
-        <div class="s-empty-msg">Seu professor ainda nao definiu as habilidades por nivel.</div>
+    <div class="s-empty" data-yr-reveal style="--d:.32s">
+        <div class="s-empty-icon">📜</div>
+        <div class="s-empty-msg">Seu professor ainda não definiu as habilidades por nível.</div>
     </div>
 } else {
     <div class="lvl-journey">
+        @{ int tierIdx = 0; }
         @foreach (var tier in tiers) {
-            var tierSkills = Model.Skills.Where(skill => skill.RequiredLevel == tier.Num).ToList();
-            var tierMastered = tierSkills.Count(skill => skill.Mastered);
-            var isCurrent = level == tier.Num;
-            var isReachedByLevel = level >= tier.Num;
-            var tierPct = tierSkills.Count == 0 ? (isReachedByLevel ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
-            <div class="lvl-tier @(isReachedByLevel ? "lvl-tier-unlocked" : "lvl-tier-locked") lvl-@tier.Num">
+            tierIdx++;
+            var tierSkills    = Model.Skills.Where(s => s.RequiredLevel == tier.Num).ToList();
+            var tierMastered  = tierSkills.Count(s => s.Mastered);
+            var isCurrent     = level == tier.Num;
+            var isUnlocked    = level >= tier.Num;
+            var tierPct       = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
+            var revealDelay   = (0.30 + tierIdx * 0.07).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            <div class="lvl-tier lvl-@tier.Num @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
+                 data-yr-reveal style="--d:@(revealDelay)s" data-tier-pct="@tierPct">
                 <div class="lvl-tier-left">
                     <div class="lvl-tier-badge">
-                        @if (isReachedByLevel) { <span class="lvl-tier-num">@tier.Num</span> }
-                        else { <span class="lvl-tier-lock">#</span> }
+                        @if (isUnlocked) { <span>@tier.Num</span> }
+                        else { <span style="font-size:14px;opacity:.5">🔒</span> }
                     </div>
                     @if (tier.Num < 5) {
-                        <div class="lvl-tier-line @(isReachedByLevel ? "lvl-tier-line-on" : "")"></div>
+                        <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
                     }
                 </div>
+
                 <div class="lvl-tier-body">
                     <div class="lvl-tier-head">
                         <div>
-                            <div class="lvl-tier-name">Nivel @tier.Num - @tier.Name</div>
+                            <div class="lvl-tier-name">Nível @tier.Num — @tier.Name</div>
                             <div class="lvl-tier-range">
-                                @tierMastered/@tierSkills.Count habilidades possuidas
-                                @if (tier.Num < 5) { <span> - @tier.XpStart a @(tier.XpEnd - 1) XP</span> }
-                                else { <span> - @tier.XpStart+ XP</span> }
+                                @tierMastered/@tierSkills.Count habilidades
+                                @if (tier.Num < 5) {
+                                    <span>· @tier.XpStart–@(tier.XpEnd-1) XP</span>
+                                } else {
+                                    <span>· @tier.XpStart+ XP</span>
+                                }
                             </div>
                         </div>
-                        @if (isCurrent) { <span class="lvl-tier-tag">Atual</span> }
-                        else if (isReachedByLevel) { <span class="lvl-tier-tag lvl-tier-done">Possui</span> }
+                        @if (isCurrent)     { <span class="lvl-tier-tag">Atual</span> }
+                        else if (isUnlocked){ <span class="lvl-tier-tag lvl-tier-done">Possui</span> }
                     </div>
 
                     <div class="lvl-tier-bar-wrap">
-                        <div class="lvl-tier-bar"><i style="width:@tierPct%"></i></div>
+                        <div class="lvl-tier-bar">
+                            <i class="lvl-tier-bar-fill" style="width:0"></i>
+                        </div>
                     </div>
 
                     @if (tierSkills.Any()) {
                         <div class="lvl-skills">
                             @foreach (var skill in tierSkills) {
-                                var source = skill.InferredFromCurrentLevel
-                                    ? "Pelo nivel atual"
-                                    : skill.MasteredAtUtc.HasValue ? $"Marcada em {skill.MasteredAtUtc.Value.ToLocalTime():dd/MM/yy}" : "Pendente";
+                                var src = skill.InferredFromCurrentLevel
+                                    ? "pelo nível atual"
+                                    : skill.MasteredAtUtc.HasValue
+                                        ? skill.MasteredAtUtc.Value.ToLocalTime().ToString("dd/MM/yy")
+                                        : "pendente";
                                 <div class="lvl-skill @(skill.Mastered ? "lvl-skill-mastered" : "lvl-skill-pending")">
-                                    <span class="lvl-skill-dot">@(skill.Mastered ? "OK" : "--")</span>
+                                    <span class="lvl-skill-dot">@(skill.Mastered ? "✓" : "–")</span>
                                     <span class="lvl-skill-name">@skill.Name</span>
-                                    <span style="margin-left:auto;font-size:11px;color:var(--muted)">@source</span>
+                                    <span style="margin-left:auto;font-size:11px;color:var(--muted)">@src</span>
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(skill.Description)) {
-                                    <div style="font-size:12px;color:var(--muted);padding:0 0 8px 34px">@skill.Description</div>
+                                    <div style="font-size:12px;color:var(--muted);padding:2px 0 8px 34px;line-height:1.5">@skill.Description</div>
                                 }
                             }
                         </div>
                     } else {
-                        <p class="card-sub" style="margin:8px 0 0">Nenhuma habilidade definida para este nivel.</p>
+                        <p class="s-muted" style="margin:8px 0 0;font-size:13px">Nenhuma habilidade definida para este nível.</p>
                     }
                 </div>
             </div>
@@ -131,10 +150,51 @@
     static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
         if (level >= 5) return (xp - 1000, 0, 100);
         int[] starts = { 0, 100, 250, 500 };
-        int[] ends = { 100, 250, 500, 1000 };
-        var i = Math.Max(0, Math.Min(level - 1, 3));
+        int[] ends   = { 100, 250, 500, 1000 };
+        var i       = Math.Max(0, Math.Min(level - 1, 3));
         var current = Math.Max(0, xp - starts[i]);
-        var need = ends[i] - starts[i];
+        var need    = ends[i] - starts[i];
         return (current, need, Math.Min(100, need > 0 ? current * 100 / need : 100));
     }
+}
+
+@section Scripts {
+<script>
+(function(){
+    // Hero XP count-up + bar
+    var bigEl = document.getElementById('lvlXpBig');
+    if (bigEl) window.yrCountUp(bigEl, parseInt(bigEl.dataset.count || '0', 10), 900);
+    window.yrBarAnimate(document.getElementById('lvlXpFill'), @xpPct);
+
+    // Chip count-ups
+    document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
+        window.yrCountUp(el, parseInt(el.dataset.count || '0', 10), 700);
+    });
+
+    // Per-tier bar animation: fire when tier enters viewport
+    if (!window.IntersectionObserver || window.yrTier === 'low') {
+        document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(tier){
+            var fill = tier.querySelector('.lvl-tier-bar-fill');
+            if (fill) fill.style.width = tier.dataset.tierPct + '%';
+        });
+        return;
+    }
+
+    var barObserver = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+            if (!e.isIntersecting) return;
+            var tier = e.target;
+            var fill = tier.querySelector('.lvl-tier-bar-fill');
+            if (fill) {
+                setTimeout(function(){ fill.style.width = tier.dataset.tierPct + '%'; }, 200);
+            }
+            barObserver.unobserve(tier);
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(tier){
+        barObserver.observe(tier);
+    });
+}());
+</script>
 }

@@ -75,15 +75,27 @@ public sealed class TeacherController : Controller
         }
 
         var profile = await CurrentProfile(cancellationToken);
-        var student = await _teacherStudentService.CreateStudentAsync(
-            profile,
-            new CreateTeacherStudentRequest(
-                model.DisplayName,
-                model.Email,
-                model.Instrument,
-                model.Level,
-                model.Notes),
-            cancellationToken);
+        TeacherStudentSummary student;
+        try
+        {
+            student = await _teacherStudentService.CreateStudentAsync(
+                profile,
+                new CreateTeacherStudentRequest(
+                    model.DisplayName,
+                    model.Email,
+                    model.Instrument,
+                    model.Level,
+                    model.Notes),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            var message = ex is Microsoft.EntityFrameworkCore.DbUpdateException && ex.InnerException is not null
+                ? ex.InnerException.Message
+                : ex.Message;
+            ModelState.AddModelError(string.Empty, $"Nao foi possivel cadastrar o aluno: {message}");
+            return View(model);
+        }
 
         return RedirectToAction(nameof(StudentDetail), new { studentId = student.StudentProfileId });
     }
@@ -102,9 +114,11 @@ public sealed class TeacherController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateLesson(
         Guid studentId,
-        [Bind(Prefix = "Lesson")] CreateLessonViewModel model,
+        [Bind(Prefix = "Base.Lesson")] CreateLessonViewModel model,
         CancellationToken cancellationToken)
     {
+        model = ReadLessonForm(model);
+        TryValidateModel(model);
         if (!ModelState.IsValid || model.StudentProfileId != studentId)
         {
             TempData["Error"] = "Dados da aula invalidos.";
@@ -124,9 +138,11 @@ public sealed class TeacherController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddRepertoire(
         Guid studentId,
-        [Bind(Prefix = "Repertoire")] AddRepertoireViewModel model,
+        [Bind(Prefix = "Base.Repertoire")] AddRepertoireViewModel model,
         CancellationToken cancellationToken)
     {
+        model = ReadRepertoireForm(model);
+        TryValidateModel(model);
         if (!ModelState.IsValid || model.StudentProfileId != studentId)
         {
             TempData["Error"] = "Dados do repertorio invalidos.";
@@ -153,9 +169,11 @@ public sealed class TeacherController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateAssignment(
         Guid studentId,
-        [Bind(Prefix = "Assignment")] CreateAssignmentViewModel model,
+        [Bind(Prefix = "Base.Assignment")] CreateAssignmentViewModel model,
         CancellationToken cancellationToken)
     {
+        model = ReadAssignmentForm(model);
+        TryValidateModel(model);
         if (!ModelState.IsValid || model.StudentProfileId != studentId)
         {
             TempData["Error"] = "Dados da missao invalidos.";
@@ -163,16 +181,24 @@ public sealed class TeacherController : Controller
         }
 
         var profile = await CurrentProfile(cancellationToken);
-        await _assignmentService.CreateAssignmentAsync(
-            profile,
-            new CreateAssignmentRequest(
-                studentId,
-                model.Title,
-                model.Description,
-                model.DueAtUtc,
-                model.TargetMinutes,
-                model.XpReward),
-            cancellationToken);
+        try
+        {
+            await _assignmentService.CreateAssignmentAsync(
+                profile,
+                new CreateAssignmentRequest(
+                    studentId,
+                    model.Title,
+                    string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
+                    model.DueAtUtc,
+                    model.TargetMinutes,
+                    model.XpReward),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["Error"] = $"Nao foi possivel criar a missao: {ex.Message}";
+            return RedirectToAction(nameof(StudentDetail), new { studentId });
+        }
 
         return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
@@ -181,9 +207,11 @@ public sealed class TeacherController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateFeedback(
         Guid studentId,
-        [Bind(Prefix = "Feedback")] CreateFeedbackViewModel model,
+        [Bind(Prefix = "Base.Feedback")] CreateFeedbackViewModel model,
         CancellationToken cancellationToken)
     {
+        model = ReadFeedbackForm(model);
+        TryValidateModel(model);
         if (!ModelState.IsValid || model.StudentProfileId != studentId)
         {
             TempData["Error"] = "Dados do feedback invalidos.";
@@ -325,5 +353,123 @@ public sealed class TeacherController : Controller
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)
     {
         return _profileResolver.ResolveCurrentAsync(User, cancellationToken);
+    }
+
+    private CreateLessonViewModel ReadLessonForm(CreateLessonViewModel current)
+    {
+        ModelState.Clear();
+        return new CreateLessonViewModel
+        {
+            StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Lesson.StudentProfileId", "Lesson.StudentProfileId"),
+            Title = ReadString(current.Title, "Base.Lesson.Title", "Lesson.Title"),
+            LessonDateUtc = ReadDateTime(current.LessonDateUtc, "Base.Lesson.LessonDateUtc", "Lesson.LessonDateUtc") ?? current.LessonDateUtc,
+            Notes = ReadString(current.Notes, "Base.Lesson.Notes", "Lesson.Notes")
+        };
+    }
+
+    private AddRepertoireViewModel ReadRepertoireForm(AddRepertoireViewModel current)
+    {
+        ModelState.Clear();
+        return new AddRepertoireViewModel
+        {
+            StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Repertoire.StudentProfileId", "Repertoire.StudentProfileId"),
+            Title = ReadString(current.Title, "Base.Repertoire.Title", "Repertoire.Title"),
+            ComposerOrArtist = ReadString(current.ComposerOrArtist, "Base.Repertoire.ComposerOrArtist", "Repertoire.ComposerOrArtist"),
+            Instrument = ReadString(current.Instrument, "Base.Repertoire.Instrument", "Repertoire.Instrument"),
+            Level = ReadString(current.Level, "Base.Repertoire.Level", "Repertoire.Level"),
+            Notes = ReadString(current.Notes, "Base.Repertoire.Notes", "Repertoire.Notes"),
+            ReferenceUrl = ReadString(current.ReferenceUrl, "Base.Repertoire.ReferenceUrl", "Repertoire.ReferenceUrl")
+        };
+    }
+
+    private CreateAssignmentViewModel ReadAssignmentForm(CreateAssignmentViewModel current)
+    {
+        ModelState.Clear();
+        return new CreateAssignmentViewModel
+        {
+            StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Assignment.StudentProfileId", "Assignment.StudentProfileId"),
+            Title = ReadString(current.Title, "Base.Assignment.Title", "Assignment.Title"),
+            Description = ReadString(current.Description, "Base.Assignment.Description", "Assignment.Description"),
+            DueAtUtc = ReadDateTime(current.DueAtUtc, "Base.Assignment.DueAtUtc", "Assignment.DueAtUtc"),
+            TargetMinutes = ReadInt(current.TargetMinutes, "Base.Assignment.TargetMinutes", "Assignment.TargetMinutes"),
+            XpReward = ReadInt(current.XpReward, "Base.Assignment.XpReward", "Assignment.XpReward")
+        };
+    }
+
+    private CreateFeedbackViewModel ReadFeedbackForm(CreateFeedbackViewModel current)
+    {
+        ModelState.Clear();
+        return new CreateFeedbackViewModel
+        {
+            StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Feedback.StudentProfileId", "Feedback.StudentProfileId"),
+            Message = ReadString(current.Message, "Base.Feedback.Message", "Feedback.Message"),
+            VisibleToStudent = ReadBool(current.VisibleToStudent, "Base.Feedback.VisibleToStudent", "Feedback.VisibleToStudent")
+        };
+    }
+
+    private string ReadString(string? fallback, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (Request.Form.TryGetValue(key, out var value))
+                return value.ToString().Trim();
+        }
+
+        return fallback?.Trim() ?? string.Empty;
+    }
+
+    private Guid ReadGuid(Guid fallback, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (Request.Form.TryGetValue(key, out var value) && Guid.TryParse(value.ToString(), out var parsed))
+                return parsed;
+        }
+
+        return fallback;
+    }
+
+    private int ReadInt(int fallback, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (Request.Form.TryGetValue(key, out var value) && int.TryParse(value.ToString(), out var parsed))
+                return parsed;
+        }
+
+        return fallback;
+    }
+
+    private DateTime? ReadDateTime(DateTime? fallback, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!Request.Form.TryGetValue(key, out var value))
+                continue;
+
+            var raw = value.ToString();
+            if (string.IsNullOrWhiteSpace(raw))
+                return null;
+
+            if (DateTime.TryParse(raw, out var parsed))
+                return parsed;
+        }
+
+        return fallback;
+    }
+
+    private bool ReadBool(bool fallback, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!Request.Form.TryGetValue(key, out var value))
+                continue;
+
+            var raw = value.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+            if (bool.TryParse(raw, out var parsed))
+                return parsed;
+        }
+
+        return fallback;
     }
 }

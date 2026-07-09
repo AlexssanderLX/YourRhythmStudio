@@ -121,14 +121,13 @@ public sealed class TeacherStudentService
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
         var email = NormalizeEmail(request.Email);
 
-        var existingStudent = await _dbContext.StudentProfiles
-            .Include(student => student.SchoolUser)
+        var existingSchoolUser = await _dbContext.SchoolUsers
             .FirstOrDefaultAsync(
-                student => student.SchoolId == schoolId && student.SchoolUser!.Email == email,
+                user => user.SchoolId == schoolId && user.Email == email,
                 cancellationToken);
 
         StudentProfile studentProfile;
-        if (existingStudent is null)
+        if (existingSchoolUser is null)
         {
             var schoolUser = new SchoolUser
             {
@@ -153,7 +152,41 @@ public sealed class TeacherStudentService
         }
         else
         {
-            studentProfile = existingStudent;
+            if (existingSchoolUser.Role != YourRhythmRoles.Student)
+            {
+                throw new InvalidOperationException("Este e-mail ja esta vinculado a um usuario que nao e aluno.");
+            }
+
+            existingSchoolUser.DisplayName = RequireText(request.DisplayName, nameof(request.DisplayName));
+            existingSchoolUser.IsActive = true;
+
+            var existingStudent = await _dbContext.StudentProfiles
+                .FirstOrDefaultAsync(
+                    student => student.SchoolId == schoolId && student.SchoolUserId == existingSchoolUser.Id,
+                    cancellationToken);
+
+            if (existingStudent is null)
+            {
+                studentProfile = new StudentProfile
+                {
+                    SchoolId = schoolId,
+                    SchoolUserId = existingSchoolUser.Id,
+                    Instrument = OptionalText(request.Instrument) ?? string.Empty,
+                    Level = OptionalText(request.Level) ?? string.Empty,
+                    Notes = OptionalText(request.Notes) ?? string.Empty,
+                    CurrentLevel = ParseInitialLevel(request.Level)
+                };
+
+                _dbContext.StudentProfiles.Add(studentProfile);
+            }
+            else
+            {
+                studentProfile = existingStudent;
+                studentProfile.Instrument = OptionalText(request.Instrument) ?? studentProfile.Instrument;
+                studentProfile.Level = OptionalText(request.Level) ?? studentProfile.Level;
+                studentProfile.Notes = OptionalText(request.Notes) ?? studentProfile.Notes;
+                studentProfile.CurrentLevel = ParseInitialLevel(request.Level);
+            }
         }
 
         var link = await _dbContext.TeacherStudents.FirstOrDefaultAsync(

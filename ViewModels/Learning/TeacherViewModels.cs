@@ -28,7 +28,7 @@ public sealed class CreateStudentViewModel
     public string Instrument { get; set; } = string.Empty;
 
     [StringLength(80)]
-    public string Level { get; set; } = string.Empty;
+    public string Level { get; set; } = "1";
 
     [StringLength(1000)]
     public string Notes { get; set; } = string.Empty;
@@ -95,7 +95,6 @@ public sealed class CreateAssignmentViewModel
     [StringLength(180)]
     public string Title { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Descricao da missao e obrigatoria.")]
     [StringLength(2000)]
     public string Description { get; set; } = string.Empty;
 

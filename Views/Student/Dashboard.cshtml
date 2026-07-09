@@ -1,160 +1,248 @@
-@model YourRhythmStudio.ViewModels.Learning.StudentDashboardViewModel
+﻿@model YourRhythmStudio.ViewModels.Learning.StudentDashboardViewModel
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = "Meu painel";
     ViewData["Role"] = "student";
     var first = (User.Identity?.Name ?? "Aluno").Split(' ')[0];
-    ViewData["DashTitle"] = $"Ola, {first}";
 
-    var xp = Model.Summary.Progress.CurrentXp;
-    var level = Model.Summary.Progress.CurrentLevel;
-    var pending = Model.Summary.Progress.PendingAssignments;
+    var xp        = Model.Summary.Progress.CurrentXp;
+    var level     = Model.Summary.Progress.CurrentLevel;
+    var pending   = Model.Summary.Progress.PendingAssignments;
     var completed = Model.Summary.Progress.CompletedAssignments;
-    var repertoireCount = Model.Summary.RepertoireInProgress.Count;
+    var repCount  = Model.Summary.RepertoireInProgress.Count;
     var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
     var nextAssignment = Model.Summary.PendingAssignments.FirstOrDefault();
     var nextRepertoire = Model.Summary.RepertoireInProgress.FirstOrDefault();
-    var hasNextMove = nextAssignment is not null || nextRepertoire is not null;
+    var hasContent = nextAssignment is not null || nextRepertoire is not null
+                     || Model.Summary.RecentFeedback.Any()
+                     || Model.Summary.RepertoireInProgress.Any();
+
+    var rankLabel = level switch {
+        1 => "Iniciante",
+        2 => "Aprendiz",
+        3 => "Intermediário",
+        4 => "Avançado",
+        _ => "Mestre"
+    };
 }
 
-<a href="@Url.Action("Levels", "Student")" class="student-command lvl-@level">
-    <div class="student-command-top">
-        <div class="s-lvl-hex">@level</div>
-        <div class="student-command-copy">
-            <span>Jornada atual</span>
-            <strong>@first</strong>
-            <small>Nivel @level - YourRhythm</small>
+@* ── Hero Card ──────────────────────────────────────────────────── *@
+<a href="@Url.Action("Levels","Student")" class="s-hero lvl-@level" data-yr-reveal style="--d:0s">
+    <div class="s-hero-glow"></div>
+
+    @* Particles — lvl 3-5, high perf only *@
+    @if (level >= 3) {
+    <div class="s-hero-particles">
+        <span style="left:15%;top:60%;--dur:3.2s;--delay2:0s"></span>
+        <span style="left:30%;top:70%;--dur:4.1s;--delay2:.7s"></span>
+        <span style="left:55%;top:55%;--dur:3.6s;--delay2:1.2s"></span>
+        <span style="left:70%;top:65%;--dur:4.8s;--delay2:.3s"></span>
+        <span style="left:82%;top:50%;--dur:3.0s;--delay2:1.8s"></span>
+    </div>
+    }
+
+    <div class="s-hero-top">
+        <div class="s-badge-wrap">
+            <div class="s-badge-ring"></div>
+            <div class="s-badge">@level</div>
         </div>
-        <div class="student-xp-block">
-            <strong>@xp</strong>
-            <span>XP total</span>
+
+        <div class="s-hero-meta">
+            <div class="s-hero-greeting">Sua jornada</div>
+            <div class="s-hero-name">@first</div>
+            <div class="s-hero-rank">@rankLabel · Nível @level</div>
+        </div>
+
+        <div class="s-hero-xp">
+            <div class="s-xp-num" id="heroXp" data-count="@xp">@xp</div>
+            <div class="s-xp-tag">XP total</div>
         </div>
     </div>
 
-    <div class="student-xp-row">
+    <div class="s-bar-area">
         @if (level >= 5) {
-            <span>Nivel maximo</span><b>MAX</b>
+            <div class="s-bar-labels"><span>Nível <b>MAX</b></span><b>MESTRE</b></div>
         } else {
-            <span><b>@xpIn</b> / @xpNeed XP para o nivel @(level + 1)</span><b>@xpPct%</b>
+            <div class="s-bar-labels">
+                <span><b id="heroXpIn">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
+                <b>@xpPct%</b>
+            </div>
         }
-    </div>
-    <div class="s-xp-track">
-        <div class="s-xp-fill" style="width:@xpPct%"></div>
+        <div class="s-xp-track">
+            <div class="s-xp-fill" id="heroXpFill" style="width:0"></div>
+        </div>
     </div>
 </a>
 
-<section class="student-stats-grid">
-    <a class="student-stat-tile" asp-controller="Student" asp-action="Assignments">
-        <span>Pendentes</span>
-        <strong>@pending</strong>
-        <small>Missoes abertas</small>
+@* ── Stat chips ─────────────────────────────────────────────────── *@
+<div class="s-chips">
+    <a class="s-chip s-chip-warn" asp-controller="Student" asp-action="Assignments"
+       data-yr-reveal style="--d:.08s">
+        <div class="s-chip-ico">🎯</div>
+        <div class="s-chip-val" data-count="@pending">@pending</div>
+        <div class="s-chip-lbl">Missões abertas</div>
     </a>
-    <a class="student-stat-tile done" asp-controller="Student" asp-action="Assignments">
-        <span>Concluidas</span>
-        <strong>@completed</strong>
-        <small>XP conquistado</small>
+    <a class="s-chip s-chip-ok" asp-controller="Student" asp-action="Assignments"
+       data-yr-reveal style="--d:.14s">
+        <div class="s-chip-ico">✅</div>
+        <div class="s-chip-val" data-count="@completed">@completed</div>
+        <div class="s-chip-lbl">Concluídas</div>
     </a>
-    <a class="student-stat-tile rep" asp-controller="Student" asp-action="Repertoire">
-        <span>Repertorio</span>
-        <strong>@repertoireCount</strong>
-        <small>Em estudo</small>
+    <a class="s-chip s-chip-blue" asp-controller="Student" asp-action="Repertoire"
+       data-yr-reveal style="--d:.20s">
+        <div class="s-chip-ico">🎵</div>
+        <div class="s-chip-val" data-count="@repCount">@repCount</div>
+        <div class="s-chip-lbl">Em repertório</div>
     </a>
-</section>
+</div>
 
-<section class="student-next-card">
-    <div>
-        <span class="student-section-kicker">Proxima jogada</span>
+@* ── Next move card ──────────────────────────────────────────────── *@
+<div class="s-next lvl-@level" data-yr-reveal style="--d:.26s">
+    <div class="s-next-body">
+        <div class="s-next-kicker">Próxima jogada</div>
         @if (nextAssignment is not null) {
-            <h2>@nextAssignment.Title</h2>
-            <p>Missao pronta para avancar. Vale +@nextAssignment.XpReward XP.</p>
+            <div class="s-next-title">@nextAssignment.Title</div>
+            <div class="s-next-desc">Missão pronta para avançar · +@nextAssignment.XpReward XP</div>
         } else if (nextRepertoire is not null) {
-            <h2>@nextRepertoire.Title</h2>
-            <p>Abra a referencia para registrar 50% do estudo.</p>
+            <div class="s-next-title">@nextRepertoire.Title</div>
+            <div class="s-next-desc">Registre seu estudo para acumular XP</div>
         } else {
-            <h2>Tudo em dia</h2>
-            <p>Quando seu professor enviar uma missao ou repertorio, ela aparece aqui.</p>
+            <div class="s-next-title">Tudo em dia!</div>
+            <div class="s-next-desc">Novas missões aparecem assim que seu professor enviar.</div>
         }
     </div>
     @if (nextAssignment is not null) {
-        <a class="btn btn-primary btn-sm" asp-controller="Student" asp-action="Assignments">Abrir missoes</a>
+        <a class="s-next-btn" asp-controller="Student" asp-action="Assignments">Abrir missões</a>
     } else if (nextRepertoire is not null) {
-        <a class="btn btn-primary btn-sm" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@nextRepertoire.Id">Abrir repertorio</a>
+        <a class="s-next-btn" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@nextRepertoire.Id">Abrir repertório</a>
     } else {
-        <a class="btn btn-ghost btn-sm" asp-controller="Student" asp-action="Progress">Ver progresso</a>
+        <a class="s-next-btn ghost" asp-controller="Student" asp-action="Progress">Ver progresso</a>
     }
-</section>
+</div>
 
-<section class="student-dashboard-grid">
-    <div class="student-panel">
-        <div class="student-panel-head">
+@* ── Panels row ──────────────────────────────────────────────────── *@
+<div class="s-panels">
+    @* Feedback *@
+    <div class="s-panel" data-yr-reveal style="--d:.33s">
+        <div class="s-panel-head">
             <div>
-                <span class="student-section-kicker">Feedback</span>
-                <h3>Professor</h3>
+                <div class="s-panel-kicker">Do Professor</div>
+                <h3>Feedback</h3>
             </div>
-            <a asp-controller="Student" asp-action="Feedback">Ver tudo</a>
+            <a class="s-panel-link" asp-controller="Student" asp-action="Feedback">Ver tudo →</a>
         </div>
+
         @if (Model.Summary.RecentFeedback.Any()) {
-            <div class="student-feedback-stack">
-                @foreach (var item in Model.Summary.RecentFeedback.Take(2)) {
-                    <div class="student-feedback-card">
-                        <div>
-                            <strong>Professor</strong>
-                            <span>@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
-                        </div>
-                        <p>@item.Message</p>
-                    </div>
-                }
+            @foreach (var fb in Model.Summary.RecentFeedback.Take(2)) {
+            <div class="s-fb-item">
+                <div class="s-fb-row">
+                    <span class="s-fb-who">Professor</span>
+                    <span class="s-fb-date">@fb.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
+                </div>
+                <div class="s-fb-msg">@fb.Message</div>
             </div>
+            }
         } else {
-            <p class="student-muted">Nenhum feedback visivel ainda.</p>
+            <div class="s-empty">
+                <div class="s-empty-icon">💬</div>
+                <div class="s-empty-msg">Nenhum feedback visível ainda.</div>
+            </div>
         }
     </div>
 
-    <div class="student-panel">
-        <div class="student-panel-head">
+    @* Repertoire *@
+    <div class="s-panel" data-yr-reveal style="--d:.40s">
+        <div class="s-panel-head">
             <div>
-                <span class="student-section-kicker">Repertorio</span>
-                <h3>Em estudo</h3>
+                <div class="s-panel-kicker">Em estudo</div>
+                <h3>Repertório</h3>
             </div>
-            <a asp-controller="Student" asp-action="Repertoire">Ver tudo</a>
+            <a class="s-panel-link" asp-controller="Student" asp-action="Repertoire">Ver tudo →</a>
         </div>
+
         @if (Model.Summary.RepertoireInProgress.Any()) {
-            <div class="student-rep-stack">
-                @foreach (var item in Model.Summary.RepertoireInProgress.Take(3)) {
-                    <a class="student-rep-card" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@item.Id">
-                        <div class="rep-ico">YR</div>
-                        <div>
-                            <strong>@item.Title</strong>
-                            @if (!string.IsNullOrWhiteSpace(item.ComposerOrArtist)) {
-                                <span>@item.ComposerOrArtist</span>
-                            }
-                            <div class="rep-bar"><i style="width:@item.ProgressPercent%"></i></div>
-                            <small>@item.ProgressPercent% acessado</small>
-                        </div>
-                    </a>
-                }
-            </div>
+            @foreach (var rep in Model.Summary.RepertoireInProgress.Take(3)) {
+            <a class="s-rep-item" asp-controller="Student" asp-action="RepertoireDetail" asp-route-id="@rep.Id">
+                <div class="s-rep-ico">YR</div>
+                <div class="s-rep-body">
+                    <div class="s-rep-title">@rep.Title</div>
+                    @if (!string.IsNullOrWhiteSpace(rep.ComposerOrArtist)) {
+                        <div class="s-rep-artist">@rep.ComposerOrArtist</div>
+                    }
+                    <div class="s-rep-bar-wrap">
+                        <div class="s-rep-bar"><i style="width:@rep.ProgressPercent%"></i></div>
+                        <div class="s-rep-pct">@rep.ProgressPercent% acessado</div>
+                    </div>
+                </div>
+            </a>
+            }
         } else {
-            <p class="student-muted">Nenhum repertorio em andamento.</p>
+            <div class="s-empty">
+                <div class="s-empty-icon">🎵</div>
+                <div class="s-empty-msg">Nenhum repertório em andamento.</div>
+            </div>
         }
     </div>
-</section>
+</div>
 
-@if (!hasNextMove && !Model.Summary.RecentFeedback.Any() && !Model.Summary.RepertoireInProgress.Any()) {
-    <div class="s-empty">
-        <div class="s-empty-icon">YR</div>
-        <div class="s-empty-msg">Nenhuma atividade ainda.<br>Seu professor em breve criara missoes para voce.</div>
-    </div>
+@if (!hasContent) {
+<div class="s-empty" style="margin-top:32px">
+    <div class="s-empty-icon">YR</div>
+    <div class="s-empty-msg">Nenhuma atividade ainda.<br>Seu professor em breve criará missões para você.</div>
+</div>
 }
 
 @functions {
     static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
         if (level >= 5) return (xp - 1000, 0, 100);
         int[] starts = { 0, 100, 250, 500 };
-        int[] ends = { 100, 250, 500, 1000 };
-        var i = Math.Max(0, Math.Min(level - 1, 3));
+        int[] ends   = { 100, 250, 500, 1000 };
+        var i       = Math.Max(0, Math.Min(level - 1, 3));
         var current = xp - starts[i];
-        var need = ends[i] - starts[i];
+        var need    = ends[i] - starts[i];
         return (current, need, Math.Min(100, need > 0 ? current * 100 / need : 100));
     }
+}
+
+@section Scripts {
+<script>
+(function(){
+    // Count-up for hero XP and chips
+    function runCountUps() {
+        var heroEl = document.getElementById('heroXp');
+        if (heroEl) window.yrCountUp(heroEl, parseInt(heroEl.dataset.count || '0'), 900);
+
+        document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
+            window.yrCountUp(el, parseInt(el.dataset.count || '0'), 700);
+        });
+    }
+
+    // XP bar fill
+    function runBar() {
+        var fill = document.getElementById('heroXpFill');
+        window.yrBarAnimate(fill, @xpPct);
+    }
+
+    // Wait for hero to be revealed, then run
+    var hero = document.querySelector('.s-hero');
+    if (!hero) { runCountUps(); runBar(); return; }
+
+    if (window.yrTier === 'low') {
+        runCountUps(); runBar(); return;
+    }
+
+    var started = false;
+    var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+            if (e.isIntersecting && !started) {
+                started = true;
+                setTimeout(runCountUps, 120);
+                runBar();
+                io.disconnect();
+            }
+        });
+    }, { threshold: 0.1 });
+    io.observe(hero);
+}());
+</script>
 }
