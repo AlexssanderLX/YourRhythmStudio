@@ -733,6 +733,57 @@
   .s-chip-val { font-size: 19px; }
 }
 
+/* ── Progress hero stats ──────────────────────────────────────── */
+.s-ph-stats {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 0; margin-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 16px;
+}
+.s-ph-stat {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 0 8px;
+  border-right: 1px solid rgba(255,255,255,.08);
+}
+.s-ph-stat:last-child { border-right: none; }
+.s-ph-stat-val {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 22px; color: var(--lvl-a, var(--xp)); line-height: 1;
+}
+.s-ph-stat-lbl { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.3; }
+
+/* ── s-card (generic content card) ───────────────────────────── */
+.s-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+/* ── XP feed (progress history) ──────────────────────────────── */
+.xp-feed { display: flex; flex-direction: column; gap: 0; }
+.xp-ev {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.xp-ev:last-child { border-bottom: none; padding-bottom: 0; }
+.xp-ev:first-child { padding-top: 0; }
+.xp-ev-badge {
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--xp) 15%, transparent);
+  color: var(--xp);
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 13px;
+  padding: 4px 10px; border-radius: 20px;
+  min-width: 64px; text-align: center;
+}
+.xp-ev-body { flex: 1; min-width: 0; }
+.xp-ev-title { font-size: 13.5px; font-weight: 500; color: var(--ink); line-height: 1.4; }
+.xp-ev-date  { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
 /* ── SVG icon helpers ─────────────────────────────────────────── */
 .s-chip-ico { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
 .s-chip-ico svg { display: block; flex-shrink: 0; }
