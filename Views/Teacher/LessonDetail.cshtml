@@ -1,0 +1,61 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherLessonDetailViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model.Detail.Lesson.Title;
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = Model.Detail.Lesson.Title;
+
+    var lesson = Model.Detail.Lesson;
+    var student = Model.Detail.Student;
+    var localDate = lesson.LessonDateUtc.ToLocalTime();
+}
+
+<section class="lesson-detail-page">
+    <div class="student-detail-topline">
+        <a class="student-back-link" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId">
+            <partial name="_DashIcon" model="@("users")" />
+            Voltar para @student.DisplayName
+        </a>
+        <a class="student-home-link" asp-controller="Teacher" asp-action="QuickLesson">Nova aula</a>
+    </div>
+
+    <section class="lesson-detail-hero">
+        <div>
+            <span class="student-section-kicker">Aula registrada</span>
+            <h1>@lesson.Title</h1>
+            <p>@student.DisplayName · @student.Instrument</p>
+        </div>
+        <div class="lesson-status-pill">@lesson.Status</div>
+    </section>
+
+    <section class="lesson-detail-grid">
+        <div class="lesson-metric">
+            <span>Data</span>
+            <strong>@localDate.ToString("dd/MM/yyyy")</strong>
+        </div>
+        <div class="lesson-metric">
+            <span>Hora</span>
+            <strong>@localDate.ToString("HH:mm")</strong>
+        </div>
+        <div class="lesson-metric">
+            <span>Duração</span>
+            <strong>@lesson.DurationMinutes min</strong>
+        </div>
+        <div class="lesson-metric">
+            <span>Nivel do aluno</span>
+            <strong>@student.CurrentLevel</strong>
+        </div>
+    </section>
+
+    <section class="lesson-notes-card">
+        <span class="student-section-kicker">Descrição da aula</span>
+        @if (string.IsNullOrWhiteSpace(lesson.Notes))
+        {
+            <p>Nenhuma descrição foi registrada para esta aula.</p>
+        }
+        else
+        {
+            <p>@lesson.Notes</p>
+        }
+    </section>
+</section>

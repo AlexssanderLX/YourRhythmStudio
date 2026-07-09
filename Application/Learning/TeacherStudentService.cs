@@ -55,8 +55,10 @@ public sealed class TeacherStudentService
             .Take(10)
             .Select(lesson => new LessonSummary(
                 lesson.Id,
+                lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
+                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))
@@ -246,8 +248,10 @@ public sealed class TeacherStudentService
             .Take(4)
             .Select(lesson => new LessonSummary(
                 lesson.Id,
+                lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
+                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))

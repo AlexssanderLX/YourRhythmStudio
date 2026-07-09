@@ -56,8 +56,16 @@ public sealed class CreateLessonViewModel
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime LessonDateUtc { get; set; } = DateTime.UtcNow;
 
+    [Range(0, 600, ErrorMessage = "Informe uma duracao entre 0 e 600 minutos.")]
+    public int DurationMinutes { get; set; } = 60;
+
     [StringLength(2000)]
     public string? Notes { get; set; }
+}
+
+public sealed class TeacherLessonDetailViewModel
+{
+    public required LessonDetailSummary Detail { get; init; }
 }
 
 public sealed class AddRepertoireViewModel
@@ -162,6 +170,9 @@ public sealed class QuickLessonFormViewModel
     [Required]
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime LessonDateUtc { get; set; } = DateTime.Now;
+
+    [Range(0, 600, ErrorMessage = "Informe uma duracao entre 0 e 600 minutos.")]
+    public int DurationMinutes { get; set; } = 60;
 
     [StringLength(2000)]
     public string? Notes { get; set; }

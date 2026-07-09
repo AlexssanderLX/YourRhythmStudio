@@ -23,11 +23,17 @@ public sealed record StudentDetailSummary(
 
 public sealed record LessonSummary(
     Guid Id,
+    Guid StudentProfileId,
     string Title,
     DateTime LessonDateUtc,
+    int DurationMinutes,
     DateTime? CompletedAtUtc,
     LessonStatus Status,
     string? Notes);
+
+public sealed record LessonDetailSummary(
+    LessonSummary Lesson,
+    TeacherStudentSummary Student);
 
 public sealed record RepertoireSummary(
     Guid Id,
@@ -96,6 +102,7 @@ public sealed record CreateLessonRequest(
     Guid StudentProfileId,
     string Title,
     DateTime LessonDateUtc,
+    int DurationMinutes,
     string? Notes);
 
 public sealed record AddRepertoireRequest(

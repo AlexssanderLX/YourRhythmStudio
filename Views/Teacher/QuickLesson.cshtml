@@ -6,46 +6,73 @@
     ViewData["DashTitle"] = "Registrar aula";
 }
 
-<div class="card" style="max-width:560px">
-    <h3 style="margin-bottom:4px">Nova aula</h3>
-    <p class="card-sub" style="margin-bottom:20px">Selecione o aluno, data e hora.</p>
-
-    <form asp-controller="Teacher" asp-action="QuickLesson" method="post" class="auth-form">
-        @Html.AntiForgeryToken()
-
-        <div>
-            <label asp-for="Form.StudentProfileId">Aluno</label>
-            <select asp-for="Form.StudentProfileId">
-                <option value="">Selecione o aluno</option>
-                @foreach (var student in Model.Students) {
-                    <option value="@student.StudentProfileId">@student.DisplayName - @student.Instrument</option>
-                }
-            </select>
-            <span asp-validation-for="Form.StudentProfileId" class="auth-error"></span>
-        </div>
-
-        <div>
-            <label asp-for="Form.LessonDateUtc">Data e hora</label>
-            <input
-                asp-for="Form.LessonDateUtc"
-                type="datetime-local"
-                asp-format="{0:yyyy-MM-ddTHH:mm}"
-                step="60"
-                value="@Model.Form.LessonDateUtc.ToString("yyyy-MM-ddTHH:mm")" />
-            <span asp-validation-for="Form.LessonDateUtc" class="auth-error"></span>
-        </div>
-
-        <button type="submit">Registrar aula</button>
-    </form>
-</div>
-
-@if (!Model.Students.Any()) {
-    <div class="empty-state" style="margin-top:20px">
-        <p>Voce ainda nao tem alunos cadastrados.<br>
-           <a asp-controller="Teacher" asp-action="CreateStudent" style="color:var(--blue-bright)">Cadastrar primeiro aluno</a>
-        </p>
+<section class="lesson-compose-page">
+    <div class="lesson-compose-hero">
+        <span class="student-section-kicker">Registro de aula</span>
+        <h2>Nova aula</h2>
+        <p>Cadastre nome, horario, duração e o que foi trabalhado. Depois a aula fica acessível no histórico do aluno.</p>
     </div>
-}
+
+    <div class="lesson-compose-card">
+        <form asp-controller="Teacher" asp-action="QuickLesson" method="post" class="auth-form compact-form">
+            @Html.AntiForgeryToken()
+
+            <div>
+                <label asp-for="Form.StudentProfileId">Aluno</label>
+                <select asp-for="Form.StudentProfileId">
+                    <option value="">Selecione o aluno</option>
+                    @foreach (var student in Model.Students)
+                    {
+                        <option value="@student.StudentProfileId">@student.DisplayName - @student.Instrument</option>
+                    }
+                </select>
+                <span asp-validation-for="Form.StudentProfileId" class="auth-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Form.Title">Nome da aula</label>
+                <input asp-for="Form.Title" placeholder="Ex: Técnica, leitura e repertório" />
+                <span asp-validation-for="Form.Title" class="auth-error"></span>
+            </div>
+
+            <div class="form-grid-compact">
+                <div>
+                    <label asp-for="Form.LessonDateUtc">Data e hora</label>
+                    <input
+                        asp-for="Form.LessonDateUtc"
+                        type="datetime-local"
+                        asp-format="{0:yyyy-MM-ddTHH:mm}"
+                        step="60"
+                        value="@Model.Form.LessonDateUtc.ToString("yyyy-MM-ddTHH:mm")" />
+                    <span asp-validation-for="Form.LessonDateUtc" class="auth-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Form.DurationMinutes">Duração</label>
+                    <input asp-for="Form.DurationMinutes" type="number" min="0" max="600" placeholder="60" />
+                    <span asp-validation-for="Form.DurationMinutes" class="auth-error"></span>
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="Form.Notes">Descrição da aula</label>
+                <textarea asp-for="Form.Notes" placeholder="O que foi trabalhado, observações, combinados para a próxima aula..."></textarea>
+                <span asp-validation-for="Form.Notes" class="auth-error"></span>
+            </div>
+
+            <button type="submit">Registrar aula</button>
+        </form>
+    </div>
+
+    @if (!Model.Students.Any())
+    {
+        <div class="empty-state">
+            <p>Voce ainda nao tem alunos cadastrados.<br>
+               <a asp-controller="Teacher" asp-action="CreateStudent" style="color:var(--blue-bright)">Cadastrar primeiro aluno</a>
+            </p>
+        </div>
+    }
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

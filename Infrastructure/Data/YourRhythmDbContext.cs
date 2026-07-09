@@ -129,6 +129,7 @@ public sealed class YourRhythmDbContext : DbContext
             entity.HasKey(lesson => lesson.Id);
             entity.Property(lesson => lesson.Title).HasMaxLength(180).IsRequired();
             entity.Property(lesson => lesson.Notes).HasMaxLength(2000);
+            entity.Property(lesson => lesson.DurationMinutes).HasDefaultValue(60);
             entity.Property(lesson => lesson.Status).HasConversion<int>();
             entity.HasIndex(lesson => lesson.SchoolId);
             entity.HasIndex(lesson => lesson.TeacherProfileId);

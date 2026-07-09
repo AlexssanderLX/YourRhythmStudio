@@ -90,8 +90,8 @@ public sealed class TeacherController : Controller
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Microsoft.EntityFrameworkCore.DbUpdateException)
         {
-            var message = ex is Microsoft.EntityFrameworkCore.DbUpdateException && ex.InnerException is not null
-                ? ex.InnerException.Message
+            var message = ex is Microsoft.EntityFrameworkCore.DbUpdateException
+                ? "Verifique se o e-mail ja esta cadastrado ou tente novamente."
                 : ex.Message;
             ModelState.AddModelError(string.Empty, $"Nao foi possivel cadastrar o aluno: {message}");
             return View(model);
@@ -128,10 +128,29 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         await _lessonService.CreateLessonAsync(
             profile,
-            new CreateLessonRequest(studentId, model.Title, model.LessonDateUtc, model.Notes),
+            new CreateLessonRequest(studentId, model.Title, model.LessonDateUtc, model.DurationMinutes, model.Notes),
             cancellationToken);
 
         return RedirectToAction(nameof(StudentDetail), new { studentId });
+    }
+
+    [HttpGet("Students/{studentId:guid}/Lessons/{lessonId:guid}")]
+    public async Task<IActionResult> LessonDetail(Guid studentId, Guid lessonId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var profile = await CurrentProfile(cancellationToken);
+            var detail = await _lessonService.GetLessonDetailAsync(profile, studentId, lessonId, cancellationToken);
+            return View(new TeacherLessonDetailViewModel { Detail = detail });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("Students/{studentId:guid}/Repertoire")]
@@ -150,17 +169,25 @@ public sealed class TeacherController : Controller
         }
 
         var profile = await CurrentProfile(cancellationToken);
-        await _repertoireService.AddRepertoireAsync(
-            profile,
-            new AddRepertoireRequest(
-                studentId,
-                model.Title,
-                model.ComposerOrArtist,
-                model.Instrument,
-                model.Level,
-                model.Notes,
-                model.ReferenceUrl),
-            cancellationToken);
+        try
+        {
+            await _repertoireService.AddRepertoireAsync(
+                profile,
+                new AddRepertoireRequest(
+                    studentId,
+                    model.Title,
+                    model.ComposerOrArtist,
+                    model.Instrument,
+                    model.Level,
+                    model.Notes,
+                    model.ReferenceUrl),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["Error"] = $"Nao foi possivel adicionar o repertorio: {ex.Message}";
+            return RedirectToAction(nameof(StudentDetail), new { studentId });
+        }
 
         return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
@@ -227,7 +254,8 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
 
-    [HttpGet("Students/{studentId:guid}/AccessLink")]
+    [HttpPost("Students/{studentId:guid}/AccessLink")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateStudentAccessLink(Guid studentId, CancellationToken cancellationToken)
     {
         var detail = await LoadStudentDetail(studentId, cancellationToken);
@@ -320,7 +348,7 @@ public sealed class TeacherController : Controller
 
         await _lessonService.CreateLessonAsync(
             profile,
-            new CreateLessonRequest(model.StudentProfileId, lessonTitle, model.LessonDateUtc.ToUniversalTime(), model.Notes),
+            new CreateLessonRequest(model.StudentProfileId, lessonTitle, model.LessonDateUtc.ToUniversalTime(), model.DurationMinutes, model.Notes),
             cancellationToken);
         return RedirectToAction(nameof(StudentDetail), new { studentId = model.StudentProfileId });
     }
@@ -334,7 +362,7 @@ public sealed class TeacherController : Controller
             return new TeacherStudentDetailViewModel
             {
                 Detail = detail,
-                Lesson = new CreateLessonViewModel { StudentProfileId = studentId, LessonDateUtc = DateTime.UtcNow },
+                Lesson = new CreateLessonViewModel { StudentProfileId = studentId, LessonDateUtc = DateTime.UtcNow, DurationMinutes = 60 },
                 Repertoire = new AddRepertoireViewModel { StudentProfileId = studentId, Instrument = detail.Student.Instrument, Level = detail.Student.Level },
                 Assignment = new CreateAssignmentViewModel { StudentProfileId = studentId, XpReward = 50 },
                 Feedback = new CreateFeedbackViewModel { StudentProfileId = studentId, VisibleToStudent = true }
@@ -363,6 +391,7 @@ public sealed class TeacherController : Controller
             StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Lesson.StudentProfileId", "Lesson.StudentProfileId"),
             Title = ReadString(current.Title, "Base.Lesson.Title", "Lesson.Title"),
             LessonDateUtc = ReadDateTime(current.LessonDateUtc, "Base.Lesson.LessonDateUtc", "Lesson.LessonDateUtc") ?? current.LessonDateUtc,
+            DurationMinutes = ReadInt(current.DurationMinutes, "Base.Lesson.DurationMinutes", "Lesson.DurationMinutes"),
             Notes = ReadString(current.Notes, "Base.Lesson.Notes", "Lesson.Notes")
         };
     }

@@ -35,12 +35,10 @@ public sealed class LessonService
             request.StudentProfileId,
             request.Title,
             request.LessonDateUtc,
+            request.DurationMinutes,
             now);
 
-        if (!string.IsNullOrWhiteSpace(request.Notes))
-        {
-            lesson.UpdateDetails(request.Title, request.LessonDateUtc, request.Notes, now);
-        }
+        lesson.UpdateDetails(request.Title, request.LessonDateUtc, request.DurationMinutes, request.Notes, now);
 
         _dbContext.Lessons.Add(lesson);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -69,12 +67,74 @@ public sealed class LessonService
             .OrderByDescending(lesson => lesson.LessonDateUtc)
             .Select(lesson => new LessonSummary(
                 lesson.Id,
+                lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
+                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))
             .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<LessonDetailSummary> GetLessonDetailAsync(
+        AuthenticatedUserProfile profile,
+        Guid studentProfileId,
+        Guid lessonId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            studentProfileId,
+            cancellationToken);
+
+        var lesson = await _dbContext.Lessons
+            .AsNoTracking()
+            .Where(item => item.Id == lessonId
+                && item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == studentProfileId)
+            .Select(item => new LessonSummary(
+                item.Id,
+                item.StudentProfileId,
+                item.Title,
+                item.LessonDateUtc,
+                item.DurationMinutes,
+                item.CompletedAtUtc,
+                item.Status,
+                item.Notes))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (lesson is null)
+        {
+            throw new KeyNotFoundException("Lesson was not found.");
+        }
+
+        var student = await (
+            from link in _dbContext.TeacherStudents.AsNoTracking()
+            join profileRow in _dbContext.StudentProfiles.AsNoTracking() on link.StudentProfileId equals profileRow.Id
+            join user in _dbContext.SchoolUsers.AsNoTracking() on profileRow.SchoolUserId equals user.Id
+            where link.SchoolId == schoolId
+                && link.TeacherProfileId == teacherProfileId
+                && link.StudentProfileId == studentProfileId
+                && link.IsActive
+            select new TeacherStudentSummary(
+                profileRow.Id,
+                user.Id,
+                user.DisplayName,
+                user.Email,
+                profileRow.Instrument,
+                profileRow.Level,
+                profileRow.CurrentXp,
+                profileRow.CurrentLevel,
+                0,
+                null))
+            .FirstAsync(cancellationToken);
+
+        return new LessonDetailSummary(lesson, student);
     }
 
     public async Task CompleteLessonAsync(
@@ -108,11 +168,12 @@ public sealed class LessonService
     {
         return new LessonSummary(
             lesson.Id,
+            lesson.StudentProfileId,
             lesson.Title,
             lesson.LessonDateUtc,
+            lesson.DurationMinutes,
             lesson.CompletedAtUtc,
             lesson.Status,
             lesson.Notes);
     }
 }
-

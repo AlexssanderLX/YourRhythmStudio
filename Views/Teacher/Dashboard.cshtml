@@ -99,13 +99,13 @@
         <div class="teacher-timeline">
             @foreach (var lesson in Model.Summary.RecentLessons)
             {
-                <div class="teacher-lesson-item">
+                <a class="teacher-lesson-item" asp-controller="Teacher" asp-action="LessonDetail" asp-route-studentId="@lesson.StudentProfileId" asp-route-lessonId="@lesson.Id">
                     <span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
                     <div>
                         <strong>@lesson.Title</strong>
-                        <small>@lesson.Status</small>
+                        <small>@lesson.DurationMinutes min · @lesson.Status</small>
                     </div>
-                </div>
+                </a>
             }
             @if (!Model.Summary.RecentLessons.Any())
             {
