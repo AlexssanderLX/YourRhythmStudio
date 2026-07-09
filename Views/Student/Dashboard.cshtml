@@ -10,20 +10,16 @@
     var pending   = Model.Summary.Progress.PendingAssignments;
     var completed = Model.Summary.Progress.CompletedAssignments;
     var repCount  = Model.Summary.RepertoireInProgress.Count;
-    var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
+    var xpIn      = Model.Summary.Progress.XpInCurrentLevel;
+    var xpNeed    = Model.Summary.Progress.XpRequiredForCurrentLevel;
+    var xpPct     = Model.Summary.Progress.CurrentLevelProgressPercent;
     var nextAssignment = Model.Summary.PendingAssignments.FirstOrDefault();
     var nextRepertoire = Model.Summary.RepertoireInProgress.FirstOrDefault();
     var hasContent = nextAssignment is not null || nextRepertoire is not null
                      || Model.Summary.RecentFeedback.Any()
                      || Model.Summary.RepertoireInProgress.Any();
 
-    var rankLabel = level switch {
-        1 => "Iniciante",
-        2 => "Aprendiz",
-        3 => "Intermediário",
-        4 => "Avançado",
-        _ => "Mestre"
-    };
+    var rankLabel = Model.Summary.Progress.CurrentLevelName;
 }
 
 @* ── Hero Card ──────────────────────────────────────────────────── *@
@@ -61,10 +57,10 @@
 
     <div class="s-bar-area">
         @if (level >= 5) {
-            <div class="s-bar-labels"><span>Nível <b>MAX</b></span><b>MESTRE</b></div>
+            <div class="s-bar-labels"><span>Nível <b>MAX</b></span><b>@rankLabel</b></div>
         } else {
             <div class="s-bar-labels">
-                <span><b id="heroXpIn">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
+                <span><b id="heroXpIn">@xpIn</b> / @xpNeed XP para @Model.Summary.Progress.NextLevelName</span>
                 <b>@xpPct%</b>
             </div>
         }
@@ -190,18 +186,6 @@
     <div class="s-empty-icon">YR</div>
     <div class="s-empty-msg">Nenhuma atividade ainda.<br>Seu professor em breve criará missões para você.</div>
 </div>
-}
-
-@functions {
-    static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
-        if (level >= 5) return (xp - 1000, 0, 100);
-        int[] starts = { 0, 100, 250, 500 };
-        int[] ends   = { 100, 250, 500, 1000 };
-        var i       = Math.Max(0, Math.Min(level - 1, 3));
-        var current = xp - starts[i];
-        var need    = ends[i] - starts[i];
-        return (current, need, Math.Min(100, need > 0 ? current * 100 / need : 100));
-    }
 }
 
 @section Scripts {

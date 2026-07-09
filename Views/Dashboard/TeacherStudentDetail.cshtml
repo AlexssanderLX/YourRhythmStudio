@@ -6,12 +6,12 @@
 
     // Dados mockados por ID — futuramente virá do banco
     var allStudents = new[] {
-        new { Id=1, Init="SA", Name="Sofia Almeida",  Inst="Piano",   Song="Clair de Lune",     Pct=80, Lvl=12, Streak=14, Xp=3420, XpNext=4000, Last="Hoje 14:00",   Status="online",  Since="Mar 2024", LessonsTotal=38 },
-        new { Id=2, Init="GN", Name="Gabriel Nunes",  Inst="Teclado", Song="Canon in D",         Pct=67, Lvl=9,  Streak=7,  Xp=1980, XpNext=2500, Last="Ontem 18:00",  Status="offline", Since="Jun 2024", LessonsTotal=24 },
-        new { Id=3, Init="LM", Name="Lucas Martins",  Inst="Violão",  Song="The Scientist",      Pct=55, Lvl=7,  Streak=5,  Xp=1340, XpNext=1800, Last="Hoje 15:00",   Status="online",  Since="Ago 2024", LessonsTotal=18 },
-        new { Id=4, Init="CR", Name="Clara Ribeiro",  Inst="Piano",   Song="Für Elise",          Pct=45, Lvl=5,  Streak=3,  Xp=820,  XpNext=1200, Last="Seg 10:00",    Status="offline", Since="Out 2024", LessonsTotal=14 },
-        new { Id=5, Init="BR", Name="Beatriz Rocha",  Inst="Piano",   Song="River Flows In You", Pct=38, Lvl=4,  Streak=2,  Xp=580,  XpNext=900,  Last="Hoje 16:30",   Status="online",  Since="Nov 2024", LessonsTotal=11 },
-        new { Id=6, Init="PT", Name="Pedro Torres",   Inst="Violão",  Song="Wonderwall",         Pct=30, Lvl=3,  Streak=0,  Xp=310,  XpNext=600,  Last="Sex 11:00",    Status="offline", Since="Dez 2024", LessonsTotal=8  },
+        new { Id=1, Init="SA", Name="Sofia Almeida",  Inst="Piano",   Song="Clair de Lune",     Pct=80, Lvl=2, Streak=14, Xp=2450, XpNext=2500, Last="Hoje 14:00",   Status="online",  Since="Mar 2024", LessonsTotal=38 },
+        new { Id=2, Init="GN", Name="Gabriel Nunes",  Inst="Teclado", Song="Canon in D",         Pct=67, Lvl=1,  Streak=7,  Xp=420, XpNext=500, Last="Ontem 18:00",  Status="offline", Since="Jun 2024", LessonsTotal=24 },
+        new { Id=3, Init="LM", Name="Lucas Martins",  Inst="Violão",  Song="The Scientist",      Pct=55, Lvl=1,  Streak=5,  Xp=310, XpNext=500, Last="Hoje 15:00",   Status="online",  Since="Ago 2024", LessonsTotal=18 },
+        new { Id=4, Init="CR", Name="Clara Ribeiro",  Inst="Piano",   Song="Für Elise",          Pct=45, Lvl=3,  Streak=3,  Xp=5200,  XpNext=7500, Last="Seg 10:00",    Status="offline", Since="Out 2024", LessonsTotal=14 },
+        new { Id=5, Init="BR", Name="Beatriz Rocha",  Inst="Piano",   Song="River Flows In You", Pct=38, Lvl=2,  Streak=2,  Xp=800,  XpNext=2500,  Last="Hoje 16:30",   Status="online",  Since="Nov 2024", LessonsTotal=11 },
+        new { Id=6, Init="PT", Name="Pedro Torres",   Inst="Violão",  Song="Wonderwall",         Pct=30, Lvl=1,  Streak=0,  Xp=120,  XpNext=500,  Last="Sex 11:00",    Status="offline", Since="Dez 2024", LessonsTotal=8  },
     };
 
     var s = allStudents.FirstOrDefault(x => x.Id == id) ?? allStudents[0];

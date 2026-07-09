@@ -1,4 +1,5 @@
 @using YourRhythmStudio.Domain.Learning.Enums
+@using YourRhythmStudio.Application.Learning
 @model YourRhythmStudio.ViewModels.Learning.TeacherSkillsViewModel
 @{
     Layout = "_DashboardLayout";
@@ -6,7 +7,7 @@
     ViewData["Role"] = "teacher";
     ViewData["DashTitle"] = "Habilidades";
 
-    var levelNames  = new[] { "", "Iniciante", "Aprendiz", "Intermediário", "Avançado", "Mestre" };
+    var levels = LearningLevelCalculator.Levels;
     var levelColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
 }
 
@@ -24,8 +25,8 @@
             <div>
                 <label asp-for="NewSkill.RequiredLevel">Nível (1–5)</label>
                 <select asp-for="NewSkill.RequiredLevel">
-                    @for (var i = 1; i <= 5; i++) {
-                        <option value="@i">Nível @i · @levelNames[i]</option>
+                    @foreach (var level in levels) {
+                        <option value="@level.Level">Nível @level.Level · @level.Name</option>
                     }
                 </select>
             </div>
@@ -50,14 +51,14 @@
 </div>
 
 @if (Model.Skills.Any()) {
-    @for (var level = 1; level <= 5; level++) {
-        var levelSkills = Model.Skills.Where(s => s.RequiredLevel == level).ToList();
+    @foreach (var level in levels) {
+        var levelSkills = Model.Skills.Where(s => s.RequiredLevel == level.Level).ToList();
         if (!levelSkills.Any()) continue;
         <div class="card" style="margin-bottom:16px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                <div style="width:32px;height:32px;border-radius:50%;background:@levelColors[level];display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff;flex-shrink:0">@level</div>
+                <div style="width:32px;height:32px;border-radius:50%;background:@levelColors[level.Level];display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff;flex-shrink:0">@level.Level</div>
                 <div>
-                    <div style="font-size:15px;font-weight:600;color:var(--ink)">Nível @level · @levelNames[level]</div>
+                    <div style="font-size:15px;font-weight:600;color:var(--ink)">Nível @level.Level · @level.Name</div>
                     <div style="font-size:12px;color:var(--muted)">@levelSkills.Count habilidade(s)</div>
                 </div>
             </div>

@@ -151,7 +151,7 @@ public static class FoundationDemoSeeder
                     Level = "Iniciante",
                     Notes = "Aluno demo do MVP.",
                     CurrentXp = 120,
-                    CurrentLevel = LearningLevelCalculator.CalculateLevel(120)
+                    CurrentLevel = 1
                 });
             }
         }

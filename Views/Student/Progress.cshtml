@@ -7,7 +7,9 @@
 
     var xp    = Model.Progress.CurrentXp;
     var level = Model.Progress.CurrentLevel;
-    var (xpIn, xpNeed, xpPct) = XpProgress(xp, level);
+    var xpIn = Model.Progress.XpInCurrentLevel;
+    var xpNeed = Model.Progress.XpRequiredForCurrentLevel;
+    var xpPct = Model.Progress.CurrentLevelProgressPercent;
 }
 
 <div class="s-prog-hero lvl-@level">
@@ -22,7 +24,7 @@
                 <span style="color:var(--xp)">Nível máximo atingido!</span>
                 <b style="color:var(--xp)">MAX</b>
             } else {
-                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP para nível @(level+1)</span>
+                <span style="color:var(--muted)"><b style="color:var(--xp)">@xpIn</b> / @xpNeed XP para @Model.Progress.NextLevelName</span>
                 <span style="color:var(--muted)">@xpPct%</span>
             }
         </div>
@@ -69,14 +71,4 @@
         <div class="s-empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></div>
         <div class="s-empty-msg">Nenhum XP ganho ainda.<br>Complete missões para ver seu progresso aqui!</div>
     </div>
-}
-
-@functions {
-    static (int xpIn, int xpNeed, int pct) XpProgress(int xp, int level) {
-        if (level >= 5) return (xp, 0, 100);
-        int[] promotionXp = { 0, 500, 2_000, 8_000, 25_000 };
-        var need = promotionXp[Math.Min(level, 4)];
-        var pct  = need > 0 ? Math.Min(100, xp * 100 / need) : 100;
-        return (xp, need, pct);
-    }
 }

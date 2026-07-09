@@ -154,13 +154,22 @@ public sealed class ProgressService
             .Select(item => new XpEventSummary(item.Id, item.Points, item.Description, item.CreatedAtUtc))
             .ToArrayAsync(cancellationToken);
 
+        var levelProgress = LearningLevelCalculator.CalculateProgress(student.CurrentXp, student.CurrentLevel);
+
         return new ProgressSummary(
             student.CurrentXp,
             student.CurrentLevel,
+            levelProgress.CurrentLevel.Name,
+            levelProgress.CurrentLevel.MinXp,
+            levelProgress.CurrentLevel.MaxXp,
+            levelProgress.XpInCurrentRange,
+            levelProgress.XpRequiredInCurrentRange,
+            levelProgress.Percent,
+            levelProgress.AwaitingPromotion,
+            levelProgress.NextLevel?.Name,
             pending,
             completed,
             repertoireInProgress,
             recentXp);
     }
 }
-
