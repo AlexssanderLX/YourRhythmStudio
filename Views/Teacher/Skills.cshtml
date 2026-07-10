@@ -83,13 +83,13 @@
                             class="skill-mgmt-card@(!skill.IsActive ? " smk-inactive" : "")"
                             data-open-edit
                             data-id="@skill.Id"
-                            data-name="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(skill.Name))"
-                            data-description="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(skill.Description ?? ""))"
+                            data-name="@skill.Name"
+                            data-description="@(skill.Description ?? "")"
                             data-level="@skill.RequiredLevel"
                             data-type="@((int)skill.SkillType)"
-                            data-icon="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(skill.IconName ?? ""))"
-                            data-achievement="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(skill.AchievementText ?? ""))"
-                            data-criteria="@Html.Raw(System.Text.Json.JsonSerializer.Serialize(skill.ConquestCriteria ?? ""))"
+                            data-icon="@(skill.IconName ?? "")"
+                            data-achievement="@(skill.AchievementText ?? "")"
+                            data-criteria="@(skill.ConquestCriteria ?? "")"
                             aria-label="Editar skill: @skill.Name">
                         <span class="skill-mgmt-dot @dotCss" aria-hidden="true"></span>
                         <span class="skill-mgmt-body">
@@ -506,21 +506,21 @@
             deleteForm.action = '/Teacher/Skills/' + d.id + '/Delete';
 
             document.querySelector('[data-edit-id]').value          = d.id;
-            document.querySelector('[data-edit-name]').value        = JSON.parse(d.name);
-            document.querySelector('[data-edit-description]').value = JSON.parse(d.description);
+            document.querySelector('[data-edit-name]').value        = d.name;
+            document.querySelector('[data-edit-description]').value = d.description;
             document.querySelector('[data-edit-level]').value       = d.level;
             document.querySelector('[data-edit-type]').value        = d.type;
-            document.querySelector('[data-edit-icon]').value        = JSON.parse(d.icon);
-            document.querySelector('[data-edit-achievement]').value = JSON.parse(d.achievement);
-            document.querySelector('[data-edit-criteria]').value    = JSON.parse(d.criteria);
-            document.querySelector('[data-edit-heading]').textContent = JSON.parse(d.name);
+            document.querySelector('[data-edit-icon]').value        = d.icon;
+            document.querySelector('[data-edit-achievement]').value = d.achievement;
+            document.querySelector('[data-edit-criteria]').value    = d.criteria;
+            document.querySelector('[data-edit-heading]').textContent = d.name;
 
             // Trigger hint update for edit type select
             document.querySelector('[data-edit-type]').dispatchEvent(new Event('change'));
 
             // Delete confirmation
             var delBtn = document.querySelector('[data-delete-button]');
-            var name = JSON.parse(d.name);
+            var name = d.name;
             delBtn.onclick = function () {
                 return confirm('Desativar ou excluir a skill "' + name + '"?');
             };
