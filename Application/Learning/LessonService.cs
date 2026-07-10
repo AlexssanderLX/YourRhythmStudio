@@ -35,10 +35,9 @@ public sealed class LessonService
             request.StudentProfileId,
             request.Title,
             request.LessonDateUtc,
-            request.DurationMinutes,
             now);
 
-        lesson.UpdateDetails(request.Title, request.LessonDateUtc, request.DurationMinutes, request.Notes, now);
+        lesson.UpdateDetails(request.Title, request.LessonDateUtc, request.Notes, now);
 
         _dbContext.Lessons.Add(lesson);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -70,7 +69,6 @@ public sealed class LessonService
                 lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
-                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))
@@ -102,7 +100,6 @@ public sealed class LessonService
                 item.StudentProfileId,
                 item.Title,
                 item.LessonDateUtc,
-                item.DurationMinutes,
                 item.CompletedAtUtc,
                 item.Status,
                 item.Notes))
@@ -171,7 +168,6 @@ public sealed class LessonService
             lesson.StudentProfileId,
             lesson.Title,
             lesson.LessonDateUtc,
-            lesson.DurationMinutes,
             lesson.CompletedAtUtc,
             lesson.Status,
             lesson.Notes);

@@ -1,0 +1,81 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Aulas · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Aulas";
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+}
+
+<section class="teacher-student-page">
+    <div class="student-detail-topline"><a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a></div>
+    <nav class="student-action-bar student-module-nav">
+        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn active" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
+
+    <section class="student-workspace">
+        <div class="student-form-panel">
+            <div class="student-panel-head"><div><span class="student-section-kicker">Nova aula</span><h2>Data, hora e descrição</h2></div></div>
+            <form asp-action="CreateLesson" asp-route-studentId="@studentId" method="post" class="auth-form compact-form" data-lesson-form>
+                @Html.AntiForgeryToken()
+                <input asp-for="Base.Lesson.StudentProfileId" type="hidden" value="@studentId" />
+                <div>
+                    <label asp-for="Base.Lesson.LessonDateUtc">Data e hora</label>
+                    <input asp-for="Base.Lesson.LessonDateUtc" id="lessonDate" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
+                </div>
+                <div>
+                    <label asp-for="Base.Lesson.Title">Nome da aula</label>
+                    <input asp-for="Base.Lesson.Title" id="lessonTitle" placeholder="Gerado automaticamente pela data e hora" data-auto-title="true" />
+                </div>
+                <div>
+                    <label asp-for="Base.Lesson.Notes">Descrição da aula</label>
+                    <textarea asp-for="Base.Lesson.Notes" placeholder="O que será trabalhado?"></textarea>
+                </div>
+                <button type="submit">Registrar aula</button>
+            </form>
+        </div>
+        <aside class="student-side-panel">
+            <section>
+                <div class="student-panel-head compact"><div><span class="student-section-kicker">Histórico</span><h2>@Model.Base.Detail.Lessons.Count aulas</h2></div></div>
+                <div class="student-item-list">
+                    @foreach (var lesson in Model.Base.Detail.Lessons.OrderByDescending(l => l.LessonDateUtc))
+                    {
+                        <a class="student-list-item" asp-action="LessonDetail" asp-route-studentId="@studentId" asp-route-lessonId="@lesson.Id">
+                            <div><span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @lesson.Status</span><strong>@lesson.Title</strong></div>
+                        </a>
+                    }
+                    @if (!Model.Base.Detail.Lessons.Any()) { <p class="student-empty-inline">Nenhuma aula registrada.</p> }
+                </div>
+            </section>
+        </aside>
+    </section>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function(){
+        var date = document.getElementById('lessonDate');
+        var title = document.getElementById('lessonTitle');
+        if (!date || !title) return;
+        var custom = false;
+        title.addEventListener('input', function(){ custom = title.value.trim().length > 0 && title.dataset.autoTitle !== 'true'; title.dataset.autoTitle = 'false'; });
+        function pad(v){ return String(v).padStart(2, '0'); }
+        function build(){
+            if (custom || !date.value) return;
+            var d = new Date(date.value);
+            if (Number.isNaN(d.getTime())) return;
+            title.value = 'Aula de ' + pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear() + ' as ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            title.dataset.autoTitle = 'true';
+        }
+        date.addEventListener('change', build);
+        build();
+    }());
+    </script>
+}

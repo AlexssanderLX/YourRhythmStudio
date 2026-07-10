@@ -1,0 +1,56 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Feedbacks · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Feedbacks";
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+}
+
+<section class="teacher-student-page">
+    <div class="student-detail-topline"><a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a></div>
+    <nav class="student-action-bar student-module-nav">
+        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn active" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
+
+    <section class="student-workspace">
+        <div class="student-form-panel">
+            <div class="student-panel-head"><div><span class="student-section-kicker">Novo feedback</span><h2>Retorno para o aluno</h2></div></div>
+            <form asp-action="CreateFeedback" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Base.Feedback.StudentProfileId" type="hidden" value="@studentId" />
+                <div>
+                    <label asp-for="Base.Feedback.Message">Mensagem</label>
+                    <textarea asp-for="Base.Feedback.Message" placeholder="Escreva um retorno claro e útil."></textarea>
+                </div>
+                <label class="auth-check">
+                    <input asp-for="Base.Feedback.VisibleToStudent" type="checkbox" />
+                    <span>Visível para o aluno</span>
+                </label>
+                <button type="submit">Salvar feedback</button>
+            </form>
+        </div>
+        <aside class="student-side-panel">
+            <section>
+                <div class="student-panel-head compact"><div><span class="student-section-kicker">Histórico</span><h2>@Model.Base.Detail.Feedback.Count registros</h2></div></div>
+                <div class="student-item-list">
+                    @foreach (var item in Model.Base.Detail.Feedback.OrderByDescending(f => f.CreatedAtUtc))
+                    {
+                        <article class="student-list-item">
+                            <div><span>@(item.VisibleToStudent ? "Visível" : "Privado") · @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span><strong>@item.Message</strong></div>
+                        </article>
+                    }
+                    @if (!Model.Base.Detail.Feedback.Any()) { <p class="student-empty-inline">Nenhum feedback registrado.</p> }
+                </div>
+            </section>
+        </aside>
+    </section>
+</section>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

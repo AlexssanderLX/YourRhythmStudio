@@ -75,8 +75,6 @@ public sealed class Assignment
 
     public AssignmentStatus Status { get; private set; }
 
-    public int TargetMinutes { get; private set; }
-
     public DateTime? CompletedAtUtc { get; private set; }
 
     public int XpReward { get; private set; }
@@ -93,7 +91,6 @@ public sealed class Assignment
         string title,
         string description,
         DateTime? dueAtUtc,
-        int targetMinutes,
         int xpReward,
         DateTime utcNow)
     {
@@ -109,16 +106,12 @@ public sealed class Assignment
         if (string.IsNullOrWhiteSpace(description))
             throw new ArgumentException("Assignment description is required.", nameof(description));
 
-        if (targetMinutes < 0)
-            throw new ArgumentOutOfRangeException(nameof(targetMinutes), "Target minutes cannot be negative.");
-
         if (xpReward < 0)
             throw new ArgumentOutOfRangeException(nameof(xpReward), "XP reward cannot be negative.");
 
         Title = title.Trim();
         Description = description.Trim();
         DueAtUtc = dueAtUtc;
-        TargetMinutes = targetMinutes;
         XpReward = xpReward;
         UpdatedAtUtc = utcNow;
     }

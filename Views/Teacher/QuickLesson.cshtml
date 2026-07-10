@@ -10,7 +10,7 @@
     <div class="lesson-compose-hero">
         <span class="student-section-kicker">Registro de aula</span>
         <h2>Nova aula</h2>
-        <p>Cadastre nome, horario, duração e o que foi trabalhado. Depois a aula fica acessível no histórico do aluno.</p>
+        <p>Selecione aluno, data e hora. O nome é gerado automaticamente e pode ser ajustado.</p>
     </div>
 
     <div class="lesson-compose-card">
@@ -30,50 +30,47 @@
             </div>
 
             <div>
-                <label asp-for="Form.Title">Nome da aula</label>
-                <input asp-for="Form.Title" placeholder="Ex: Técnica, leitura e repertório" />
-                <span asp-validation-for="Form.Title" class="auth-error"></span>
+                <label asp-for="Form.LessonDateUtc">Data e hora</label>
+                <input asp-for="Form.LessonDateUtc" id="quickLessonDate" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" value="@Model.Form.LessonDateUtc.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="Form.LessonDateUtc" class="auth-error"></span>
             </div>
 
-            <div class="form-grid-compact">
-                <div>
-                    <label asp-for="Form.LessonDateUtc">Data e hora</label>
-                    <input
-                        asp-for="Form.LessonDateUtc"
-                        type="datetime-local"
-                        asp-format="{0:yyyy-MM-ddTHH:mm}"
-                        step="60"
-                        value="@Model.Form.LessonDateUtc.ToString("yyyy-MM-ddTHH:mm")" />
-                    <span asp-validation-for="Form.LessonDateUtc" class="auth-error"></span>
-                </div>
-
-                <div>
-                    <label asp-for="Form.DurationMinutes">Duração</label>
-                    <input asp-for="Form.DurationMinutes" type="number" min="0" max="600" placeholder="60" />
-                    <span asp-validation-for="Form.DurationMinutes" class="auth-error"></span>
-                </div>
+            <div>
+                <label asp-for="Form.Title">Nome da aula</label>
+                <input asp-for="Form.Title" id="quickLessonTitle" placeholder="Gerado automaticamente pela data e hora" data-auto-title="true" />
+                <span asp-validation-for="Form.Title" class="auth-error"></span>
             </div>
 
             <div>
                 <label asp-for="Form.Notes">Descrição da aula</label>
-                <textarea asp-for="Form.Notes" placeholder="O que foi trabalhado, observações, combinados para a próxima aula..."></textarea>
+                <textarea asp-for="Form.Notes" placeholder="O que será trabalhado, observações e combinados..."></textarea>
                 <span asp-validation-for="Form.Notes" class="auth-error"></span>
             </div>
 
             <button type="submit">Registrar aula</button>
         </form>
     </div>
-
-    @if (!Model.Students.Any())
-    {
-        <div class="empty-state">
-            <p>Voce ainda nao tem alunos cadastrados.<br>
-               <a asp-controller="Teacher" asp-action="CreateStudent" style="color:var(--blue-bright)">Cadastrar primeiro aluno</a>
-            </p>
-        </div>
-    }
 </section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function(){
+        var date = document.getElementById('quickLessonDate');
+        var title = document.getElementById('quickLessonTitle');
+        if (!date || !title) return;
+        var custom = false;
+        title.addEventListener('input', function(){ custom = title.value.trim().length > 0 && title.dataset.autoTitle !== 'true'; title.dataset.autoTitle = 'false'; });
+        function pad(v){ return String(v).padStart(2, '0'); }
+        function build(){
+            if (custom || !date.value) return;
+            var d = new Date(date.value);
+            if (Number.isNaN(d.getTime())) return;
+            title.value = 'Aula de ' + pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear() + ' as ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            title.dataset.autoTitle = 'true';
+        }
+        date.addEventListener('change', build);
+        build();
+    }());
+    </script>
 }

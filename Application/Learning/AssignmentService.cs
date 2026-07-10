@@ -44,7 +44,6 @@ public sealed class AssignmentService
             request.Title,
             request.Description,
             request.DueAtUtc,
-            request.TargetMinutes,
             request.XpReward,
             now);
 
@@ -158,7 +157,6 @@ public sealed class AssignmentService
                 assignment.Description,
                 assignment.DueAtUtc,
                 assignment.Status,
-                assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
@@ -173,7 +171,6 @@ public sealed class AssignmentService
             assignment.Description,
             assignment.DueAtUtc,
             assignment.Status,
-            assignment.TargetMinutes,
             assignment.CompletedAtUtc,
             assignment.XpReward,
             assignment.XpGranted,

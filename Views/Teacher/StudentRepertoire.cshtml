@@ -1,0 +1,81 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Repertório · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Repertório";
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+}
+
+<section class="teacher-student-page">
+    <div class="student-detail-topline">
+        <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a>
+    </div>
+    <nav class="student-action-bar student-module-nav">
+        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn active" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
+    @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }
+
+    <section class="student-workspace">
+        <div class="student-form-panel">
+            <div class="student-panel-head">
+                <div><span class="student-section-kicker">Novo material</span><h2>Enviar repertório</h2></div>
+            </div>
+            <form asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" enctype="multipart/form-data" class="auth-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Base.Repertoire.StudentProfileId" type="hidden" value="@studentId" />
+                <div>
+                    <label asp-for="Base.Repertoire.Title">Nome</label>
+                    <input asp-for="Base.Repertoire.Title" placeholder="Ex: Clair de Lune referência" />
+                </div>
+                <div>
+                    <label asp-for="Base.Repertoire.ReferenceUrl">Link de referência</label>
+                    <input asp-for="Base.Repertoire.ReferenceUrl" type="url" placeholder="https://..." />
+                </div>
+                <div>
+                    <label asp-for="Base.Repertoire.AudioFile">Arquivo de áudio opcional</label>
+                    <input asp-for="Base.Repertoire.AudioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" />
+                </div>
+                <div>
+                    <label asp-for="Base.Repertoire.Notes">Descrição opcional</label>
+                    <textarea asp-for="Base.Repertoire.Notes" placeholder="Como usar este material?"></textarea>
+                </div>
+                <button type="submit">Salvar repertório</button>
+            </form>
+        </div>
+
+        <aside class="student-side-panel">
+            <section>
+                <div class="student-panel-head compact">
+                    <div><span class="student-section-kicker">Materiais</span><h2>@Model.Base.Detail.Repertoire.Count itens</h2></div>
+                </div>
+                <div class="student-item-list">
+                    @foreach (var item in Model.Base.Detail.Repertoire)
+                    {
+                        <article class="student-list-item progress-item">
+                            <div>
+                                <span>@(item.HasAudio ? "Áudio" : "Link") · @item.Status</span>
+                                <strong>@item.Title</strong>
+                                <div class="student-mini-bar"><i style="width:@item.ProgressPercent%"></i></div>
+                                @if (item.HasAudio)
+                                {
+                                    <a class="student-inline-link" asp-action="StudentRepertoireAudio" asp-route-studentId="@studentId" asp-route-repertoireItemId="@item.Id">Abrir áudio</a>
+                                }
+                            </div>
+                            <em>@item.ProgressPercent%</em>
+                        </article>
+                    }
+                    @if (!Model.Base.Detail.Repertoire.Any()) { <p class="student-empty-inline">Nenhum repertório enviado.</p> }
+                </div>
+            </section>
+        </aside>
+    </section>
+</section>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

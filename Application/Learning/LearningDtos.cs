@@ -26,7 +26,6 @@ public sealed record LessonSummary(
     Guid StudentProfileId,
     string Title,
     DateTime LessonDateUtc,
-    int DurationMinutes,
     DateTime? CompletedAtUtc,
     LessonStatus Status,
     string? Notes);
@@ -38,13 +37,14 @@ public sealed record LessonDetailSummary(
 public sealed record RepertoireSummary(
     Guid Id,
     string Title,
-    string? ComposerOrArtist,
-    string? Instrument,
-    string? Level,
     RepertoireStatus Status,
     int ProgressPercent,
     string? Notes,
-    string? ReferenceUrl);
+    string? ReferenceUrl,
+    string? AudioOriginalFileName,
+    string? AudioContentType,
+    long? AudioSizeBytes,
+    bool HasAudio);
 
 public sealed record AssignmentSummary(
     Guid Id,
@@ -52,7 +52,6 @@ public sealed record AssignmentSummary(
     string Description,
     DateTime? DueAtUtc,
     AssignmentStatus Status,
-    int TargetMinutes,
     DateTime? CompletedAtUtc,
     int XpReward,
     bool XpGranted,
@@ -111,17 +110,25 @@ public sealed record CreateLessonRequest(
     Guid StudentProfileId,
     string Title,
     DateTime LessonDateUtc,
-    int DurationMinutes,
     string? Notes);
 
 public sealed record AddRepertoireRequest(
     Guid StudentProfileId,
     string Title,
-    string? ComposerOrArtist,
-    string? Instrument,
-    string? Level,
     string? Notes,
-    string? ReferenceUrl);
+    string? ReferenceUrl,
+    RepertoireAudioUpload? Audio);
+
+public sealed record RepertoireAudioUpload(
+    string FileName,
+    string ContentType,
+    long Length,
+    Func<Stream> OpenReadStream);
+
+public sealed record RepertoireAudioFile(
+    string PhysicalPath,
+    string ContentType,
+    string DownloadFileName);
 
 public sealed record UpdateRepertoireProgressRequest(
     Guid RepertoireItemId,
@@ -132,7 +139,6 @@ public sealed record CreateAssignmentRequest(
     string Title,
     string Description,
     DateTime? DueAtUtc,
-    int TargetMinutes,
     int XpReward,
     AssignmentRarity Rarity = AssignmentRarity.Comum);
 

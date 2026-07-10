@@ -14,7 +14,6 @@ public sealed class Lesson
         Guid studentProfileId,
         string title,
         DateTime lessonDateUtc,
-        int durationMinutes,
         DateTime utcNow)
     {
         if (schoolId == Guid.Empty)
@@ -29,16 +28,12 @@ public sealed class Lesson
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Lesson title is required.", nameof(title));
 
-        if (durationMinutes < 0)
-            throw new ArgumentOutOfRangeException(nameof(durationMinutes), "Lesson duration cannot be negative.");
-
         Id = Guid.NewGuid();
         SchoolId = schoolId;
         TeacherProfileId = teacherProfileId;
         StudentProfileId = studentProfileId;
         Title = title.Trim();
         LessonDateUtc = lessonDateUtc;
-        DurationMinutes = durationMinutes;
         Status = LessonStatus.Planned;
         CreatedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
@@ -56,8 +51,6 @@ public sealed class Lesson
 
     public DateTime LessonDateUtc { get; private set; }
 
-    public int DurationMinutes { get; private set; } = 60;
-
     public DateTime? CompletedAtUtc { get; private set; }
 
     public LessonStatus Status { get; private set; }
@@ -71,7 +64,6 @@ public sealed class Lesson
     public void UpdateDetails(
         string title,
         DateTime lessonDateUtc,
-        int durationMinutes,
         string? notes,
         DateTime utcNow)
     {
@@ -81,12 +73,8 @@ public sealed class Lesson
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Lesson title is required.", nameof(title));
 
-        if (durationMinutes < 0)
-            throw new ArgumentOutOfRangeException(nameof(durationMinutes), "Lesson duration cannot be negative.");
-
         Title = title.Trim();
         LessonDateUtc = lessonDateUtc;
-        DurationMinutes = durationMinutes;
         Notes = NormalizeOptionalText(notes);
         UpdatedAtUtc = utcNow;
     }

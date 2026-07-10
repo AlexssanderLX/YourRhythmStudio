@@ -1,4 +1,4 @@
-@model YourRhythmStudio.ViewModels.Learning.TeacherLessonDetailViewModel
+﻿@model YourRhythmStudio.ViewModels.Learning.TeacherLessonDetailViewModel
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = Model.Detail.Lesson.Title;
@@ -23,7 +23,7 @@
         <div>
             <span class="student-section-kicker">Aula registrada</span>
             <h1>@lesson.Title</h1>
-            <p>@student.DisplayName · @student.Instrument</p>
+            <p>@student.DisplayName Â· @student.Instrument</p>
         </div>
         <div class="lesson-status-pill">@lesson.Status</div>
     </section>
@@ -38,20 +38,16 @@
             <strong>@localDate.ToString("HH:mm")</strong>
         </div>
         <div class="lesson-metric">
-            <span>Duração</span>
-            <strong>@lesson.DurationMinutes min</strong>
-        </div>
-        <div class="lesson-metric">
             <span>Nivel do aluno</span>
             <strong>@student.CurrentLevel</strong>
         </div>
     </section>
 
     <section class="lesson-notes-card">
-        <span class="student-section-kicker">Descrição da aula</span>
+        <span class="student-section-kicker">DescriÃ§Ã£o da aula</span>
         @if (string.IsNullOrWhiteSpace(lesson.Notes))
         {
-            <p>Nenhuma descrição foi registrada para esta aula.</p>
+            <p>Nenhuma descriÃ§Ã£o foi registrada para esta aula.</p>
         }
         else
         {

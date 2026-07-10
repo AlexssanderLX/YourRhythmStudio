@@ -13,9 +13,6 @@ public sealed class RepertoireItem
         Guid teacherProfileId,
         Guid studentProfileId,
         string title,
-        string? composerOrArtist,
-        string? instrument,
-        string? level,
         DateTime utcNow)
     {
         if (schoolId == Guid.Empty)
@@ -35,9 +32,6 @@ public sealed class RepertoireItem
         TeacherProfileId = teacherProfileId;
         StudentProfileId = studentProfileId;
         Title = title.Trim();
-        ComposerOrArtist = NormalizeOptionalText(composerOrArtist);
-        Instrument = NormalizeOptionalText(instrument);
-        Level = NormalizeOptionalText(level);
         Status = RepertoireStatus.NotStarted;
         ProgressPercent = 0;
         CreatedAtUtc = utcNow;
@@ -54,12 +48,6 @@ public sealed class RepertoireItem
 
     public string Title { get; private set; } = string.Empty;
 
-    public string? ComposerOrArtist { get; private set; }
-
-    public string? Instrument { get; private set; }
-
-    public string? Level { get; private set; }
-
     public RepertoireStatus Status { get; private set; }
 
     public int ProgressPercent { get; private set; }
@@ -68,15 +56,20 @@ public sealed class RepertoireItem
 
     public string? ReferenceUrl { get; private set; }
 
+    public string? AudioStoredFileName { get; private set; }
+
+    public string? AudioOriginalFileName { get; private set; }
+
+    public string? AudioContentType { get; private set; }
+
+    public long? AudioSizeBytes { get; private set; }
+
     public DateTime CreatedAtUtc { get; private set; }
 
     public DateTime UpdatedAtUtc { get; private set; }
 
     public void UpdateDetails(
         string title,
-        string? composerOrArtist,
-        string? instrument,
-        string? level,
         string? notes,
         string? referenceUrl,
         DateTime utcNow)
@@ -88,11 +81,37 @@ public sealed class RepertoireItem
             throw new ArgumentException("Repertoire title is required.", nameof(title));
 
         Title = title.Trim();
-        ComposerOrArtist = NormalizeOptionalText(composerOrArtist);
-        Instrument = NormalizeOptionalText(instrument);
-        Level = NormalizeOptionalText(level);
         Notes = NormalizeOptionalText(notes);
         ReferenceUrl = NormalizeOptionalText(referenceUrl);
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void AttachAudio(
+        string storedFileName,
+        string originalFileName,
+        string contentType,
+        long sizeBytes,
+        DateTime utcNow)
+    {
+        if (Status == RepertoireStatus.Archived)
+            throw new InvalidOperationException("Archived repertoire items cannot be edited.");
+
+        if (string.IsNullOrWhiteSpace(storedFileName))
+            throw new ArgumentException("Stored audio file name is required.", nameof(storedFileName));
+
+        if (string.IsNullOrWhiteSpace(originalFileName))
+            throw new ArgumentException("Original audio file name is required.", nameof(originalFileName));
+
+        if (string.IsNullOrWhiteSpace(contentType))
+            throw new ArgumentException("Audio content type is required.", nameof(contentType));
+
+        if (sizeBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(sizeBytes), "Audio size must be positive.");
+
+        AudioStoredFileName = storedFileName.Trim();
+        AudioOriginalFileName = originalFileName.Trim();
+        AudioContentType = contentType.Trim();
+        AudioSizeBytes = sizeBytes;
         UpdatedAtUtc = utcNow;
     }
 

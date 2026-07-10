@@ -1,0 +1,58 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Skills · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Skills";
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+}
+
+<section class="teacher-student-page">
+    <div class="student-detail-topline"><a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a></div>
+    <nav class="student-action-bar student-module-nav">
+        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn active" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
+
+    <section class="student-form-panel">
+        <div class="student-panel-head">
+            <div><span class="student-section-kicker">Regras de evolução</span><h2>Skills do aluno</h2></div>
+            <a class="student-inline-link" asp-action="Skills">Editar base de skills</a>
+        </div>
+        @foreach (var level in Enumerable.Range(1, 5))
+        {
+            var items = Model.Skills.Where(s => s.RequiredLevel == level).ToArray();
+            <section class="skill-level-group">
+                <strong>Nível @level</strong>
+                @if (!items.Any())
+                {
+                    <p class="student-empty-inline">Nenhuma skill definida para este nível.</p>
+                }
+                @foreach (var skill in items)
+                {
+                    var label = skill.SkillType switch
+                    {
+                        SkillType.PromotionRequired => "Obrigatória para subir",
+                        SkillType.MissionReward => "Recompensa lendária",
+                        _ => "Opcional"
+                    };
+                    <form asp-action="ToggleSkillMastery" asp-route-studentId="@studentId" asp-route-skillId="@skill.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" disabled="@skill.InferredFromCurrentLevel" class="skill-toggle @(skill.Mastered ? "mastered" : "")">
+                            <span>@(skill.Mastered ? "OK" : "")</span>
+                            <em>@skill.Name</em>
+                            <small>@label · @(skill.InferredFromCurrentLevel ? "pelo nível" : skill.Mastered ? "conquistada" : "pendente")</small>
+                        </button>
+                    </form>
+                    @if (!string.IsNullOrWhiteSpace(skill.Description)) { <p class="student-help-text">@skill.Description</p> }
+                }
+            </section>
+        }
+    </section>
+</section>

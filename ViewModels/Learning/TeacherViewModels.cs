@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
 
@@ -57,9 +58,6 @@ public sealed class CreateLessonViewModel
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime LessonDateUtc { get; set; } = DateTime.UtcNow;
 
-    [Range(0, 600, ErrorMessage = "Informe uma duracao entre 0 e 600 minutos.")]
-    public int DurationMinutes { get; set; } = 60;
-
     [StringLength(2000)]
     public string? Notes { get; set; }
 }
@@ -74,18 +72,9 @@ public sealed class AddRepertoireViewModel
     [Required]
     public Guid StudentProfileId { get; set; }
 
-    [Required(ErrorMessage = "Titulo da musica e obrigatorio.")]
+    [Required(ErrorMessage = "Nome do repertorio e obrigatorio.")]
     [StringLength(180)]
     public string Title { get; set; } = string.Empty;
-
-    [StringLength(180)]
-    public string? ComposerOrArtist { get; set; }
-
-    [StringLength(120)]
-    public string? Instrument { get; set; }
-
-    [StringLength(80)]
-    public string? Level { get; set; }
 
     [StringLength(2000)]
     public string? Notes { get; set; }
@@ -93,6 +82,8 @@ public sealed class AddRepertoireViewModel
     [StringLength(500)]
     [Url(ErrorMessage = "Informe uma URL valida.")]
     public string? ReferenceUrl { get; set; }
+
+    public IFormFile? AudioFile { get; set; }
 }
 
 public sealed class CreateAssignmentViewModel
@@ -110,13 +101,12 @@ public sealed class CreateAssignmentViewModel
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? DueAtUtc { get; set; }
 
-    [Range(0, 600)]
-    public int TargetMinutes { get; set; }
-
     [Range(0, 50000)]
     public int XpReward { get; set; } = 100;
 
     public AssignmentRarity Rarity { get; set; } = AssignmentRarity.Comum;
+
+    public bool UseDefaultXp { get; set; } = true;
 }
 
 public sealed class CreateFeedbackViewModel
@@ -139,7 +129,7 @@ public sealed class TeacherSkillsViewModel
 
 public sealed class DefineSkillViewModel
 {
-    [Required(ErrorMessage = "Nome da habilidade é obrigatório.")]
+    [Required(ErrorMessage = "Nome da habilidade e obrigatorio.")]
     [StringLength(200)]
     public string Name { get; set; } = string.Empty;
 
@@ -159,6 +149,8 @@ public sealed class TeacherStudentDetailWithSkillsViewModel
 {
     public required TeacherStudentDetailViewModel Base { get; init; }
     public required IReadOnlyCollection<SkillWithMastery> Skills { get; init; }
+    public ProgressSummary? Progress { get; init; }
+    public string ActiveModule { get; init; } = "Summary";
 }
 
 public sealed class QuickLessonViewModel
@@ -179,10 +171,6 @@ public sealed class QuickLessonFormViewModel
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime LessonDateUtc { get; set; } = DateTime.Now;
 
-    [Range(0, 600, ErrorMessage = "Informe uma duracao entre 0 e 600 minutos.")]
-    public int DurationMinutes { get; set; } = 60;
-
     [StringLength(2000)]
     public string? Notes { get; set; }
 }
-

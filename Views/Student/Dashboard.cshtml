@@ -162,9 +162,7 @@
                 <div class="s-rep-ico">YR</div>
                 <div class="s-rep-body">
                     <div class="s-rep-title">@rep.Title</div>
-                    @if (!string.IsNullOrWhiteSpace(rep.ComposerOrArtist)) {
-                        <div class="s-rep-artist">@rep.ComposerOrArtist</div>
-                    }
+                    <div class="s-rep-artist">@(rep.HasAudio ? "Audio disponivel" : "Material por link")</div>
                     <div class="s-rep-bar-wrap">
                         <div class="s-rep-bar"><i style="width:@rep.ProgressPercent%"></i></div>
                         <div class="s-rep-pct">@rep.ProgressPercent% acessado</div>

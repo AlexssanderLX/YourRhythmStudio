@@ -1,4 +1,5 @@
 @model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = Model.Base.Detail.Student.DisplayName;
@@ -6,16 +7,13 @@
     ViewData["DashTitle"] = Model.Base.Detail.Student.DisplayName;
     ViewData["HideDashTopbar"] = true;
 
-    var studentId = Model.Base.Detail.Student.StudentProfileId;
     var detail = Model.Base.Detail;
     var student = detail.Student;
-    var completedAssignments = detail.Assignments.Count(a => a.Status.ToString() == "Completed");
-    var openAssignments = detail.Assignments.Count(a => a.Status.ToString() == "Pending" || a.Status.ToString() == "InProgress");
-    var visibleFeedback = detail.Feedback.Count(f => f.VisibleToStudent);
-    var initials = string.Concat(student.DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        .Take(2)
-        .Select(part => char.ToUpperInvariant(part[0])));
-    var latestRepertoire = detail.Repertoire.OrderByDescending(r => r.ProgressPercent).FirstOrDefault();
+    var studentId = student.StudentProfileId;
+    var progress = Model.Progress;
+    var activeAssignments = detail.Assignments.Where(a => a.Status != AssignmentStatus.Completed && a.Status != AssignmentStatus.Skipped).Take(3).ToArray();
+    var pendingPromotion = Model.Skills.FirstOrDefault(s => s.SkillType == SkillType.PromotionRequired && s.RequiredLevel == student.CurrentLevel && !s.Mastered);
+    var recentLessons = detail.Lessons.OrderBy(l => l.LessonDateUtc).Where(l => l.LessonDateUtc >= DateTime.UtcNow.AddDays(-1)).Take(3).ToArray();
 }
 
 <section class="teacher-student-page">
@@ -25,18 +23,15 @@
                 <partial name="_DashIcon" model="@("users")" />
                 Meus alunos
             </a>
-            <a class="student-home-link" asp-controller="Home" asp-action="Index">
-                <span aria-hidden="true">←</span>
-                Voltar ao site
-            </a>
+            <button type="button" class="btn btn-primary btn-sm" data-action-modal>Abrir criar / editar</button>
         </div>
 
         <div class="student-profile-card">
-            <div class="student-avatar-lg">@initials</div>
+            <div class="student-avatar-lg">@Initials(student.DisplayName)</div>
             <div class="student-profile-main">
-                <span class="student-kicker">Aluno ativo</span>
+                <span class="student-kicker">Resumo do aluno</span>
                 <h1>@student.DisplayName</h1>
-                <p>@(string.IsNullOrWhiteSpace(student.Instrument) ? "Instrumento não informado" : student.Instrument) · Nivel @student.CurrentLevel</p>
+                <p>@(string.IsNullOrWhiteSpace(student.Instrument) ? "Instrumento não informado" : student.Instrument) · Nível @student.CurrentLevel</p>
             </div>
             <div class="student-xp-badge">
                 <strong>@student.CurrentXp</strong>
@@ -45,21 +40,18 @@
         </div>
 
         <div class="student-quick-stats" aria-label="Resumo do aluno">
-            <div><strong>@student.CurrentLevel</strong><span>Nivel</span></div>
-            <div><strong>@completedAssignments</strong><span>Missões feitas</span></div>
-            <div><strong>@openAssignments</strong><span>Em aberto</span></div>
+            <div><strong>@student.CurrentLevel</strong><span>Nível</span></div>
+            <div><strong>@(progress?.CurrentLevelProgressPercent ?? 0)%</strong><span>Progresso XP</span></div>
+            <div><strong>@detail.Assignments.Count(a => a.Status == AssignmentStatus.Completed)</strong><span>Missões feitas</span></div>
             <div><strong>@detail.Repertoire.Count</strong><span>Repertório</span></div>
         </div>
 
-        @if (latestRepertoire is not null)
-        {
-            <div class="student-focus-strip">
-                <span>Foco atual</span>
-                <strong>@latestRepertoire.Title</strong>
-                <div class="student-mini-bar"><i style="width:@latestRepertoire.ProgressPercent%"></i></div>
-                <em>@latestRepertoire.ProgressPercent%</em>
-            </div>
-        }
+        <div class="student-focus-strip">
+            <span>Próxima evolução</span>
+            <strong>@(pendingPromotion?.Name ?? (progress?.AwaitingPromotion == true ? "Aguardando skill obrigatória" : "Sem bloqueio obrigatório definido"))</strong>
+            <div class="student-mini-bar"><i style="width:@(progress?.CurrentLevelProgressPercent ?? 0)%"></i></div>
+            <em>@(progress?.CurrentLevelProgressPercent ?? 0)%</em>
+        </div>
     </div>
 
     @if (TempData["Error"] is string error)
@@ -81,344 +73,153 @@
         </section>
     }
 
-    <div class="student-action-bar">
-        <form asp-controller="Teacher" asp-action="GenerateStudentAccessLink" asp-route-studentId="@studentId" method="post" class="student-inline-form">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-ghost btn-sm">Link de acesso</button>
-        </form>
-        <button type="button" class="student-jump-btn active" data-tab="tab-assignment">Missão</button>
-        <button type="button" class="student-jump-btn" data-tab="tab-repertoire">Repertório</button>
-        <button type="button" class="student-jump-btn" data-tab="tab-feedback">Feedback</button>
-        <button type="button" class="student-jump-btn" data-tab="tab-lesson">Aula</button>
-        <button type="button" class="student-jump-btn" data-tab="tab-skills">Skills</button>
-    </div>
+    <nav class="student-action-bar student-module-nav" aria-label="Módulos do aluno">
+        <a class="student-jump-btn active" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
 
     <section class="student-workspace">
         <div class="student-form-panel">
-            <div class="student-form-tab active" id="tab-assignment">
-                <div class="student-panel-head">
-                    <div>
-                        <span class="student-section-kicker">Criar agora</span>
-                        <h2>Nova missão</h2>
-                    </div>
-                    <span class="student-soft-pill">+@Model.Base.Assignment.XpReward XP</span>
+            <div class="student-panel-head">
+                <div>
+                    <span class="student-section-kicker">Atalho inteligente</span>
+                    <h2>O que precisa de atenção</h2>
                 </div>
-                <form asp-controller="Teacher" asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Base.Assignment.StudentProfileId" type="hidden" value="@studentId" />
-                    <div>
-                        <label asp-for="Base.Assignment.Title">Titulo</label>
-                        <input asp-for="Base.Assignment.Title" placeholder="Ex: Praticar escalas por 20 min" />
-                    </div>
-                    <div>
-                        <label asp-for="Base.Assignment.Description">Descrição opcional</label>
-                        <textarea asp-for="Base.Assignment.Description" placeholder="O que o aluno deve fazer?"></textarea>
-                    </div>
-                    <div>
-                        <label asp-for="Base.Assignment.Rarity">Raridade</label>
-                        <select asp-for="Base.Assignment.Rarity" id="assignRarity">
-                            <option value="Comum">Comum — 100 XP</option>
-                            <option value="Rara">Rara — 400 XP</option>
-                            <option value="MuitoRara">Muito Rara — 1.500 XP</option>
-                            <option value="Epica">Épica — 5.000 XP</option>
-                            <option value="Lendaria">Lendária — 25.000 XP</option>
-                        </select>
-                    </div>
-                    <div class="form-grid-compact">
-                        <div>
-                            <label asp-for="Base.Assignment.DueAtUtc">Prazo</label>
-                            <input asp-for="Base.Assignment.DueAtUtc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
-                        </div>
-                        <div>
-                            <label asp-for="Base.Assignment.TargetMinutes">Minutos</label>
-                            <input asp-for="Base.Assignment.TargetMinutes" type="number" min="0" placeholder="20" />
-                        </div>
-                        <div>
-                            <label asp-for="Base.Assignment.XpReward">XP</label>
-                            <input asp-for="Base.Assignment.XpReward" id="assignXp" type="number" min="0" max="50000" placeholder="100" />
-                        </div>
-                    </div>
-                    <button type="submit">Criar missão</button>
-                </form>
             </div>
 
-            <div class="student-form-tab" id="tab-repertoire">
-                <div class="student-panel-head">
+            <div class="student-item-list">
+                <article class="student-list-item">
                     <div>
-                        <span class="student-section-kicker">Estudo guiado</span>
-                        <h2>Adicionar repertório</h2>
+                        <span>Skill obrigatória</span>
+                        <strong>@(pendingPromotion?.Name ?? "Nenhuma skill bloqueando a evolução atual")</strong>
                     </div>
-                </div>
-                <form asp-controller="Teacher" asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Base.Repertoire.StudentProfileId" type="hidden" value="@studentId" />
+                    <a class="student-inline-link" asp-action="StudentSkills" asp-route-studentId="@studentId">Ver skills</a>
+                </article>
+                <article class="student-list-item">
                     <div>
-                        <label asp-for="Base.Repertoire.Title">Música ou estudo</label>
-                        <input asp-for="Base.Repertoire.Title" placeholder="Ex: Clair de Lune" />
+                        <span>Missões ativas</span>
+                        <strong>@activeAssignments.Length em andamento ou pendentes</strong>
                     </div>
+                    <a class="student-inline-link" asp-action="StudentAssignments" asp-route-studentId="@studentId">Gerenciar</a>
+                </article>
+                <article class="student-list-item">
                     <div>
-                        <label asp-for="Base.Repertoire.ReferenceUrl">Link de referência</label>
-                        <input asp-for="Base.Repertoire.ReferenceUrl" type="url" placeholder="https://youtube.com/..." />
+                        <span>Próximas aulas</span>
+                        <strong>@recentLessons.Length agendadas</strong>
                     </div>
-                    <div class="form-grid-compact">
-                        <div>
-                            <label asp-for="Base.Repertoire.ComposerOrArtist">Autor</label>
-                            <input asp-for="Base.Repertoire.ComposerOrArtist" placeholder="Debussy" />
-                        </div>
-                        <div>
-                            <label asp-for="Base.Repertoire.Instrument">Instrumento</label>
-                            <input asp-for="Base.Repertoire.Instrument" placeholder="Piano" />
-                        </div>
-                        <div>
-                            <label asp-for="Base.Repertoire.Level">Nivel</label>
-                            <input asp-for="Base.Repertoire.Level" type="number" min="1" placeholder="1" />
-                        </div>
-                    </div>
-                    <button type="submit">Adicionar repertório</button>
-                </form>
-            </div>
-
-            <div class="student-form-tab" id="tab-feedback">
-                <div class="student-panel-head">
-                    <div>
-                        <span class="student-section-kicker">Retorno</span>
-                        <h2>Feedback para o aluno</h2>
-                    </div>
-                    <span class="student-soft-pill">@visibleFeedback visíveis</span>
-                </div>
-                <form asp-controller="Teacher" asp-action="CreateFeedback" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Base.Feedback.StudentProfileId" type="hidden" value="@studentId" />
-                    <div>
-                        <label asp-for="Base.Feedback.Message">Mensagem</label>
-                        <textarea asp-for="Base.Feedback.Message" placeholder="Escreva um retorno claro e útil para o aluno."></textarea>
-                    </div>
-                    <label class="auth-check">
-                        <input asp-for="Base.Feedback.VisibleToStudent" type="checkbox" />
-                        <span>Visível para o aluno</span>
-                    </label>
-                    <button type="submit">Salvar feedback</button>
-                </form>
-            </div>
-
-            <div class="student-form-tab" id="tab-lesson">
-                <div class="student-panel-head">
-                    <div>
-                        <span class="student-section-kicker">Registro rápido</span>
-                        <h2>Registrar aula</h2>
-                    </div>
-                </div>
-                <form asp-controller="Teacher" asp-action="CreateLesson" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Base.Lesson.StudentProfileId" type="hidden" value="@studentId" />
-                    <div>
-                        <label asp-for="Base.Lesson.Title">Titulo da aula</label>
-                        <input asp-for="Base.Lesson.Title" placeholder="Ex: Técnica e repertório" />
-                    </div>
-                    <div>
-                        <label asp-for="Base.Lesson.LessonDateUtc">Data e hora</label>
-                        <input asp-for="Base.Lesson.LessonDateUtc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
-                    </div>
-                    <div>
-                        <label asp-for="Base.Lesson.DurationMinutes">Duração</label>
-                        <input asp-for="Base.Lesson.DurationMinutes" type="number" min="0" max="600" placeholder="60" />
-                    </div>
-                    <div>
-                        <label asp-for="Base.Lesson.Notes">Descrição da aula</label>
-                        <textarea asp-for="Base.Lesson.Notes" placeholder="O que foi trabalhado, observações e combinados?"></textarea>
-                    </div>
-                    <button type="submit">Registrar aula</button>
-                </form>
-            </div>
-
-            <div class="student-form-tab" id="tab-skills">
-                <div class="student-panel-head">
-                    <div>
-                        <span class="student-section-kicker">Níveis</span>
-                        <h2>Habilidades</h2>
-                    </div>
-                    <a class="student-inline-link" asp-controller="Teacher" asp-action="Skills">Editar base</a>
-                </div>
-                <p class="student-help-text">Habilidades até o nível atual contam como dominadas. Marque manualmente apenas antecipações de níveis acima.</p>
-                @if (!Model.Skills.Any())
-                {
-                    <div class="student-empty-inline">Nenhuma habilidade definida ainda. <a asp-controller="Teacher" asp-action="Skills">Criar habilidades</a></div>
-                }
-                else
-                {
-                    <div class="student-skill-list">
-                        @foreach (var level in Enumerable.Range(1, 5))
-                        {
-                            var levelSkills = Model.Skills.Where(s => s.RequiredLevel == level).ToList();
-                            if (!levelSkills.Any()) continue;
-                            <div class="skill-level-group">
-                                <strong>Nivel @level</strong>
-                                @foreach (var skill in levelSkills)
-                                {
-                                    <form asp-controller="Teacher" asp-action="ToggleSkillMastery" asp-route-studentId="@studentId" asp-route-skillId="@skill.Id" method="post">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" disabled="@skill.InferredFromCurrentLevel" class="skill-toggle @(skill.Mastered ? "mastered" : "")">
-                                            <span>@(skill.Mastered ? "OK" : "")</span>
-                                            <em>@skill.Name</em>
-                                            <small>@(skill.InferredFromCurrentLevel ? "Pelo nivel" : skill.Mastered ? "Dominada" : "Marcar")</small>
-                                        </button>
-                                    </form>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
+                    <a class="student-inline-link" asp-action="StudentLessons" asp-route-studentId="@studentId">Abrir aulas</a>
+                </article>
             </div>
         </div>
 
         <aside class="student-side-panel">
             <section>
                 <div class="student-panel-head compact">
-                    <div><span class="student-section-kicker">Missões</span><h2>@detail.Assignments.Count total</h2></div>
+                    <div><span class="student-section-kicker">Missões ativas</span><h2>@activeAssignments.Length recentes</h2></div>
                 </div>
                 <div class="student-item-list">
-                    @if (detail.Assignments.Any())
+                    @foreach (var item in activeAssignments)
                     {
-                        @foreach (var item in detail.Assignments.OrderBy(a => a.Status.ToString() == "Completed" ? 1 : 0).Take(5))
-                        {
-                            var statusLabel = item.Status.ToString() switch
-                            {
-                                "Pending" => "Pendente",
-                                "InProgress" => "Em andamento",
-                                "Completed" => "Concluida",
-                                "Skipped" => "Ignorada",
-                                _ => item.Status.ToString()
-                            };
-                            <article class="student-list-item">
-                                <div><span>@statusLabel</span><strong>@item.Title</strong></div>
-                                <em>+@item.XpReward XP</em>
-                            </article>
-                        }
+                        <article class="student-list-item">
+                            <div><span>@item.Status</span><strong>@item.Title</strong></div>
+                            <em>+@item.XpReward XP</em>
+                        </article>
                     }
-                    else { <p class="student-empty-inline">Sem missões ainda.</p> }
+                    @if (!activeAssignments.Any()) { <p class="student-empty-inline">Sem missões abertas.</p> }
                 </div>
             </section>
 
             <section>
                 <div class="student-panel-head compact">
-                    <div><span class="student-section-kicker">Repertório</span><h2>@detail.Repertoire.Count itens</h2></div>
+                    <div><span class="student-section-kicker">Repertórios recentes</span><h2>@detail.Repertoire.Count itens</h2></div>
                 </div>
                 <div class="student-item-list">
-                    @if (detail.Repertoire.Any())
+                    @foreach (var item in detail.Repertoire.Take(4))
                     {
-                        @foreach (var item in detail.Repertoire.Take(5))
-                        {
-                            <article class="student-list-item progress-item">
-                                <div>
-                                    <span>@(string.IsNullOrWhiteSpace(item.ComposerOrArtist) ? item.Status : item.ComposerOrArtist)</span>
-                                    <strong>@item.Title</strong>
-                                    <div class="student-mini-bar"><i style="width:@item.ProgressPercent%"></i></div>
-                                </div>
-                                <em>@item.ProgressPercent%</em>
-                            </article>
-                        }
+                        <article class="student-list-item progress-item">
+                            <div>
+                                <span>@(item.HasAudio ? "Áudio" : "Link")</span>
+                                <strong>@item.Title</strong>
+                                <div class="student-mini-bar"><i style="width:@item.ProgressPercent%"></i></div>
+                            </div>
+                            <em>@item.ProgressPercent%</em>
+                        </article>
                     }
-                    else { <p class="student-empty-inline">Sem repertório ainda.</p> }
+                    @if (!detail.Repertoire.Any()) { <p class="student-empty-inline">Sem repertório ainda.</p> }
                 </div>
             </section>
 
             <section>
                 <div class="student-panel-head compact">
-                    <div><span class="student-section-kicker">Feedbacks</span><h2>@detail.Feedback.Count registros</h2></div>
+                    <div><span class="student-section-kicker">Últimos feedbacks</span><h2>@detail.Feedback.Count registros</h2></div>
                 </div>
                 <div class="student-item-list">
-                    @if (detail.Feedback.Any())
+                    @foreach (var item in detail.Feedback.OrderByDescending(f => f.CreatedAtUtc).Take(3))
                     {
-                        @foreach (var item in detail.Feedback.OrderByDescending(f => f.CreatedAtUtc).Take(4))
-                        {
-                            <article class="student-list-item">
-                                <div>
-                                    <span>@(item.VisibleToStudent ? "Visivel" : "Privado") · @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
-                                    <strong>@item.Message</strong>
-                                </div>
-                            </article>
-                        }
+                        <article class="student-list-item">
+                            <div>
+                                <span>@(item.VisibleToStudent ? "Visível" : "Privado") · @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")</span>
+                                <strong>@item.Message</strong>
+                            </div>
+                        </article>
                     }
-                    else { <p class="student-empty-inline">Sem feedback ainda.</p> }
+                    @if (!detail.Feedback.Any()) { <p class="student-empty-inline">Sem feedback ainda.</p> }
                 </div>
             </section>
-
-            @if (detail.Lessons.Any())
-            {
-                <section>
-                    <div class="student-panel-head compact">
-                        <div><span class="student-section-kicker">Aulas</span><h2>@detail.Lessons.Count registros</h2></div>
-                    </div>
-                    <div class="student-item-list">
-                        @foreach (var lesson in detail.Lessons.OrderByDescending(l => l.LessonDateUtc).Take(4))
-                        {
-                            <a class="student-list-item" asp-controller="Teacher" asp-action="LessonDetail" asp-route-studentId="@studentId" asp-route-lessonId="@lesson.Id">
-                                <div>
-                                    <span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM") · @lesson.DurationMinutes min · @lesson.Status</span>
-                                    <strong>@lesson.Title</strong>
-                                </div>
-                            </a>
-                        }
-                    </div>
-                </section>
-            }
         </aside>
     </section>
 </section>
 
-<script>
-(function () {
-    var buttons = document.querySelectorAll('.student-jump-btn');
-    var panels = document.querySelectorAll('.student-form-tab');
-    buttons.forEach(function (button) {
-        button.addEventListener('click', function () {
-            buttons.forEach(function (item) { item.classList.remove('active'); });
-            panels.forEach(function (item) { item.classList.remove('active'); });
-            button.classList.add('active');
-            var target = document.getElementById(button.dataset.tab);
-            if (target) target.classList.add('active');
-        });
-    });
-}());
-</script>
+<div class="student-action-modal" data-action-modal-panel hidden>
+    <div class="student-action-modal-backdrop" data-action-modal-close></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Criar ou editar">
+        <div class="student-panel-head">
+            <div>
+                <span class="student-section-kicker">Criar / Editar</span>
+                <h2>@student.DisplayName</h2>
+            </div>
+            <button type="button" class="student-jump-btn" data-action-modal-close>Fechar</button>
+        </div>
+        <div class="student-modal-grid">
+            <a asp-action="StudentAssignments" asp-route-studentId="@studentId">Criar missão<span>XP, prazo opcional e raridade</span></a>
+            <a asp-action="StudentAssignments" asp-route-studentId="@studentId">Editar missão<span>Abra a lista de missões</span></a>
+            <a asp-action="StudentRepertoire" asp-route-studentId="@studentId">Criar repertório<span>Link e/ou áudio</span></a>
+            <a asp-action="StudentRepertoire" asp-route-studentId="@studentId">Editar repertório<span>Materiais enviados</span></a>
+            <a asp-action="StudentFeedback" asp-route-studentId="@studentId">Registrar feedback<span>Público ou privado</span></a>
+            <a asp-action="StudentSkills" asp-route-studentId="@studentId">Criar ou editar skill<span>Requisitos por nível</span></a>
+            <a asp-action="StudentLessons" asp-route-studentId="@studentId">Criar ou editar aula<span>Data, hora e descrição</span></a>
+            <a asp-action="CreateStudent">Editar aluno<span>Informações cadastrais</span></a>
+        </div>
+    </section>
+</div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script>
+    (function(){
+        var panel = document.querySelector('[data-action-modal-panel]');
+        document.querySelectorAll('[data-action-modal]').forEach(function(btn){
+            btn.addEventListener('click', function(){ if(panel) panel.hidden = false; });
+        });
+        document.querySelectorAll('[data-action-modal-close]').forEach(function(btn){
+            btn.addEventListener('click', function(){ if(panel) panel.hidden = true; });
+        });
+    }());
     function copyStudentLink() {
         var input = document.getElementById('student-access-link');
         if (!input) return;
-        var btn = document.querySelector('[onclick="copyStudentLink()"]');
-        function done() {
-            if (!btn) return;
-            btn.textContent = 'Copiado';
-            setTimeout(function () { btn.textContent = 'Copiar'; }, 1800);
-        }
-        function fallbackCopy() {
-            input.removeAttribute('disabled');
-            input.focus();
-            input.select();
-            input.setSelectionRange(0, input.value.length);
-            try { document.execCommand('copy'); done(); }
-            catch (_) { window.prompt('Copie o link do aluno:', input.value); }
-        }
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(input.value).then(done).catch(fallbackCopy);
-        } else {
-            fallbackCopy();
-        }
+        navigator.clipboard?.writeText(input.value).catch(function(){ input.select(); document.execCommand('copy'); });
     }
-
-    // Auto-fill XP when rarity changes
-    (function(){
-        var rarSel = document.getElementById('assignRarity');
-        var xpIn   = document.getElementById('assignXp');
-        var xpMap  = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
-        if (rarSel && xpIn) {
-            rarSel.addEventListener('change', function(){
-                xpIn.value = xpMap[rarSel.value] || 100;
-            });
-        }
-    }());
     </script>
+}
+
+@functions {
+    private static string Initials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray();
+        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
+    }
 }

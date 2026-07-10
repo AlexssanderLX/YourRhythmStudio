@@ -1,4 +1,4 @@
-@model YourRhythmStudio.ViewModels.Learning.TeacherDashboardViewModel
+﻿@model YourRhythmStudio.ViewModels.Learning.TeacherDashboardViewModel
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = "Painel do professor";
@@ -103,7 +103,7 @@
                     <span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
                     <div>
                         <strong>@lesson.Title</strong>
-                        <small>@lesson.DurationMinutes min · @lesson.Status</small>
+                        <small>@lesson.LessonDateUtc.ToLocalTime().ToString("HH:mm") · @lesson.Status</small>
                     </div>
                 </a>
             }

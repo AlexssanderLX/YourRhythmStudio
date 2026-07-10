@@ -59,7 +59,6 @@ public sealed class ProgressService
                 assignment.Description,
                 assignment.DueAtUtc,
                 assignment.Status,
-                assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
@@ -79,7 +78,6 @@ public sealed class ProgressService
                 assignment.Description,
                 assignment.DueAtUtc,
                 assignment.Status,
-                assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
@@ -96,13 +94,14 @@ public sealed class ProgressService
             .Select(item => new RepertoireSummary(
                 item.Id,
                 item.Title,
-                item.ComposerOrArtist,
-                item.Instrument,
-                item.Level,
                 item.Status,
                 item.ProgressPercent,
                 item.Notes,
-                item.ReferenceUrl))
+                item.ReferenceUrl,
+                item.AudioOriginalFileName,
+                item.AudioContentType,
+                item.AudioSizeBytes,
+                item.AudioStoredFileName != null))
             .ToArrayAsync(cancellationToken);
 
         var feedback = await _dbContext.FeedbackEntries

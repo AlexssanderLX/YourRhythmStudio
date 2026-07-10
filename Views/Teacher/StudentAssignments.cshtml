@@ -1,0 +1,127 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Missões · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Missões";
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+}
+
+<section class="teacher-student-page">
+    <div class="student-detail-topline">
+        <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a>
+    </div>
+
+    <nav class="student-action-bar student-module-nav">
+        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
+        <a class="student-jump-btn active" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
+        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
+        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
+        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
+        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
+    </nav>
+
+    @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }
+
+    <section class="student-workspace">
+        <div class="student-form-panel">
+            <div class="student-panel-head">
+                <div><span class="student-section-kicker">Nova missão</span><h2>Objetivo da semana</h2></div>
+                <span class="student-soft-pill" id="xpPreview">100 XP</span>
+            </div>
+            <form asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Base.Assignment.StudentProfileId" type="hidden" value="@studentId" />
+                <div>
+                    <label asp-for="Base.Assignment.Title">Título</label>
+                    <input asp-for="Base.Assignment.Title" placeholder="Ex: Praticar levada com metrônomo" />
+                </div>
+                <div>
+                    <label asp-for="Base.Assignment.Description">Descrição opcional</label>
+                    <textarea asp-for="Base.Assignment.Description" placeholder="Detalhe o que o aluno deve fazer."></textarea>
+                </div>
+                <div class="form-grid-compact">
+                    <div>
+                        <label asp-for="Base.Assignment.Rarity">Categoria</label>
+                        <select asp-for="Base.Assignment.Rarity" id="assignRarity">
+                            <option value="Comum">Comum · 100 XP</option>
+                            <option value="Rara">Rara · 400 XP</option>
+                            <option value="MuitoRara">Muito rara · 1.500 XP</option>
+                            <option value="Epica">Épica · 5.000 XP</option>
+                            <option value="Lendaria">Lendária · 25.000 XP</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label asp-for="Base.Assignment.DueAtUtc">Prazo opcional</label>
+                        <input asp-for="Base.Assignment.DueAtUtc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
+                    </div>
+                </div>
+                <label class="auth-check">
+                    <input asp-for="Base.Assignment.UseDefaultXp" id="useDefaultXp" type="checkbox" checked />
+                    <span>Manter XP padrão da categoria</span>
+                </label>
+                <div>
+                    <label asp-for="Base.Assignment.XpReward">XP personalizado</label>
+                    <input asp-for="Base.Assignment.XpReward" id="assignXp" type="number" min="0" max="50000" value="100" />
+                </div>
+                <button type="submit">Criar missão</button>
+            </form>
+        </div>
+
+        <aside class="student-side-panel">
+            <section>
+                <div class="student-panel-head compact">
+                    <div><span class="student-section-kicker">Histórico</span><h2>@Model.Base.Detail.Assignments.Count missões</h2></div>
+                </div>
+                <div class="student-item-list">
+                    @foreach (var item in Model.Base.Detail.Assignments.OrderBy(a => a.Status == AssignmentStatus.Completed).ThenBy(a => a.DueAtUtc ?? DateTime.MaxValue))
+                    {
+                        <article class="student-list-item">
+                            <div>
+                                <span>@Status(item.Status) · @(item.DueAtUtc?.ToLocalTime().ToString("dd/MM") ?? "sem prazo")</span>
+                                <strong>@item.Title</strong>
+                            </div>
+                            <em>+@item.XpReward XP</em>
+                        </article>
+                    }
+                    @if (!Model.Base.Detail.Assignments.Any()) { <p class="student-empty-inline">Nenhuma missão criada.</p> }
+                </div>
+            </section>
+        </aside>
+    </section>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function(){
+        var rarity = document.getElementById('assignRarity');
+        var xp = document.getElementById('assignXp');
+        var keep = document.getElementById('useDefaultXp');
+        var preview = document.getElementById('xpPreview');
+        var map = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
+        function sync(){
+            var value = map[rarity.value] || 100;
+            if (keep.checked) xp.value = value;
+            preview.textContent = (keep.checked ? value : Math.max(0, parseInt(xp.value || '0', 10))) + ' XP';
+        }
+        rarity && rarity.addEventListener('change', sync);
+        keep && keep.addEventListener('change', sync);
+        xp && xp.addEventListener('input', sync);
+        sync();
+    }());
+    </script>
+}
+
+@functions {
+    private static string Status(AssignmentStatus status) => status switch
+    {
+        AssignmentStatus.Pending => "Pendente",
+        AssignmentStatus.InProgress => "Em andamento",
+        AssignmentStatus.Completed => "Concluída",
+        AssignmentStatus.Skipped => "Ignorada",
+        _ => status.ToString()
+    };
+}

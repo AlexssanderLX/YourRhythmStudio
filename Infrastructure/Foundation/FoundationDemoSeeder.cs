@@ -180,9 +180,11 @@ public static class FoundationDemoSeeder
                 teacher.Id,
                 student.Id,
                 "Clair de Lune",
-                "C. Debussy",
-                "Piano",
-                "Iniciante",
+                utcNow);
+            repertoire.UpdateDetails(
+                repertoire.Title,
+                "Ouça a referência e marque como concluída depois do estudo.",
+                "https://www.youtube.com/results?search_query=clair+de+lune",
                 utcNow);
             repertoire.UpdateProgress(40, utcNow);
             dbContext.RepertoireItems.Add(repertoire);
@@ -203,7 +205,6 @@ public static class FoundationDemoSeeder
                 assignment.Title,
                 assignment.Description,
                 assignment.DueAtUtc,
-                20,
                 assignment.XpReward,
                 utcNow);
             dbContext.Assignments.Add(assignment);

@@ -58,7 +58,6 @@ public sealed class TeacherStudentService
                 lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
-                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))
@@ -74,13 +73,14 @@ public sealed class TeacherStudentService
             .Select(item => new RepertoireSummary(
                 item.Id,
                 item.Title,
-                item.ComposerOrArtist,
-                item.Instrument,
-                item.Level,
                 item.Status,
                 item.ProgressPercent,
                 item.Notes,
-                item.ReferenceUrl))
+                item.ReferenceUrl,
+                item.AudioOriginalFileName,
+                item.AudioContentType,
+                item.AudioSizeBytes,
+                item.AudioStoredFileName != null))
             .ToArrayAsync(cancellationToken);
 
         var assignments = await _dbContext.Assignments
@@ -96,7 +96,6 @@ public sealed class TeacherStudentService
                 assignment.Description,
                 assignment.DueAtUtc,
                 assignment.Status,
-                assignment.TargetMinutes,
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
@@ -252,7 +251,6 @@ public sealed class TeacherStudentService
                 lesson.StudentProfileId,
                 lesson.Title,
                 lesson.LessonDateUtc,
-                lesson.DurationMinutes,
                 lesson.CompletedAtUtc,
                 lesson.Status,
                 lesson.Notes))

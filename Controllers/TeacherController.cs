@@ -22,6 +22,7 @@ public sealed class TeacherController : Controller
     private readonly FeedbackService _feedbackService;
     private readonly SecureLinkService _secureLinkService;
     private readonly SkillService _skillService;
+    private readonly ProgressService _progressService;
 
     public TeacherController(
         IUserProfileResolver profileResolver,
@@ -31,7 +32,8 @@ public sealed class TeacherController : Controller
         AssignmentService assignmentService,
         FeedbackService feedbackService,
         SecureLinkService secureLinkService,
-        SkillService skillService)
+        SkillService skillService,
+        ProgressService progressService)
     {
         _profileResolver = profileResolver;
         _teacherStudentService = teacherStudentService;
@@ -41,6 +43,7 @@ public sealed class TeacherController : Controller
         _feedbackService = feedbackService;
         _secureLinkService = secureLinkService;
         _skillService = skillService;
+        _progressService = progressService;
     }
 
     [HttpGet("")]
@@ -108,7 +111,37 @@ public sealed class TeacherController : Controller
         if (detail is null) return Forbid();
         var profile = await CurrentProfile(cancellationToken);
         var skills = await _skillService.GetStudentSkillsAsync(profile, studentId, cancellationToken);
-        return View(new TeacherStudentDetailWithSkillsViewModel { Base = detail, Skills = skills });
+        var progress = await _progressService.GetTeacherStudentProgressAsync(profile, studentId, cancellationToken);
+        return View(new TeacherStudentDetailWithSkillsViewModel { Base = detail, Skills = skills, Progress = progress, ActiveModule = "Summary" });
+    }
+
+    [HttpGet("Students/{studentId:guid}/Assignments")]
+    public async Task<IActionResult> StudentAssignments(Guid studentId, CancellationToken cancellationToken)
+        => await StudentModule(studentId, "Assignments", cancellationToken);
+
+    [HttpGet("Students/{studentId:guid}/Repertoire")]
+    public async Task<IActionResult> StudentRepertoire(Guid studentId, CancellationToken cancellationToken)
+        => await StudentModule(studentId, "Repertoire", cancellationToken);
+
+    [HttpGet("Students/{studentId:guid}/Feedback")]
+    public async Task<IActionResult> StudentFeedback(Guid studentId, CancellationToken cancellationToken)
+        => await StudentModule(studentId, "Feedback", cancellationToken);
+
+    [HttpGet("Students/{studentId:guid}/Skills")]
+    public async Task<IActionResult> StudentSkills(Guid studentId, CancellationToken cancellationToken)
+        => await StudentModule(studentId, "Skills", cancellationToken);
+
+    [HttpGet("Students/{studentId:guid}/Lessons")]
+    public async Task<IActionResult> StudentLessons(Guid studentId, CancellationToken cancellationToken)
+        => await StudentModule(studentId, "Lessons", cancellationToken);
+
+    [HttpGet("Students/{studentId:guid}/Repertoire/{repertoireItemId:guid}/Audio")]
+    public async Task<IActionResult> StudentRepertoireAudio(Guid studentId, Guid repertoireItemId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var audio = await _repertoireService.GetAudioForTeacherAsync(profile, studentId, repertoireItemId, cancellationToken);
+        if (audio is null) return NotFound();
+        return PhysicalFile(audio.PhysicalPath, audio.ContentType, audio.DownloadFileName, enableRangeProcessing: true);
     }
 
     [HttpPost("Students/{studentId:guid}/Lessons")]
@@ -129,10 +162,10 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         await _lessonService.CreateLessonAsync(
             profile,
-            new CreateLessonRequest(studentId, model.Title, model.LessonDateUtc, model.DurationMinutes, model.Notes),
+            new CreateLessonRequest(studentId, BuildLessonTitle(model.Title, model.LessonDateUtc), model.LessonDateUtc, model.Notes),
             cancellationToken);
 
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToAction(nameof(StudentLessons), new { studentId });
     }
 
     [HttpGet("Students/{studentId:guid}/Lessons/{lessonId:guid}")]
@@ -172,16 +205,22 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         try
         {
+            var audio = model.AudioFile is null
+                ? null
+                : new RepertoireAudioUpload(
+                    model.AudioFile.FileName,
+                    model.AudioFile.ContentType,
+                    model.AudioFile.Length,
+                    model.AudioFile.OpenReadStream);
+
             await _repertoireService.AddRepertoireAsync(
                 profile,
                 new AddRepertoireRequest(
                     studentId,
                     model.Title,
-                    model.ComposerOrArtist,
-                    model.Instrument,
-                    model.Level,
                     model.Notes,
-                    model.ReferenceUrl),
+                    model.ReferenceUrl,
+                    audio),
                 cancellationToken);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -190,7 +229,7 @@ public sealed class TeacherController : Controller
             return RedirectToAction(nameof(StudentDetail), new { studentId });
         }
 
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToAction(nameof(StudentRepertoire), new { studentId });
     }
 
     [HttpPost("Students/{studentId:guid}/Assignments")]
@@ -211,6 +250,10 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         try
         {
+            var xpReward = model.UseDefaultXp
+                ? DefaultXpFor(model.Rarity)
+                : model.XpReward;
+
             await _assignmentService.CreateAssignmentAsync(
                 profile,
                 new CreateAssignmentRequest(
@@ -218,8 +261,7 @@ public sealed class TeacherController : Controller
                     model.Title,
                     string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
                     model.DueAtUtc,
-                    model.TargetMinutes,
-                    model.XpReward,
+                    xpReward,
                     model.Rarity),
                 cancellationToken);
         }
@@ -229,7 +271,7 @@ public sealed class TeacherController : Controller
             return RedirectToAction(nameof(StudentDetail), new { studentId });
         }
 
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToAction(nameof(StudentAssignments), new { studentId });
     }
 
     [HttpPost("Students/{studentId:guid}/Feedback")]
@@ -253,7 +295,7 @@ public sealed class TeacherController : Controller
             new CreateFeedbackRequest(studentId, model.Message, model.VisibleToStudent),
             cancellationToken);
 
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToAction(nameof(StudentFeedback), new { studentId });
     }
 
     [HttpPost("Students/{studentId:guid}/AccessLink")]
@@ -323,7 +365,7 @@ public sealed class TeacherController : Controller
     {
         var profile = await CurrentProfile(cancellationToken);
         await _skillService.ToggleMasteryAsync(profile, studentId, skillId, cancellationToken);
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToAction(nameof(StudentSkills), new { studentId });
     }
 
     [HttpGet("QuickLesson")]
@@ -344,13 +386,13 @@ public sealed class TeacherController : Controller
             var students2 = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
             return View(new QuickLessonViewModel { Students = students2, Form = model });
         }
-        var lessonTitle = string.IsNullOrWhiteSpace(model.Title)
-            ? $"Aula - {model.LessonDateUtc:dd/MM/yyyy HH:mm}"
-            : model.Title.Trim();
-
         await _lessonService.CreateLessonAsync(
             profile,
-            new CreateLessonRequest(model.StudentProfileId, lessonTitle, model.LessonDateUtc.ToUniversalTime(), model.DurationMinutes, model.Notes),
+            new CreateLessonRequest(
+                model.StudentProfileId,
+                BuildLessonTitle(model.Title, model.LessonDateUtc),
+                model.LessonDateUtc.ToUniversalTime(),
+                model.Notes),
             cancellationToken);
         return RedirectToAction(nameof(StudentDetail), new { studentId = model.StudentProfileId });
     }
@@ -364,9 +406,9 @@ public sealed class TeacherController : Controller
             return new TeacherStudentDetailViewModel
             {
                 Detail = detail,
-                Lesson = new CreateLessonViewModel { StudentProfileId = studentId, LessonDateUtc = DateTime.UtcNow, DurationMinutes = 60 },
-                Repertoire = new AddRepertoireViewModel { StudentProfileId = studentId, Instrument = detail.Student.Instrument, Level = detail.Student.Level },
-                Assignment = new CreateAssignmentViewModel { StudentProfileId = studentId, XpReward = 50 },
+                Lesson = new CreateLessonViewModel { StudentProfileId = studentId, LessonDateUtc = DateTime.UtcNow },
+                Repertoire = new AddRepertoireViewModel { StudentProfileId = studentId },
+                Assignment = new CreateAssignmentViewModel { StudentProfileId = studentId, XpReward = DefaultXpFor(AssignmentRarity.Comum) },
                 Feedback = new CreateFeedbackViewModel { StudentProfileId = studentId, VisibleToStudent = true }
             };
         }
@@ -380,10 +422,49 @@ public sealed class TeacherController : Controller
         }
     }
 
+    private async Task<IActionResult> StudentModule(Guid studentId, string module, CancellationToken cancellationToken)
+    {
+        var detail = await LoadStudentDetail(studentId, cancellationToken);
+        if (detail is null) return Forbid();
+
+        var profile = await CurrentProfile(cancellationToken);
+        var skills = await _skillService.GetStudentSkillsAsync(profile, studentId, cancellationToken);
+        var progress = await _progressService.GetTeacherStudentProgressAsync(profile, studentId, cancellationToken);
+
+        return View($"Student{module}", new TeacherStudentDetailWithSkillsViewModel
+        {
+            Base = detail,
+            Skills = skills,
+            Progress = progress,
+            ActiveModule = module
+        });
+    }
+
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)
     {
         return _profileResolver.ResolveCurrentAsync(User, cancellationToken);
     }
+
+    private static string BuildLessonTitle(string? title, DateTime lessonDate)
+    {
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            return title.Trim();
+        }
+
+        var local = lessonDate.Kind == DateTimeKind.Utc ? lessonDate.ToLocalTime() : lessonDate;
+        return $"Aula de {local:dd/MM/yyyy} as {local:HH:mm}";
+    }
+
+    private static int DefaultXpFor(AssignmentRarity rarity) => rarity switch
+    {
+        AssignmentRarity.Comum => 100,
+        AssignmentRarity.Rara => 400,
+        AssignmentRarity.MuitoRara => 1500,
+        AssignmentRarity.Epica => 5000,
+        AssignmentRarity.Lendaria => 25000,
+        _ => 100
+    };
 
     private CreateLessonViewModel ReadLessonForm(CreateLessonViewModel current)
     {
@@ -393,7 +474,6 @@ public sealed class TeacherController : Controller
             StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Lesson.StudentProfileId", "Lesson.StudentProfileId"),
             Title = ReadString(current.Title, "Base.Lesson.Title", "Lesson.Title"),
             LessonDateUtc = ReadDateTime(current.LessonDateUtc, "Base.Lesson.LessonDateUtc", "Lesson.LessonDateUtc") ?? current.LessonDateUtc,
-            DurationMinutes = ReadInt(current.DurationMinutes, "Base.Lesson.DurationMinutes", "Lesson.DurationMinutes"),
             Notes = ReadString(current.Notes, "Base.Lesson.Notes", "Lesson.Notes")
         };
     }
@@ -405,11 +485,9 @@ public sealed class TeacherController : Controller
         {
             StudentProfileId = ReadGuid(current.StudentProfileId, "Base.Repertoire.StudentProfileId", "Repertoire.StudentProfileId"),
             Title = ReadString(current.Title, "Base.Repertoire.Title", "Repertoire.Title"),
-            ComposerOrArtist = ReadString(current.ComposerOrArtist, "Base.Repertoire.ComposerOrArtist", "Repertoire.ComposerOrArtist"),
-            Instrument = ReadString(current.Instrument, "Base.Repertoire.Instrument", "Repertoire.Instrument"),
-            Level = ReadString(current.Level, "Base.Repertoire.Level", "Repertoire.Level"),
             Notes = ReadString(current.Notes, "Base.Repertoire.Notes", "Repertoire.Notes"),
-            ReferenceUrl = ReadString(current.ReferenceUrl, "Base.Repertoire.ReferenceUrl", "Repertoire.ReferenceUrl")
+            ReferenceUrl = ReadString(current.ReferenceUrl, "Base.Repertoire.ReferenceUrl", "Repertoire.ReferenceUrl"),
+            AudioFile = Request.Form.Files.GetFile("Base.Repertoire.AudioFile") ?? Request.Form.Files.GetFile("Repertoire.AudioFile")
         };
     }
 
@@ -422,9 +500,9 @@ public sealed class TeacherController : Controller
             Title = ReadString(current.Title, "Base.Assignment.Title", "Assignment.Title"),
             Description = ReadString(current.Description, "Base.Assignment.Description", "Assignment.Description"),
             DueAtUtc = ReadDateTime(current.DueAtUtc, "Base.Assignment.DueAtUtc", "Assignment.DueAtUtc"),
-            TargetMinutes = ReadInt(current.TargetMinutes, "Base.Assignment.TargetMinutes", "Assignment.TargetMinutes"),
             XpReward = ReadInt(current.XpReward, "Base.Assignment.XpReward", "Assignment.XpReward"),
             Rarity = ReadEnum(current.Rarity, "Base.Assignment.Rarity", "Assignment.Rarity"),
+            UseDefaultXp = ReadBool(current.UseDefaultXp, "Base.Assignment.UseDefaultXp", "Assignment.UseDefaultXp"),
         };
     }
 

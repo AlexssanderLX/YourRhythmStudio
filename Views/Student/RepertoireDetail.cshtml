@@ -3,33 +3,30 @@
     Layout = "_DashboardLayout";
     ViewData["Title"] = Model.Item.Title;
     ViewData["Role"] = "student";
-    ViewData["DashTitle"] = "Repertorio";
+    ViewData["DashTitle"] = "Repertório";
 
     var item = Model.Item;
     var isAccessed = item.ProgressPercent >= 50;
     var isCompleted = item.ProgressPercent >= 100 || item.Status.ToString() == "Learned";
     var statusLabel = item.Status.ToString() switch
     {
-        "NotStarted" => "Referencia nao acessada",
-        "Practicing" => "Referencia acessada",
-        "Learned" => "Estudo concluido",
+        "NotStarted" => "Referência não acessada",
+        "Practicing" => "Referência acessada",
+        "Learned" => "Estudo concluído",
         "Archived" => "Arquivada",
         _ => item.Status.ToString()
     };
 }
 
-<a href="@Url.Action("Repertoire", "Student")" class="s-back-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg> Voltar ao repertório</a>
+<a href="@Url.Action("Repertoire", "Student")" class="s-back-link">← Voltar ao repertório</a>
 
 <section class="rep-quest lvl-@Math.Clamp(item.ProgressPercent / 25 + 1, 1, 5)">
     <div class="rep-quest-top">
-        <div class="rep-orb"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div class="rep-orb">♪</div>
         <div class="rep-quest-copy">
-            <div class="rep-kicker">Desafio de repertorio</div>
+            <div class="rep-kicker">Material de estudo</div>
             <h1>@item.Title</h1>
-            @if (!string.IsNullOrWhiteSpace(item.ComposerOrArtist))
-            {
-                <p>@item.ComposerOrArtist</p>
-            }
+            <p>@(item.HasAudio ? "Áudio enviado pelo professor" : "Referência por link")</p>
         </div>
         <div class="rep-score">
             <strong>@item.ProgressPercent%</strong>
@@ -37,24 +34,16 @@
         </div>
     </div>
 
-    <div class="rep-quest-bar">
-        <i style="width:@item.ProgressPercent%"></i>
-    </div>
+    <div class="rep-quest-bar"><i style="width:@item.ProgressPercent%"></i></div>
 
     <div class="rep-steps">
-            <div class="rep-step @(isAccessed ? "done" : "active")">
+        <div class="rep-step @(isAccessed ? "done" : "active")">
             <span>1</span>
-            <div>
-                <strong>Abrir referencia</strong>
-                <small>Registra acesso e libera 50%</small>
-            </div>
+            <div><strong>Abrir referência</strong><small>Registra acesso e libera 50%</small></div>
         </div>
         <div class="rep-step @(isCompleted ? "done" : isAccessed ? "active" : "")">
             <span>2</span>
-            <div>
-                <strong>Concluir estudo</strong>
-                <small>Aluno confirma que estudou a referencia</small>
-            </div>
+            <div><strong>Concluir estudo</strong><small>Aluno confirma que estudou o material</small></div>
         </div>
     </div>
 </section>
@@ -63,45 +52,36 @@
     @if (!string.IsNullOrWhiteSpace(item.ReferenceUrl))
     {
         <a class="rep-action-card primary" href="@Url.Action("OpenRepertoireReference", "Student", new { id = item.Id })" target="_blank" rel="noopener">
-            <span class="rep-action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
-            <strong>Abrir referencia</strong>
-            <small>@(isAccessed ? "Referencia acessada · 50% registrado" : "Clique para acessar o material de estudo")</small>
+            <span class="rep-action-icon">↗</span>
+            <strong>Abrir referência</strong>
+            <small>@(isAccessed ? "Referência acessada · 50% registrado" : "Clique para acessar o material")</small>
         </a>
     }
-    else
+    @if (item.HasAudio)
+    {
+        <a class="rep-action-card primary" href="@Url.Action("RepertoireAudio", "Student", new { id = item.Id })">
+            <span class="rep-action-icon">♪</span>
+            <strong>Ouvir áudio</strong>
+            <small>@item.AudioOriginalFileName</small>
+        </a>
+    }
+    @if (string.IsNullOrWhiteSpace(item.ReferenceUrl) && !item.HasAudio)
     {
         <div class="rep-action-card disabled">
-            <span class="rep-action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-            <strong>Sem referencia</strong>
-            <small>O professor ainda nao adicionou link</small>
+            <span class="rep-action-icon">–</span>
+            <strong>Sem material</strong>
+            <small>O professor ainda não adicionou link ou áudio.</small>
         </div>
     }
 
     <form asp-controller="Student" asp-action="CompleteRepertoire" asp-route-id="@item.Id" method="post" class="rep-action-form">
         @Html.AntiForgeryToken()
         <button class="rep-action-card complete" type="submit" @(isCompleted ? "disabled" : "")>
-            <span class="rep-action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg></span>
-            <strong>@(isCompleted ? "Estudo concluido" : "Marcar estudo como concluido")</strong>
-            <small>@(isCompleted ? "O aluno confirmou esta referencia" : "Use depois de estudar o link")</small>
+            <span class="rep-action-icon">✓</span>
+            <strong>@(isCompleted ? "Estudo concluído" : "Marcar como concluído")</strong>
+            <small>@(isCompleted ? "O aluno confirmou este material" : "Use depois de estudar")</small>
         </button>
     </form>
-</section>
-
-<section class="rep-detail-grid game-grid">
-    @if (!string.IsNullOrWhiteSpace(item.Instrument))
-    {
-        <div class="rep-detail-info-card">
-            <div class="rep-detail-info-lbl">Classe</div>
-            <div class="rep-detail-info-val">@item.Instrument</div>
-        </div>
-    }
-    @if (!string.IsNullOrWhiteSpace(item.Level))
-    {
-        <div class="rep-detail-info-card">
-            <div class="rep-detail-info-lbl">Rank tecnico</div>
-            <div class="rep-detail-info-val">@item.Level</div>
-        </div>
-    }
 </section>
 
 @if (!string.IsNullOrWhiteSpace(item.Notes))

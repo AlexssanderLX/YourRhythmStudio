@@ -111,6 +111,15 @@ public sealed class StudentController : Controller
         return Redirect(referenceUrl);
     }
 
+    [HttpGet("Repertoire/{id:guid}/Audio")]
+    public async Task<IActionResult> RepertoireAudio(Guid id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var audio = await _repertoireService.GetAudioForCurrentStudentAsync(profile, id, cancellationToken);
+        if (audio is null) return NotFound();
+        return PhysicalFile(audio.PhysicalPath, audio.ContentType, audio.DownloadFileName, enableRangeProcessing: true);
+    }
+
     [HttpPost("Repertoire/{id:guid}/Complete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CompleteRepertoire(Guid id, CancellationToken cancellationToken)
