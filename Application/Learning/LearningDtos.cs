@@ -107,14 +107,14 @@ public sealed record CreateTeacherStudentRequest(
     string? Contact,
     string Instrument,
     string Level,
-    string Notes);
+    string? Notes);
 
 public sealed record UpdateTeacherStudentRequest(
     Guid StudentProfileId,
     string DisplayName,
     string Instrument,
     string Level,
-    string Notes);
+    string? Notes);
 
 public sealed record CreateLessonRequest(
     Guid StudentProfileId,

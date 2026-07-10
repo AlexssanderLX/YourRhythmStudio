@@ -36,7 +36,7 @@ public sealed class CreateStudentViewModel : IValidatableObject
     public string Level { get; set; } = "1";
 
     [StringLength(1000)]
-    public string Notes { get; set; } = string.Empty;
+    public string? Notes { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -83,7 +83,7 @@ public sealed class EditStudentViewModel
     public string Level { get; set; } = "1";
 
     [StringLength(1000)]
-    public string Notes { get; set; } = string.Empty;
+    public string? Notes { get; set; }
 }
 
 public sealed class CreateLessonViewModel
