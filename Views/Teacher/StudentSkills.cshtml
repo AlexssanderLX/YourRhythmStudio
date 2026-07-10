@@ -19,7 +19,10 @@
             <h1>Skills por nivel</h1>
             <p>Requisitos definidos pelo professor para evolucao do aluno.</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar skill</button>
+        <div class="module-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar skill</button>
+            <partial name="_StudentManagementActions" model="Model" />
+        </div>
     </div>
 
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }

@@ -156,6 +156,53 @@ public sealed class TeacherStudentService
         return all.First(item => item.StudentProfileId == request.StudentProfileId);
     }
 
+    public async Task DeactivateStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid studentProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+
+        var link = await _dbContext.TeacherStudents
+            .FirstOrDefaultAsync(
+                item => item.SchoolId == schoolId
+                    && item.TeacherProfileId == teacherProfileId
+                    && item.StudentProfileId == studentProfileId
+                    && item.IsActive,
+                cancellationToken)
+            ?? throw new UnauthorizedAccessException("Teacher cannot access this student.");
+
+        var studentProfile = await _dbContext.StudentProfiles
+            .FirstOrDefaultAsync(
+                student => student.SchoolId == schoolId && student.Id == studentProfileId,
+                cancellationToken)
+            ?? throw new KeyNotFoundException("Student profile was not found.");
+
+        link.Deactivate(DateTime.UtcNow);
+
+        var hasOtherActiveLinks = await _dbContext.TeacherStudents.AnyAsync(
+            item => item.SchoolId == schoolId
+                && item.StudentProfileId == studentProfileId
+                && item.Id != link.Id
+                && item.IsActive,
+            cancellationToken);
+
+        if (!hasOtherActiveLinks)
+        {
+            var schoolUser = await _dbContext.SchoolUsers
+                .FirstOrDefaultAsync(
+                    user => user.SchoolId == schoolId && user.Id == studentProfile.SchoolUserId,
+                    cancellationToken);
+
+            if (schoolUser is not null)
+            {
+                schoolUser.IsActive = false;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<TeacherStudentSummary> CreateStudentAsync(
         AuthenticatedUserProfile profile,
         CreateTeacherStudentRequest request,

@@ -114,6 +114,94 @@
     transform: translateY(-1px);
 }
 
+.student-management-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.student-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 9px 13px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease, color .18s ease, transform .14s ease;
+}
+
+.student-action-btn-edit {
+    color: #eaf4ff;
+    border: 1px solid rgba(107,192,255,.42);
+    background: rgba(46,155,255,.12);
+}
+
+.student-action-btn-delete {
+    color: #ffc4c4;
+    border: 1px solid rgba(255,100,100,.38);
+    background: rgba(255,100,100,.1);
+}
+
+.student-action-btn:hover,
+.student-action-btn:focus-visible {
+    color: #fff;
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.student-action-btn-edit:hover,
+.student-action-btn-edit:focus-visible {
+    border-color: rgba(107,192,255,.82);
+    background: rgba(46,155,255,.22);
+}
+
+.student-action-btn-delete:hover,
+.student-action-btn-delete:focus-visible {
+    border-color: rgba(255,130,130,.82);
+    background: rgba(255,100,100,.18);
+}
+
+.student-delete-modal-card {
+    max-width: 560px;
+}
+
+.student-section-kicker.danger {
+    color: #ff8a8a;
+}
+
+.student-delete-warning {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(255,100,100,.28);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,100,100,.13), rgba(255,100,100,.04));
+}
+
+.student-delete-warning strong {
+    color: #fff;
+}
+
+.student-delete-warning p {
+    margin: 0;
+    color: #c9d4f0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.student-delete-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
 @media (max-width: 640px) {
     .student-action-modal {
         align-items: end;
@@ -126,6 +214,16 @@
 
     .student-modal-grid {
         grid-template-columns: 1fr;
+    }
+
+    .student-delete-actions,
+    .student-management-actions {
+        flex-direction: column;
+    }
+
+    .student-delete-actions .btn,
+    .student-management-actions .student-action-btn {
+        width: 100%;
     }
 }
 .dash-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 18px; }
@@ -754,6 +852,20 @@
     text-transform: uppercase;
 }
 
+.student-card-actions {
+    grid-column: 1 / -1;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-soft);
+}
+
+.student-card-actions .student-management-actions {
+    width: 100%;
+}
+
+.student-card-actions .student-action-btn {
+    flex: 1 1 140px;
+}
+
 .student-quick-stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(96px, 1fr));
@@ -1153,6 +1265,14 @@
     gap: 14px;
 }
 
+.module-header-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .module-header h1 {
     margin: 6px 0 4px;
     font-family: var(--font-display);
@@ -1457,9 +1577,13 @@ body.modal-open {
         min-width: 0;
     }
 
+    .student-profile-card-command .student-card-actions {
+        grid-column: 2;
+    }
+
     .student-profile-card-command .student-access-panel {
         grid-column: 3;
-        grid-row: 1 / span 2;
+        grid-row: 1 / span 3;
         align-self: stretch;
         margin-top: 0;
     }
@@ -1512,7 +1636,9 @@ body.modal-open {
         flex-direction: column;
     }
 
-    .module-header .btn {
+    .module-header .btn,
+    .module-header-actions,
+    .module-header-actions .student-management-actions {
         width: 100%;
     }
 

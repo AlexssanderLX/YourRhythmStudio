@@ -23,7 +23,10 @@
             <h1>Missoes</h1>
             <p>@student.DisplayName · Nivel @student.CurrentLevel · @student.CurrentXp XP</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar missao</button>
+        <div class="module-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar missao</button>
+            <partial name="_StudentManagementActions" model="Model" />
+        </div>
     </div>
 
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }

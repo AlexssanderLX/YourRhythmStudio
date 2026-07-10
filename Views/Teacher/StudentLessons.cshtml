@@ -18,7 +18,10 @@
             <h1>Aulas</h1>
             <p>Registros com nome, data, hora e descricao da aula.</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar aula</button>
+        <div class="module-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar aula</button>
+            <partial name="_StudentManagementActions" model="Model" />
+        </div>
     </div>
 
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }

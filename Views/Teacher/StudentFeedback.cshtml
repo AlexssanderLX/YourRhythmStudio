@@ -18,7 +18,10 @@
             <h1>Feedbacks</h1>
             <p>Retornos publicos e privados registrados pelo professor.</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar feedback</button>
+        <div class="module-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar feedback</button>
+            <partial name="_StudentManagementActions" model="Model" />
+        </div>
     </div>
 
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }

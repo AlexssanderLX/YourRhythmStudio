@@ -250,7 +250,7 @@ public class AuthController : Controller
             .Include(s => s.SchoolUser)
             .FirstOrDefaultAsync(s => s.Id == studentProfileId, cancellationToken);
 
-        if (student?.SchoolUser is null)
+        if (student?.SchoolUser is null || !student.SchoolUser.IsActive)
             return RedirectToAction(nameof(Login));
 
         var schoolUser = student.SchoolUser;

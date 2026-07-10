@@ -1,0 +1,131 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@{
+    var student = Model.Base.Detail.Student;
+    var studentId = student.StudentProfileId;
+    var returnUrl = Context.Request.PathBase.ToString() + Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+}
+
+<div class="student-management-actions" aria-label="Acoes do aluno">
+    <button type="button" class="student-action-btn student-action-btn-edit" data-student-edit-open>
+        Editar aluno
+    </button>
+    <button type="button" class="student-action-btn student-action-btn-delete" data-student-delete-open>
+        Apagar aluno
+    </button>
+</div>
+
+<div class="student-action-modal" data-student-edit-panel hidden>
+    <div class="student-action-modal-backdrop" data-student-action-close></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-labelledby="student-edit-title">
+        <div class="student-panel-head">
+            <div>
+                <span class="student-section-kicker">Editar aluno</span>
+                <h2 id="student-edit-title">@student.DisplayName</h2>
+            </div>
+            <button type="button" class="student-jump-btn" data-student-action-close>Fechar</button>
+        </div>
+        <form asp-action="UpdateStudent" asp-route-studentId="@studentId" method="post" class="auth-form compact-form" data-student-safe-submit>
+            @Html.AntiForgeryToken()
+            <input asp-for="Base.EditStudent.StudentProfileId" type="hidden" value="@studentId" />
+            <input name="returnUrl" type="hidden" value="@returnUrl" />
+            <div>
+                <label asp-for="Base.EditStudent.DisplayName">Nome</label>
+                <input asp-for="Base.EditStudent.DisplayName" />
+                <span asp-validation-for="Base.EditStudent.DisplayName"></span>
+            </div>
+            <div class="form-grid-compact two">
+                <div>
+                    <label asp-for="Base.EditStudent.Instrument">Instrumento</label>
+                    <input asp-for="Base.EditStudent.Instrument" />
+                    <span asp-validation-for="Base.EditStudent.Instrument"></span>
+                </div>
+                <div>
+                    <label asp-for="Base.EditStudent.Level">Nivel definido pelo professor</label>
+                    <input asp-for="Base.EditStudent.Level" />
+                    <span asp-validation-for="Base.EditStudent.Level"></span>
+                </div>
+            </div>
+            <div>
+                <label asp-for="Base.EditStudent.Notes">Observacoes</label>
+                <textarea asp-for="Base.EditStudent.Notes"></textarea>
+                <span asp-validation-for="Base.EditStudent.Notes"></span>
+            </div>
+            <button type="submit" data-loading-text="Salvando...">Salvar aluno</button>
+        </form>
+    </section>
+</div>
+
+<div class="student-action-modal" data-student-delete-panel hidden>
+    <div class="student-action-modal-backdrop" data-student-action-close></div>
+    <section class="student-action-modal-card student-delete-modal-card" role="dialog" aria-modal="true" aria-labelledby="student-delete-title">
+        <div class="student-panel-head">
+            <div>
+                <span class="student-section-kicker danger">Apagar aluno</span>
+                <h2 id="student-delete-title">Apagar aluno?</h2>
+            </div>
+            <button type="button" class="student-jump-btn" data-student-action-close>Cancelar</button>
+        </div>
+        <div class="student-delete-warning" role="alert">
+            <strong>@student.DisplayName sera removido da sua lista ativa.</strong>
+            <p>Missoes, repertorio, feedbacks, aulas, skills, progresso e historico pedagogico serao preservados para auditoria e recuperacao futura.</p>
+        </div>
+        <form asp-action="DeleteStudent" asp-route-studentId="@studentId" method="post" data-student-safe-submit>
+            @Html.AntiForgeryToken()
+            <div class="student-delete-actions">
+                <button type="button" class="btn btn-ghost btn-sm" data-student-action-close>Cancelar</button>
+                <button type="submit" class="btn btn-danger btn-sm" data-loading-text="Apagando...">Apagar aluno</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<script>
+(function(){
+    function closeStudentActionModals() {
+        document.querySelectorAll('[data-student-edit-panel], [data-student-delete-panel]').forEach(function(panel){
+            panel.hidden = true;
+        });
+        if (!document.querySelector('.student-action-modal:not([hidden])')) {
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    function openStudentActionModal(panel) {
+        if (!panel) return;
+        panel.hidden = false;
+        document.body.classList.add('modal-open');
+        var first = panel.querySelector('input:not([type="hidden"]), textarea, select, button');
+        if (first) window.setTimeout(function(){ first.focus(); }, 40);
+    }
+
+    document.querySelectorAll('[data-student-edit-open]').forEach(function(button){
+        button.addEventListener('click', function(){
+            openStudentActionModal(document.querySelector('[data-student-edit-panel]'));
+        });
+    });
+
+    document.querySelectorAll('[data-student-delete-open]').forEach(function(button){
+        button.addEventListener('click', function(){
+            openStudentActionModal(document.querySelector('[data-student-delete-panel]'));
+        });
+    });
+
+    document.querySelectorAll('[data-student-action-close]').forEach(function(button){
+        button.addEventListener('click', closeStudentActionModals);
+    });
+
+    document.addEventListener('keydown', function(event){
+        if (event.key === 'Escape') closeStudentActionModals();
+    });
+
+    document.querySelectorAll('[data-student-safe-submit]').forEach(function(form){
+        form.addEventListener('submit', function(){
+            var submit = form.querySelector('button[type="submit"]');
+            if (!submit || submit.disabled) return;
+            submit.dataset.originalText = submit.textContent || '';
+            submit.textContent = submit.dataset.loadingText || 'Salvando...';
+            submit.disabled = true;
+        });
+    });
+}());
+</script>

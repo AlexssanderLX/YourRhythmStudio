@@ -47,6 +47,9 @@
                 <strong>@student.CurrentXp</strong>
                 <span>XP total</span>
             </div>
+            <div class="student-card-actions">
+                <partial name="_StudentManagementActions" model="Model" />
+            </div>
             @if (Model.AccessLink is not null)
             {
                 <section class="student-access-panel">
@@ -162,41 +165,7 @@
             <a asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks<span>Retornos publicos ou privados</span></a>
             <a asp-action="StudentSkills" asp-route-studentId="@studentId">Skills<span>Requisitos por nivel</span></a>
             <a asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas<span>Data, hora e descricao</span></a>
-            <button type="button" class="student-modal-link" data-edit-student>Editar aluno<span>Dados cadastrais deste aluno</span></button>
         </div>
-    </section>
-</div>
-
-<div class="student-action-modal" data-edit-student-panel hidden>
-    <div class="student-action-modal-backdrop" data-edit-student-close></div>
-    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Editar aluno">
-        <div class="student-panel-head">
-            <div><span class="student-section-kicker">Editar aluno</span><h2>@student.DisplayName</h2></div>
-            <button type="button" class="student-jump-btn" data-edit-student-close>Fechar</button>
-        </div>
-        <form asp-action="UpdateStudent" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-            @Html.AntiForgeryToken()
-            <input asp-for="Base.EditStudent.StudentProfileId" type="hidden" value="@studentId" />
-            <div>
-                <label asp-for="Base.EditStudent.DisplayName">Nome</label>
-                <input asp-for="Base.EditStudent.DisplayName" />
-            </div>
-            <div class="form-grid-compact two">
-                <div>
-                    <label asp-for="Base.EditStudent.Instrument">Instrumento</label>
-                    <input asp-for="Base.EditStudent.Instrument" />
-                </div>
-                <div>
-                    <label asp-for="Base.EditStudent.Level">Nivel definido pelo professor</label>
-                    <input asp-for="Base.EditStudent.Level" />
-                </div>
-            </div>
-            <div>
-                <label asp-for="Base.EditStudent.Notes">Observacoes</label>
-                <textarea asp-for="Base.EditStudent.Notes"></textarea>
-            </div>
-            <button type="submit">Salvar aluno</button>
-        </form>
     </section>
 </div>
 
@@ -233,7 +202,6 @@
             });
         }
         bindModal('[data-action-modal]', '[data-action-modal-panel]', '[data-action-modal-close]');
-        bindModal('[data-edit-student]', '[data-edit-student-panel]', '[data-edit-student-close]');
         bindModal('[data-qr-modal]', '[data-qr-modal-panel]', '[data-qr-modal-close]');
         document.addEventListener('keydown', function(event){
             if (event.key !== 'Escape') return;

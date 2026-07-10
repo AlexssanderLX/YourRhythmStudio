@@ -18,7 +18,10 @@
             <h1>Repertorio</h1>
             <p>Materiais de estudo enviados para @student.DisplayName.</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar repertorio</button>
+        <div class="module-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar repertorio</button>
+            <partial name="_StudentManagementActions" model="Model" />
+        </div>
     </div>
 
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }

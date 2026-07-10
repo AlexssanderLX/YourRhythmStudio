@@ -448,12 +448,16 @@ public sealed class TeacherController : Controller
 
     [HttpPost("Students/{studentId:guid}/Edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateStudent(Guid studentId, [Bind(Prefix = "Base.EditStudent")] EditStudentViewModel model, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateStudent(
+        Guid studentId,
+        [Bind(Prefix = "Base.EditStudent")] EditStudentViewModel model,
+        string? returnUrl,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid || model.StudentProfileId != studentId)
         {
             TempData["Error"] = "Dados do aluno invalidos.";
-            return RedirectToAction(nameof(StudentDetail), new { studentId });
+            return RedirectToStudentContext(studentId, returnUrl);
         }
 
         var profile = await CurrentProfile(cancellationToken);
@@ -470,7 +474,34 @@ public sealed class TeacherController : Controller
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToAction(nameof(StudentDetail), new { studentId });
+        return RedirectToStudentContext(studentId, returnUrl);
+    }
+
+    [HttpPost("Students/{studentId:guid}/Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteStudent(Guid studentId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _teacherStudentService.DeactivateStudentAsync(profile, studentId, cancellationToken);
+            TempData["Success"] = "Aluno removido da lista ativa. O historico pedagogico foi preservado.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while deactivating student {StudentProfileId}.", studentId);
+            TempData["Error"] = "Nao foi possivel apagar o aluno agora. Tente novamente em alguns instantes.";
+        }
+
+        return RedirectToAction(nameof(Students));
     }
 
     [HttpPost("Students/{studentId:guid}/AccessLink")]
@@ -806,6 +837,16 @@ public sealed class TeacherController : Controller
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)
     {
         return _profileResolver.ResolveCurrentAsync(User, cancellationToken);
+    }
+
+    private IActionResult RedirectToStudentContext(Guid studentId, string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(returnUrl);
+        }
+
+        return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
 
     private static string BuildLessonTitle(string? title, DateTime lessonDate)
