@@ -1,0 +1,139 @@
+@using YourRhythmStudio.Application.Learning
+@using YourRhythmStudio.Domain.Learning.Enums
+@model YourRhythmStudio.ViewModels.Learning.TeacherLevelDetailViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = $"Nível {Model.Config.Level} · {Model.Config.LevelName}";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = $"Nível {Model.Config.Level} · {Model.Config.LevelName}";
+
+    var levelColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
+    var color = levelColors[Model.Config.Level];
+}
+
+<div style="margin-bottom:16px">
+    <a asp-action="Levels" style="font-size:13px;color:var(--muted);text-decoration:none">← Todos os níveis</a>
+</div>
+
+@if (TempData["Success"] is string success) {
+    <div class="auth-validation" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#22c55e;margin-bottom:16px">@success</div>
+}
+@if (TempData["Error"] is string error) {
+    <div class="auth-validation" style="margin-bottom:16px">@error</div>
+}
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+    <div>
+        <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+                <div style="width:48px;height:48px;border-radius:50%;background:@color;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:20px;color:#fff;flex-shrink:0">@Model.Config.Level</div>
+                <div>
+                    <div style="font-size:17px;font-weight:700;color:var(--ink)">@Model.Config.LevelName</div>
+                    <div style="font-size:12px;color:var(--muted)">@Model.Config.MinXp.ToString("N0") – @((Model.Config.MaxXp - 1).ToString("N0")) XP</div>
+                </div>
+            </div>
+
+            <form asp-action="SaveLevelConfig" asp-route-level="@Model.Config.Level" method="post" class="auth-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Form.Level" type="hidden" />
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div>
+                        <label asp-for="Form.Subtitle">Subtítulo do nível</label>
+                        <input asp-for="Form.Subtitle" placeholder="Ex: Fundamentos consolidados" />
+                        <span asp-validation-for="Form.Subtitle" class="auth-error"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Form.ConquestMessage">Mensagem de conquista</label>
+                        <input asp-for="Form.ConquestMessage" placeholder="Parabéns! Você chegou ao nível @Model.Config.Level" />
+                        <span asp-validation-for="Form.ConquestMessage" class="auth-error"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <label asp-for="Form.Description">Descrição do nível</label>
+                    <textarea asp-for="Form.Description" rows="3" placeholder="O que o aluno deve saber ao atingir este nível…"></textarea>
+                    <span asp-validation-for="Form.Description" class="auth-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Form.TeacherExpectations">Expectativas do professor</label>
+                    <textarea asp-for="Form.TeacherExpectations" rows="3" placeholder="O que eu espero que o aluno demonstre…"></textarea>
+                    <span asp-validation-for="Form.TeacherExpectations" class="auth-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Form.Objectives">Objetivos de aprendizado</label>
+                    <textarea asp-for="Form.Objectives" rows="3" placeholder="• Leitura de notas na clave de sol&#10;• Levada básica…"></textarea>
+                    <span asp-validation-for="Form.Objectives" class="auth-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Form.OrientationMessage">Mensagem de orientação ao aluno</label>
+                    <textarea asp-for="Form.OrientationMessage" rows="2" placeholder="Mensagem motivacional exibida no painel do aluno…"></textarea>
+                    <span asp-validation-for="Form.OrientationMessage" class="auth-error"></span>
+                </div>
+
+                <button type="submit">Salvar configuração</button>
+            </form>
+        </div>
+    </div>
+
+    <aside>
+        <div class="card">
+            <h3 style="margin-bottom:12px">Habilidades deste nível</h3>
+            @if (Model.Skills.Any()) {
+                <div class="student-item-list">
+                    @foreach (var skill in Model.Skills.Where(s => s.IsActive)) {
+                        var typeLbl = skill.SkillType switch {
+                            SkillType.PromotionRequired => "Promoção",
+                            SkillType.MissionReward     => "Lendária",
+                            _                            => "Especial"
+                        };
+                        var typeCss = skill.SkillType switch {
+                            SkillType.PromotionRequired => "lvld-badge-promo",
+                            SkillType.MissionReward     => "lvld-badge-legend",
+                            _                            => "lvld-badge-special"
+                        };
+                        <article class="student-list-item" style="gap:8px">
+                            <div style="flex:1;min-width:0">
+                                <span><span class="lvld-badge @typeCss">@typeLbl</span></span>
+                                <strong style="display:block;margin-top:2px">@skill.Name</strong>
+                                @if (!string.IsNullOrEmpty(skill.AchievementText)) {
+                                    <small style="color:var(--muted)">@skill.AchievementText</small>
+                                }
+                            </div>
+                        </article>
+                    }
+                    @if (!Model.Skills.Any(s => s.IsActive)) {
+                        <p class="student-empty-inline">Nenhuma habilidade ativa neste nível.</p>
+                    }
+                </div>
+            } else {
+                <p class="student-empty-inline" style="padding:8px 0">Nenhuma habilidade vinculada a este nível.</p>
+                <a asp-action="Skills" style="font-size:13px">Gerenciar habilidades →</a>
+            }
+        </div>
+    </aside>
+</div>
+
+<style>
+.lvld-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 6px;
+}
+.lvld-badge-promo  { background: rgba(255,176,32,.12);  color: #ffb020; border: 1px solid rgba(255,176,32,.2);  }
+.lvld-badge-legend { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2);  }
+.lvld-badge-special{ background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
+
+@@media (max-width: 720px) {
+    div[style*="grid-template-columns:1fr 340px"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

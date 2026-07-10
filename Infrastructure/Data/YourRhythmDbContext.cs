@@ -35,6 +35,10 @@ public sealed class YourRhythmDbContext : DbContext
 
     public DbSet<StudentSkillMastery> StudentSkillMasteries => Set<StudentSkillMastery>();
 
+    public DbSet<LevelConfig> LevelConfigs => Set<LevelConfig>();
+
+    public DbSet<LevelUpEvent> LevelUpEvents => Set<LevelUpEvent>();
+
     public DbSet<PersistedAccount> PersistedAccounts => Set<PersistedAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -211,6 +215,10 @@ public sealed class YourRhythmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(assignment => assignment.RepertoireItemId)
                 .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<Skill>()
+                .WithMany()
+                .HasForeignKey(assignment => assignment.SkillRewardId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<FeedbackEntry>(entity =>
@@ -259,6 +267,10 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(s => s.Description).HasMaxLength(1000);
             entity.Property(s => s.SkillType).HasConversion<int>();
             entity.Property(s => s.IconName).HasMaxLength(80);
+            entity.Property(s => s.AchievementText).HasMaxLength(500);
+            entity.Property(s => s.ConquestCriteria).HasMaxLength(500);
+            entity.Property(s => s.SortOrder).HasDefaultValue(0);
+            entity.Property(s => s.IsActive).HasDefaultValue(true);
             entity.HasIndex(s => new { s.SchoolId, s.TeacherProfileId, s.RequiredLevel });
             entity.HasOne<School>()
                 .WithMany()
@@ -326,6 +338,42 @@ public sealed class YourRhythmDbContext : DbContext
             entity.HasOne<StudentProfile>()
                 .WithMany()
                 .HasForeignKey(xpEvent => xpEvent.StudentProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LevelConfig>(entity =>
+        {
+            entity.ToTable("level_configs");
+            entity.HasKey(lc => lc.Id);
+            entity.Property(lc => lc.Subtitle).HasMaxLength(200);
+            entity.Property(lc => lc.Description).HasMaxLength(2000);
+            entity.Property(lc => lc.TeacherExpectations).HasMaxLength(2000);
+            entity.Property(lc => lc.Objectives).HasMaxLength(2000);
+            entity.Property(lc => lc.ConquestMessage).HasMaxLength(500);
+            entity.Property(lc => lc.OrientationMessage).HasMaxLength(1000);
+            entity.HasIndex(lc => new { lc.SchoolId, lc.TeacherProfileId, lc.Level }).IsUnique();
+            entity.HasOne<School>()
+                .WithMany()
+                .HasForeignKey(lc => lc.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<TeacherProfile>()
+                .WithMany()
+                .HasForeignKey(lc => lc.TeacherProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LevelUpEvent>(entity =>
+        {
+            entity.ToTable("level_up_events");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.SchoolId, e.StudentProfileId, e.SeenAtUtc });
+            entity.HasOne<School>()
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<StudentProfile>()
+                .WithMany()
+                .HasForeignKey(e => e.StudentProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

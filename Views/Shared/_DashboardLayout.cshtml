@@ -29,6 +29,7 @@
             ("Dashboard",   "Visão geral",   "home"),
             ("Students",    "Meus alunos",   "users"),
             ("Skills",      "Habilidades",   "target"),
+            ("Levels",      "Níveis",        "trophy"),
             ("QuickLesson", "Registrar Aula","calendar"),
         },
         _ => new[]
@@ -220,6 +221,72 @@ window.yrBarAnimate = function(fill, pct){
   setTimeout(function(){ fill.style.width = pct + '%'; }, 180);
 };
 </script>
+@if (role == "student") {
+@Html.AntiForgeryToken()
+<div id="yrLevelUpOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px" aria-modal="true" role="dialog">
+    <div id="yrLevelUpCard" style="background:var(--surface);border-radius:20px;padding:36px 28px;max-width:380px;width:100%;text-align:center;position:relative;box-shadow:0 24px 64px rgba(0,0,0,.5)">
+        <div id="yrLevelUpIcon" style="width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;font-size:28px;font-weight:700;font-family:var(--font-display);color:#fff"></div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Nível conquistado!</div>
+        <h2 id="yrLevelUpTitle" style="font-size:22px;margin-bottom:8px;color:var(--ink)"></h2>
+        <p id="yrLevelUpMsg" style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.5"></p>
+        <button id="yrLevelUpDismiss" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer">Continuar →</button>
+    </div>
+</div>
+<script>
+(function(){
+    var overlay = document.getElementById('yrLevelUpOverlay');
+    var icon    = document.getElementById('yrLevelUpIcon');
+    var title   = document.getElementById('yrLevelUpTitle');
+    var msg     = document.getElementById('yrLevelUpMsg');
+    var btn     = document.getElementById('yrLevelUpDismiss');
+    var colors  = ['','#64748B','#22C55E','#3B82F6','#A855F7','#FFB020'];
+    var currentEventId = null;
+
+    function dismiss(){
+        if (!currentEventId) return;
+        var id = currentEventId;
+        currentEventId = null;
+        overlay.style.display = 'none';
+        var fd = new FormData();
+        /* Grab any CSRF token present on the page */
+        var anyTok = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (anyTok) fd.append('__RequestVerificationToken', anyTok.value);
+        fetch('/Student/LevelUp/' + id + '/Dismiss', { method: 'POST', body: fd })
+            .catch(function(){});
+    }
+
+    function show(ev){
+        currentEventId = ev.id;
+        icon.textContent  = ev.toLevel;
+        icon.style.background = colors[ev.toLevel] || '#3B82F6';
+        title.textContent = ev.toLevel + ' · ' + ev.toLevelName;
+        msg.textContent   = ev.conquestMessage || ('Parabéns! Você avançou do nível ' + ev.fromLevel + ' para o ' + ev.toLevel + '!');
+        overlay.style.display = 'flex';
+        /* Simple scale-in */
+        if (window.yrTier !== 'low') {
+            var card = document.getElementById('yrLevelUpCard');
+            card.style.transform = 'scale(.88)';
+            card.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.style.transform = ''; }); });
+        }
+    }
+
+    function poll(){
+        fetch('/Student/PendingLevelUp')
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(ev){ if (ev && ev.id) show(ev); })
+            .catch(function(){});
+    }
+
+    if (btn) btn.addEventListener('click', dismiss);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) dismiss(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') dismiss(); });
+
+    /* Poll once on load (after a short delay) */
+    setTimeout(poll, 800);
+}());
+</script>
+}
 @RenderSection("Scripts", required: false)
 <script>
 /* YR Reveal observer */

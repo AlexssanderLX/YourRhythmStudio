@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
 
+
 namespace YourRhythmStudio.ViewModels.Learning;
 
 public sealed class TeacherDashboardViewModel
@@ -107,6 +108,8 @@ public sealed class CreateAssignmentViewModel
     public AssignmentRarity Rarity { get; set; } = AssignmentRarity.Comum;
 
     public bool UseDefaultXp { get; set; } = true;
+
+    public Guid? SkillRewardId { get; set; }
 }
 
 public sealed class CreateFeedbackViewModel
@@ -143,6 +146,50 @@ public sealed class DefineSkillViewModel
 
     [StringLength(80)]
     public string? IconName { get; set; }
+
+    [StringLength(500)]
+    public string? AchievementText { get; set; }
+
+    [StringLength(500)]
+    public string? ConquestCriteria { get; set; }
+}
+
+public sealed class TeacherLevelsViewModel
+{
+    public required IReadOnlyList<LevelConfigSummary> LevelConfigs { get; init; }
+    public required IReadOnlyCollection<SkillSummary> Skills { get; init; }
+}
+
+public sealed class TeacherLevelDetailViewModel
+{
+    public required LevelConfigSummary Config { get; init; }
+    public required IReadOnlyCollection<SkillSummary> Skills { get; init; }
+    public SaveLevelConfigViewModel Form { get; set; } = new();
+}
+
+public sealed class SaveLevelConfigViewModel
+{
+    [Required]
+    [Range(1, 5)]
+    public int Level { get; set; }
+
+    [StringLength(200)]
+    public string? Subtitle { get; set; }
+
+    [StringLength(2000)]
+    public string? Description { get; set; }
+
+    [StringLength(2000)]
+    public string? TeacherExpectations { get; set; }
+
+    [StringLength(2000)]
+    public string? Objectives { get; set; }
+
+    [StringLength(500)]
+    public string? ConquestMessage { get; set; }
+
+    [StringLength(1000)]
+    public string? OrientationMessage { get; set; }
 }
 
 public sealed class TeacherStudentDetailWithSkillsViewModel

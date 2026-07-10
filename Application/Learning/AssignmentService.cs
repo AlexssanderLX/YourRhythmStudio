@@ -4,6 +4,7 @@ using YourRhythmStudio.Domain.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.Infrastructure.Data;
 
+
 namespace YourRhythmStudio.Application.Learning;
 
 public sealed class AssignmentService
@@ -28,6 +29,27 @@ public sealed class AssignmentService
             request.StudentProfileId,
             cancellationToken);
 
+        // Only Epic and Legendary assignments may carry a skill reward.
+        if (request.SkillRewardId.HasValue
+            && request.Rarity is not (AssignmentRarity.Epica or AssignmentRarity.Lendaria))
+        {
+            throw new InvalidOperationException(
+                "Recompensa de habilidade só pode ser vinculada a missões Épicas ou Lendárias.");
+        }
+
+        // Validate that the skill belongs to this teacher's school.
+        if (request.SkillRewardId.HasValue)
+        {
+            var skillExists = await _dbContext.Skills.AnyAsync(
+                s => s.Id == request.SkillRewardId.Value
+                    && s.SchoolId == schoolId
+                    && s.TeacherProfileId == teacherProfileId
+                    && s.IsActive,
+                cancellationToken);
+            if (!skillExists)
+                throw new KeyNotFoundException("Habilidade selecionada não encontrada.");
+        }
+
         var now = DateTime.UtcNow;
         var assignment = new Assignment(
             schoolId,
@@ -38,7 +60,8 @@ public sealed class AssignmentService
             request.DueAtUtc,
             request.XpReward,
             now,
-            rarity: request.Rarity);
+            rarity: request.Rarity,
+            skillRewardId: request.SkillRewardId);
 
         assignment.UpdateDetails(
             request.Title,
@@ -116,7 +139,8 @@ public sealed class AssignmentService
             item => item.Id == studentProfileId && item.SchoolId == schoolId,
             cancellationToken);
 
-        assignment.Complete(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        assignment.Complete(now);
 
         // XP accumulates freely; level-up is gated behind a PromotionRequired skill (see SkillService).
         if (!assignment.XpGranted && assignment.XpReward > 0)
@@ -130,9 +154,29 @@ public sealed class AssignmentService
                 XpEventType.AssignmentCompleted,
                 assignment.XpReward,
                 $"Missão concluída: {assignment.Title}",
-                DateTime.UtcNow,
+                now,
                 assignment.TeacherProfileId,
                 assignment.Id));
+        }
+
+        // Auto-grant the linked skill reward (if any) when not already mastered.
+        if (assignment.SkillRewardId.HasValue)
+        {
+            var alreadyMastered = await _dbContext.StudentSkillMasteries.AnyAsync(
+                m => m.SchoolId == schoolId
+                    && m.StudentProfileId == studentProfileId
+                    && m.SkillId == assignment.SkillRewardId.Value,
+                cancellationToken);
+
+            if (!alreadyMastered)
+            {
+                _dbContext.StudentSkillMasteries.Add(new StudentSkillMastery(
+                    schoolId,
+                    assignment.TeacherProfileId,
+                    studentProfileId,
+                    assignment.SkillRewardId.Value,
+                    now));
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

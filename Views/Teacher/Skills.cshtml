@@ -46,6 +46,16 @@
                 <input asp-for="NewSkill.Description" placeholder="Critério de domínio…" />
             </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+            <div>
+                <label asp-for="NewSkill.AchievementText">Texto de conquista (opcional)</label>
+                <input asp-for="NewSkill.AchievementText" placeholder="Ex: Dominou leitura em clave de sol" />
+            </div>
+            <div>
+                <label asp-for="NewSkill.ConquestCriteria">Critério de conquista (opcional)</label>
+                <input asp-for="NewSkill.ConquestCriteria" placeholder="Ex: Lê 20 compassos sem erro…" />
+            </div>
+        </div>
         <button type="submit" style="margin-top:4px">Adicionar habilidade</button>
     </form>
 </div>
@@ -79,16 +89,16 @@
                             <div class="pn" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                                 @skill.Name
                                 <span class="skill-type-badge @typeCss">@typeLbl</span>
+                                @if (!skill.IsActive) { <span class="skill-type-badge" style="background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2)">Inativa</span> }
                             </div>
-                            @if (!string.IsNullOrEmpty(skill.Description)) {
-                                <div class="ps">@skill.Description</div>
-                            }
+                            @if (!string.IsNullOrEmpty(skill.Description)) { <div class="ps">@skill.Description</div> }
+                            @if (!string.IsNullOrEmpty(skill.AchievementText)) { <div class="ps" style="font-style:italic;opacity:.8">🏆 @skill.AchievementText</div> }
                         </div>
                         <form asp-controller="Teacher" asp-action="DeleteSkill" asp-route-skillId="@skill.Id" method="post" style="flex-shrink:0">
                             @Html.AntiForgeryToken()
-                            <button type="submit" onclick="return confirm('Excluir @skill.Name?')"
+                            <button type="submit" onclick="return confirm('@(skill.IsActive ? "Excluir ou desativar" : "Excluir") @skill.Name?')"
                                     style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,138,138,.3);background:rgba(255,138,138,.08);color:#ff8a8a;cursor:pointer;font-size:12px">
-                                Excluir
+                                @(skill.IsActive ? "Excluir" : "Remover")
                             </button>
                         </form>
                     </div>

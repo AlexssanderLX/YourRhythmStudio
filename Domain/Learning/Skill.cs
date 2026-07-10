@@ -14,6 +14,9 @@ public sealed class Skill
         int requiredLevel,
         SkillType skillType,
         string? iconName,
+        string? achievementText,
+        string? conquestCriteria,
+        int sortOrder,
         DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
@@ -27,7 +30,12 @@ public sealed class Skill
         RequiredLevel = requiredLevel;
         SkillType = skillType;
         IconName = iconName?.Trim();
+        AchievementText = achievementText?.Trim();
+        ConquestCriteria = conquestCriteria?.Trim();
+        SortOrder = sortOrder;
+        IsActive = true;
         CreatedAtUtc = utcNow;
+        UpdatedAtUtc = utcNow;
     }
 
     public Guid Id { get; private set; }
@@ -38,5 +46,41 @@ public sealed class Skill
     public int RequiredLevel { get; private set; }
     public SkillType SkillType { get; private set; }
     public string? IconName { get; private set; }
+    public string? AchievementText { get; private set; }
+    public string? ConquestCriteria { get; private set; }
+    public int SortOrder { get; private set; }
+    public bool IsActive { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
+    public DateTime UpdatedAtUtc { get; private set; }
+
+    public void Update(
+        string name,
+        string? description,
+        SkillType skillType,
+        string? iconName,
+        string? achievementText,
+        string? conquestCriteria,
+        DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
+        Name = name.Trim();
+        Description = description?.Trim();
+        SkillType = skillType;
+        IconName = iconName?.Trim();
+        AchievementText = achievementText?.Trim();
+        ConquestCriteria = conquestCriteria?.Trim();
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void Deactivate(DateTime utcNow)
+    {
+        IsActive = false;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void Reactivate(DateTime utcNow)
+    {
+        IsActive = true;
+        UpdatedAtUtc = utcNow;
+    }
 }

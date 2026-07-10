@@ -1,0 +1,87 @@
+@using YourRhythmStudio.Application.Learning
+@model YourRhythmStudio.ViewModels.Learning.TeacherLevelsViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Níveis";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Progressão por Níveis";
+
+    var rarityColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
+}
+
+<p class="card-sub" style="margin-bottom:20px">Configure o que cada nível representa para seus alunos — expectativas, objetivos e mensagem de conquista exibida no momento da promoção.</p>
+
+<div style="display:grid;gap:12px">
+    @foreach (var cfg in Model.LevelConfigs) {
+        var color = rarityColors[cfg.Level];
+        var levelSkills = Model.Skills.Where(s => s.RequiredLevel == cfg.Level && s.IsActive).ToList();
+        <a class="card" href="@Url.Action("LevelDetail", "Teacher", new { level = cfg.Level })"
+           style="display:block;text-decoration:none;cursor:pointer;transition:box-shadow .15s">
+            <div style="display:flex;align-items:center;gap:14px">
+                <div style="width:40px;height:40px;border-radius:50%;background:@color;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;flex-shrink:0">@cfg.Level</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:15px;font-weight:600;color:var(--ink)">
+                        Nível @cfg.Level · @cfg.LevelName
+                        @if (!string.IsNullOrEmpty(cfg.Subtitle)) { <span style="font-weight:400;color:var(--muted);margin-left:6px">— @cfg.Subtitle</span> }
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:2px">
+                        @cfg.MinXp.ToString("N0") – @((cfg.MaxXp - 1).ToString("N0")) XP
+                        @if (levelSkills.Any()) { <span style="margin-left:10px">· @levelSkills.Count habilidade(s)</span> }
+                    </div>
+                    @if (!string.IsNullOrEmpty(cfg.Description)) {
+                        <div style="font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:480px">@cfg.Description</div>
+                    }
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--muted)"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+        </a>
+    }
+</div>
+
+<div class="card" style="margin-top:24px">
+    <h3 style="margin-bottom:8px">Todas as habilidades</h3>
+    <p class="card-sub" style="margin-bottom:14px">Visão consolidada. Clique em um nível acima para editar.</p>
+    @if (Model.Skills.Any(s => s.IsActive)) {
+        <div class="row-list">
+            @foreach (var skill in Model.Skills.Where(s => s.IsActive).OrderBy(s => s.RequiredLevel).ThenBy(s => s.SortOrder).ThenBy(s => s.Name)) {
+                var typeLbl = skill.SkillType switch {
+                    YourRhythmStudio.Domain.Learning.Enums.SkillType.PromotionRequired => "Promoção",
+                    YourRhythmStudio.Domain.Learning.Enums.SkillType.MissionReward     => "Lendária",
+                    _                                                                    => "Especial"
+                };
+                var typeCss = skill.SkillType switch {
+                    YourRhythmStudio.Domain.Learning.Enums.SkillType.PromotionRequired => "lvl-badge-promo",
+                    YourRhythmStudio.Domain.Learning.Enums.SkillType.MissionReward     => "lvl-badge-legend",
+                    _                                                                    => "lvl-badge-special"
+                };
+                <div class="prow" style="gap:10px">
+                    <div style="width:24px;height:24px;border-radius:50%;background:@rarityColors[skill.RequiredLevel];display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">@skill.RequiredLevel</div>
+                    <div class="pmeta" style="min-width:0;flex:1">
+                        <div class="pn" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            @skill.Name
+                            <span class="lvl-badge @typeCss">@typeLbl</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(skill.AchievementText)) {
+                            <div class="ps">@skill.AchievementText</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    } else {
+        <div class="empty-state"><p>Nenhuma habilidade ativa. Acesse <a asp-action="Skills">Habilidades</a> para criar.</p></div>
+    }
+</div>
+
+<style>
+.card:has(a) { padding: 0; }
+.card[href]:hover { box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.25); }
+.lvl-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 6px; flex-shrink: 0;
+}
+.lvl-badge-promo  { background: rgba(255,176,32,.12);  color: #ffb020; border: 1px solid rgba(255,176,32,.2);  }
+.lvl-badge-legend { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2);  }
+.lvl-badge-special{ background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
+</style>

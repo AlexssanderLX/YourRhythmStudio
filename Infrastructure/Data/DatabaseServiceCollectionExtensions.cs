@@ -27,6 +27,7 @@ public static class DatabaseServiceCollectionExtensions
         services.AddScoped<FeedbackService>();
         services.AddScoped<ProgressService>();
         services.AddScoped<SkillService>();
+        services.AddScoped<LevelConfigService>();
         services.AddScoped<SettingsService>();
 
         return services;

@@ -58,6 +58,23 @@
                         <input asp-for="Base.Assignment.DueAtUtc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
                     </div>
                 </div>
+                @{
+                    var missionRewardSkills = Model.Skills
+                        .Where(s => s.SkillType == YourRhythmStudio.Domain.Learning.Enums.SkillType.MissionReward)
+                        .OrderBy(s => s.Name)
+                        .ToList();
+                }
+                @if (missionRewardSkills.Any()) {
+                    <div id="skillRewardWrap" style="display:none">
+                        <label asp-for="Base.Assignment.SkillRewardId">Recompensa de habilidade <span style="font-size:11px;color:var(--muted)">(apenas Épica / Lendária)</span></label>
+                        <select asp-for="Base.Assignment.SkillRewardId" id="assignSkillReward">
+                            <option value="">— Nenhuma —</option>
+                            @foreach (var sk in missionRewardSkills) {
+                                <option value="@sk.Id">@sk.Name</option>
+                            }
+                        </select>
+                    </div>
+                }
                 <label class="auth-check">
                     <input asp-for="Base.Assignment.UseDefaultXp" id="useDefaultXp" type="checkbox" checked />
                     <span>Manter XP padrão da categoria</span>
@@ -101,11 +118,18 @@
         var xp = document.getElementById('assignXp');
         var keep = document.getElementById('useDefaultXp');
         var preview = document.getElementById('xpPreview');
+        var skillWrap = document.getElementById('skillRewardWrap');
+        var skillSel = document.getElementById('assignSkillReward');
         var map = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
         function sync(){
             var value = map[rarity.value] || 100;
             if (keep.checked) xp.value = value;
             preview.textContent = (keep.checked ? value : Math.max(0, parseInt(xp.value || '0', 10))) + ' XP';
+            if (skillWrap) {
+                var epic = rarity.value === 'Epica' || rarity.value === 'Lendaria';
+                skillWrap.style.display = epic ? '' : 'none';
+                if (!epic && skillSel) skillSel.value = '';
+            }
         }
         rarity && rarity.addEventListener('change', sync);
         keep && keep.addEventListener('change', sync);

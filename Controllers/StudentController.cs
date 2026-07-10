@@ -17,6 +17,7 @@ public sealed class StudentController : Controller
     private readonly FeedbackService _feedbackService;
     private readonly ProgressService _progressService;
     private readonly SkillService _skillService;
+    private readonly LevelConfigService _levelConfigService;
 
     public StudentController(
         IUserProfileResolver profileResolver,
@@ -24,7 +25,8 @@ public sealed class StudentController : Controller
         RepertoireService repertoireService,
         FeedbackService feedbackService,
         ProgressService progressService,
-        SkillService skillService)
+        SkillService skillService,
+        LevelConfigService levelConfigService)
     {
         _profileResolver = profileResolver;
         _assignmentService = assignmentService;
@@ -32,6 +34,7 @@ public sealed class StudentController : Controller
         _feedbackService = feedbackService;
         _progressService = progressService;
         _skillService = skillService;
+        _levelConfigService = levelConfigService;
     }
 
     [HttpGet("")]
@@ -141,6 +144,23 @@ public sealed class StudentController : Controller
             Progress = progress,
             Skills = skills
         });
+    }
+
+    [HttpGet("PendingLevelUp")]
+    public async Task<IActionResult> PendingLevelUp(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var ev = await _levelConfigService.GetPendingLevelUpAsync(profile, cancellationToken);
+        return Json(ev);
+    }
+
+    [HttpPost("LevelUp/{eventId:guid}/Dismiss")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DismissLevelUp(Guid eventId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        await _levelConfigService.DismissLevelUpAsync(profile, eventId, cancellationToken);
+        return Ok();
     }
 
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)

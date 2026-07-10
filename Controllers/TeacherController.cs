@@ -1,11 +1,11 @@
 using Foundation.SecureLinks.Models;
-using YourRhythmStudio.Domain.Learning.Enums;
 using Foundation.SecureLinks.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
+using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.ViewModels.Learning;
 
 namespace YourRhythmStudio.Controllers;
@@ -23,6 +23,7 @@ public sealed class TeacherController : Controller
     private readonly SecureLinkService _secureLinkService;
     private readonly SkillService _skillService;
     private readonly ProgressService _progressService;
+    private readonly LevelConfigService _levelConfigService;
 
     public TeacherController(
         IUserProfileResolver profileResolver,
@@ -33,7 +34,8 @@ public sealed class TeacherController : Controller
         FeedbackService feedbackService,
         SecureLinkService secureLinkService,
         SkillService skillService,
-        ProgressService progressService)
+        ProgressService progressService,
+        LevelConfigService levelConfigService)
     {
         _profileResolver = profileResolver;
         _teacherStudentService = teacherStudentService;
@@ -44,6 +46,7 @@ public sealed class TeacherController : Controller
         _secureLinkService = secureLinkService;
         _skillService = skillService;
         _progressService = progressService;
+        _levelConfigService = levelConfigService;
     }
 
     [HttpGet("")]
@@ -262,7 +265,8 @@ public sealed class TeacherController : Controller
                     string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
                     model.DueAtUtc,
                     xpReward,
-                    model.Rarity),
+                    model.Rarity,
+                    model.SkillRewardId),
                 cancellationToken);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -346,7 +350,9 @@ public sealed class TeacherController : Controller
             return View(new TeacherSkillsViewModel { Skills = skills2, NewSkill = model });
         }
         var profile = await CurrentProfile(cancellationToken);
-        await _skillService.CreateSkillAsync(profile, model.Name, model.Description, model.RequiredLevel, model.SkillType, model.IconName, cancellationToken);
+        await _skillService.CreateSkillAsync(profile, new CreateSkillRequest(
+            model.Name, model.Description, model.RequiredLevel, model.SkillType, model.IconName,
+            model.AchievementText, model.ConquestCriteria), cancellationToken);
         return RedirectToAction(nameof(Skills));
     }
 
@@ -366,6 +372,64 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         await _skillService.ToggleMasteryAsync(profile, studentId, skillId, cancellationToken);
         return RedirectToAction(nameof(StudentSkills), new { studentId });
+    }
+
+    [HttpGet("Levels")]
+    public async Task<IActionResult> Levels(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var levelConfigs = await _levelConfigService.GetAllForTeacherAsync(profile, cancellationToken);
+        var skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
+        return View(new TeacherLevelsViewModel { LevelConfigs = levelConfigs, Skills = skills });
+    }
+
+    [HttpGet("Levels/{level:int}")]
+    public async Task<IActionResult> LevelDetail(int level, CancellationToken cancellationToken)
+    {
+        if (level is < 1 or > 5) return NotFound();
+        var profile = await CurrentProfile(cancellationToken);
+        var config = await _levelConfigService.GetForLevelAsync(profile, level, cancellationToken);
+        var skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
+        return View(new TeacherLevelDetailViewModel
+        {
+            Config = config,
+            Skills = skills.Where(s => s.RequiredLevel == level).ToArray(),
+            Form = new SaveLevelConfigViewModel
+            {
+                Level = config.Level,
+                Subtitle = config.Subtitle,
+                Description = config.Description,
+                TeacherExpectations = config.TeacherExpectations,
+                Objectives = config.Objectives,
+                ConquestMessage = config.ConquestMessage,
+                OrientationMessage = config.OrientationMessage,
+            }
+        });
+    }
+
+    [HttpPost("Levels/{level:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveLevelConfig(int level, [Bind(Prefix = "Form")] SaveLevelConfigViewModel model, CancellationToken cancellationToken)
+    {
+        if (level is < 1 or > 5) return NotFound();
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _levelConfigService.UpsertAsync(profile, new UpdateLevelConfigRequest(
+                level,
+                model.Subtitle,
+                model.Description,
+                model.TeacherExpectations,
+                model.Objectives,
+                model.ConquestMessage,
+                model.OrientationMessage), cancellationToken);
+            TempData["Success"] = "Configuração salva com sucesso.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(LevelDetail), new { level });
     }
 
     [HttpGet("QuickLesson")]

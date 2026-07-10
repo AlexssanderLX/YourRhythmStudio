@@ -14,21 +14,30 @@ public sealed class SkillService
 
     public async Task<SkillSummary> CreateSkillAsync(
         AuthenticatedUserProfile profile,
-        string name,
-        string? description,
-        int requiredLevel,
-        SkillType skillType,
-        string? iconName,
+        CreateSkillRequest request,
         CancellationToken cancellationToken = default)
     {
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
-        var skill = new Skill(schoolId, teacherProfileId, name, description, requiredLevel, skillType, iconName, DateTime.UtcNow);
+
+        var skill = new Skill(
+            schoolId,
+            teacherProfileId,
+            request.Name,
+            request.Description,
+            request.RequiredLevel,
+            request.SkillType,
+            request.IconName,
+            request.AchievementText,
+            request.ConquestCriteria,
+            sortOrder: 0,
+            DateTime.UtcNow);
+
         _db.Skills.Add(skill);
         await _db.SaveChangesAsync(cancellationToken);
         return ToSummary(skill);
     }
 
-    public async Task DeleteSkillAsync(
+    public async Task<bool> DeleteSkillAsync(
         AuthenticatedUserProfile profile,
         Guid skillId,
         CancellationToken cancellationToken = default)
@@ -37,9 +46,24 @@ public sealed class SkillService
         var skill = await _db.Skills.FirstOrDefaultAsync(
             s => s.Id == skillId && s.SchoolId == schoolId && s.TeacherProfileId == teacherProfileId,
             cancellationToken);
-        if (skill is null) return;
+        if (skill is null) return false;
+
+        var hasLinkedData = await _db.StudentSkillMasteries
+            .AnyAsync(m => m.SkillId == skillId, cancellationToken)
+            || await _db.Assignments
+            .AnyAsync(a => a.SkillRewardId == skillId, cancellationToken);
+
+        if (hasLinkedData)
+        {
+            // Soft-delete: deactivate instead of destroy
+            skill.Deactivate(DateTime.UtcNow);
+            await _db.SaveChangesAsync(cancellationToken);
+            return false; // indicates deactivated, not deleted
+        }
+
         _db.Skills.Remove(skill);
         await _db.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<IReadOnlyCollection<SkillSummary>> ListSkillsAsync(
@@ -50,8 +74,9 @@ public sealed class SkillService
         return await _db.Skills
             .AsNoTracking()
             .Where(s => s.SchoolId == schoolId && s.TeacherProfileId == teacherProfileId)
-            .OrderBy(s => s.RequiredLevel).ThenBy(s => s.SkillType).ThenBy(s => s.Name)
-            .Select(s => new SkillSummary(s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName, s.CreatedAtUtc))
+            .OrderBy(s => s.RequiredLevel).ThenBy(s => s.SortOrder).ThenBy(s => s.SkillType).ThenBy(s => s.Name)
+            .Select(s => new SkillSummary(s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName,
+                s.AchievementText, s.ConquestCriteria, s.SortOrder, s.IsActive, s.CreatedAtUtc))
             .ToArrayAsync(cancellationToken);
     }
 
@@ -112,8 +137,6 @@ public sealed class SkillService
             _db.StudentSkillMasteries.Add(
                 new StudentSkillMastery(schoolId, teacherProfileId, studentProfileId, skillId, DateTime.UtcNow));
 
-            // When granting a PromotionRequired skill: if the skill promotes FROM the student's current level
-            // and the student has accumulated enough XP, advance their level.
             if (skill.SkillType == SkillType.PromotionRequired)
             {
                 var student = await _db.StudentProfiles.FirstOrDefaultAsync(
@@ -124,7 +147,15 @@ public sealed class SkillService
                     && skill.RequiredLevel == student.CurrentLevel
                     && LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
                 {
+                    var fromLevel = student.CurrentLevel;
                     student.CurrentLevel += 1;
+
+                    _db.LevelUpEvents.Add(new LevelUpEvent(
+                        schoolId,
+                        studentProfileId,
+                        fromLevel,
+                        student.CurrentLevel,
+                        DateTime.UtcNow));
                 }
             }
         }
@@ -146,8 +177,8 @@ public sealed class SkillService
 
         var skills = await _db.Skills
             .AsNoTracking()
-            .Where(s => s.SchoolId == schoolId && s.TeacherProfileId == teacherProfileId)
-            .OrderBy(s => s.RequiredLevel).ThenBy(s => s.SkillType).ThenBy(s => s.Name)
+            .Where(s => s.SchoolId == schoolId && s.TeacherProfileId == teacherProfileId && s.IsActive)
+            .OrderBy(s => s.RequiredLevel).ThenBy(s => s.SortOrder).ThenBy(s => s.SkillType).ThenBy(s => s.Name)
             .ToArrayAsync(cancellationToken);
 
         var masteries = await _db.StudentSkillMasteries
@@ -160,12 +191,11 @@ public sealed class SkillService
         return skills.Select(s =>
         {
             var explicitMastery = masteryMap.ContainsKey(s.Id);
-            // PromotionRequired skills are only mastered if explicitly granted, never by level inference.
             var inferredByLevel = s.SkillType != SkillType.PromotionRequired && s.RequiredLevel <= currentLevel;
             var mastered = explicitMastery || inferredByLevel;
 
             return new SkillWithMastery(
-                s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName,
+                s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName, s.AchievementText,
                 mastered,
                 masteryMap.TryGetValue(s.Id, out var d) ? d : null,
                 inferredByLevel);
@@ -173,5 +203,6 @@ public sealed class SkillService
     }
 
     private static SkillSummary ToSummary(Skill s) =>
-        new(s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName, s.CreatedAtUtc);
+        new(s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName,
+            s.AchievementText, s.ConquestCriteria, s.SortOrder, s.IsActive, s.CreatedAtUtc);
 }

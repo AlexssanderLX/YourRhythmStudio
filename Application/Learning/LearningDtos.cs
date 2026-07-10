@@ -140,7 +140,8 @@ public sealed record CreateAssignmentRequest(
     string Description,
     DateTime? DueAtUtc,
     int XpReward,
-    AssignmentRarity Rarity = AssignmentRarity.Comum);
+    AssignmentRarity Rarity = AssignmentRarity.Comum,
+    Guid? SkillRewardId = null);
 
 public sealed record CreateFeedbackRequest(
     Guid StudentProfileId,
@@ -154,6 +155,10 @@ public sealed record SkillSummary(
     int RequiredLevel,
     SkillType SkillType,
     string? IconName,
+    string? AchievementText,
+    string? ConquestCriteria,
+    int SortOrder,
+    bool IsActive,
     DateTime CreatedAtUtc);
 
 public sealed record SkillWithMastery(
@@ -163,6 +168,46 @@ public sealed record SkillWithMastery(
     int RequiredLevel,
     SkillType SkillType,
     string? IconName,
+    string? AchievementText,
     bool Mastered,
     DateTime? MasteredAtUtc,
     bool InferredFromCurrentLevel);
+
+public sealed record LevelConfigSummary(
+    int Level,
+    string LevelName,
+    int MinXp,
+    int MaxXp,
+    string? Subtitle,
+    string? Description,
+    string? TeacherExpectations,
+    string? Objectives,
+    string? ConquestMessage,
+    string? OrientationMessage);
+
+public sealed record UpdateLevelConfigRequest(
+    int Level,
+    string? Subtitle,
+    string? Description,
+    string? TeacherExpectations,
+    string? Objectives,
+    string? ConquestMessage,
+    string? OrientationMessage);
+
+public sealed record LevelUpEventDto(
+    Guid Id,
+    int FromLevel,
+    int ToLevel,
+    string FromLevelName,
+    string ToLevelName,
+    string? ConquestMessage,
+    DateTime CreatedAtUtc);
+
+public sealed record CreateSkillRequest(
+    string Name,
+    string? Description,
+    int RequiredLevel,
+    SkillType SkillType,
+    string? IconName,
+    string? AchievementText,
+    string? ConquestCriteria);
