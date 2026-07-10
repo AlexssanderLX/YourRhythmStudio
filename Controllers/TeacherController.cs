@@ -506,14 +506,38 @@ public sealed class TeacherController : Controller
     {
         if (!ModelState.IsValid)
         {
-            var profile2 = await CurrentProfile(cancellationToken);
-            var skills2 = await _skillService.ListSkillsAsync(profile2, cancellationToken);
-            return View(new TeacherSkillsViewModel { Skills = skills2, NewSkill = model });
+            TempData["Error"] = "Dados inválidos. Verifique os campos e tente novamente.";
+            return RedirectToAction(nameof(Skills));
         }
         var profile = await CurrentProfile(cancellationToken);
         await _skillService.CreateSkillAsync(profile, new CreateSkillRequest(
             model.Name, model.Description, model.RequiredLevel, model.SkillType, model.IconName,
             model.AchievementText, model.ConquestCriteria), cancellationToken);
+        TempData["Success"] = "Skill criada com sucesso.";
+        return RedirectToAction(nameof(Skills));
+    }
+
+    [HttpPost("Skills/{skillId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateSkill(Guid skillId, EditSkillViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.SkillId != skillId)
+        {
+            TempData["Error"] = "Dados inválidos. Verifique os campos e tente novamente.";
+            return RedirectToAction(nameof(Skills));
+        }
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _skillService.UpdateSkillAsync(profile, new UpdateSkillRequest(
+                skillId, model.Name, model.Description, model.RequiredLevel, model.SkillType,
+                model.IconName, model.AchievementText, model.ConquestCriteria), cancellationToken);
+            TempData["Success"] = "Skill atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
         return RedirectToAction(nameof(Skills));
     }
 
