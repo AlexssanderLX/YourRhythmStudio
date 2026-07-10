@@ -646,6 +646,9 @@ namespace YourRhythmStudio.Migrations
                     b.Property<int>("CurrentLevel")
                         .HasColumnType("int");
 
+                    b.Property<int>("CurrentLevelXp")
+                        .HasColumnType("int");
+
                     b.Property<int>("CurrentXp")
                         .HasColumnType("int");
 

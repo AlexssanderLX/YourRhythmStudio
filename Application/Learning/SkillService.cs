@@ -173,10 +173,11 @@ public sealed class SkillService
 
                 if (student is not null
                     && skill.RequiredLevel == student.CurrentLevel
-                    && LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
+                    && LearningLevelCalculator.IsEligibleForPromotion(student.CurrentLevelXp, student.CurrentLevel))
                 {
                     var fromLevel = student.CurrentLevel;
-                    student.CurrentLevel += 1;
+                    student.CurrentLevel   += 1;
+                    student.CurrentLevelXp  = 0; // XP resets to 0 on each promotion
 
                     _db.LevelUpEvents.Add(new LevelUpEvent(
                         schoolId,
@@ -186,7 +187,7 @@ public sealed class SkillService
                         DateTime.UtcNow));
 
                     // Continue leveling if the new level also has no PromotionRequired skill.
-                    while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
+                    while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentLevelXp, student.CurrentLevel))
                     {
                         var nextHasRequired = await _db.Skills.AnyAsync(
                             s => s.SchoolId == schoolId
@@ -199,7 +200,8 @@ public sealed class SkillService
                             break;
 
                         var nextFrom = student.CurrentLevel;
-                        student.CurrentLevel += 1;
+                        student.CurrentLevel   += 1;
+                        student.CurrentLevelXp  = 0; // XP resets to 0 on each promotion
 
                         _db.LevelUpEvents.Add(new LevelUpEvent(
                             schoolId,

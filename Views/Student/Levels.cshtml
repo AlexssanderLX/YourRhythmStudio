@@ -63,7 +63,9 @@
 @* ── Progress Hero ──────────────────────────────────────────────────── *@
 <div class="s-prog-hero lvl-@level" data-yr-reveal style="--d:0s">
     <div class="s-ph-eyebrow">Classificação atual</div>
-    <div class="s-ph-hex">@level</div>
+    <div class="s-ph-hex s-ph-hex-svg">
+        <partial name="_LevelBadge" model="@level" />
+    </div>
     <div class="s-ph-xp-big" id="lvlXpBig" data-count="@xp">@xp</div>
     <div class="s-ph-xp-lbl">XP total</div>
 
@@ -152,9 +154,10 @@
              data-level="@tier.Level"
              role="button" tabindex="0" aria-label="Ver detalhes do Nível @tier.Level — @tier.Name">
             <div class="lvl-tier-left">
-                <div class="lvl-tier-badge">
-                    @if (isUnlocked) { <span>@tier.Level</span> }
-                    else {
+                <div class="lvl-tier-badge @(isUnlocked ? "lvl-tier-badge-svg" : "")">
+                    @if (isUnlocked) {
+                        <partial name="_LevelBadge" model="@tier.Level" />
+                    } else {
                         <span style="opacity:.4;display:flex;align-items:center;justify-content:center">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                         </span>
@@ -194,6 +197,13 @@
                 </div>
             </div>
         </div>
+    }
+</div>
+
+@* ── Pre-rendered badge SVGs for modal cloning ── *@
+<div id="lvlBadgeTemplates" style="display:none" aria-hidden="true">
+    @for (int b = 1; b <= 5; b++) {
+    <div data-badge-level="@b"><partial name="_LevelBadge" model="@b" /></div>
     }
 </div>
 
@@ -411,8 +421,9 @@
 
         /* header */
         var badge = document.getElementById('lvlModalBadge');
-        badge.textContent = lvlNum;
-        badge.style.cssText = 'background:'+color+';color:'+txtColor+';box-shadow:0 0 18px '+glow;
+        var tpl = document.querySelector('#lvlBadgeTemplates [data-badge-level="'+lvlNum+'"]');
+        badge.innerHTML = tpl ? tpl.innerHTML : lvlNum;
+        badge.style.cssText = 'background:none;box-shadow:0 0 18px '+glow;
 
         document.getElementById('lvlModalName').textContent = data.levelName;
         document.getElementById('lvlModalRange').textContent = fmtXp(data.minXp) + ' – ' + fmtXp(data.maxXp) + ' XP';

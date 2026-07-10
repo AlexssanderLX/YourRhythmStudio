@@ -14,7 +14,9 @@
 
 <div class="s-prog-hero lvl-@level">
     <div class="s-ph-eyebrow">Nível atual</div>
-    <div class="s-ph-hex">@level</div>
+    <div class="s-ph-hex s-ph-hex-svg">
+        <partial name="_LevelBadge" model="@level" />
+    </div>
     <div class="s-ph-xp-big">@xp</div>
     <div class="s-ph-xp-lbl">XP Total</div>
 

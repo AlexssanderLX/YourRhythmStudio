@@ -1,0 +1,229 @@
+@* _LevelBadge.cshtml — Premium SVG emblem for each level.
+   Usage: <partial name="_LevelBadge" model="@level" />
+   Model: int (1–5)
+   Wrap in a container that sets width/height via CSS; the SVG fills 100%.
+*@
+@model int
+@{
+    var lvl = Math.Clamp(Model, 1, 5);
+    var id  = $"lvlb-{Guid.NewGuid():N}"; // unique IDs for gradients/filters per instance
+}
+
+@if (lvl == 1) {
+@* ── Nível 1 — Iniciante — Simples, discreto, primeiro passo ── *@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="Nível 1 — Iniciante">
+  <defs>
+    <linearGradient id="@(id)g1" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#8fa8c0"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,4 93,27 93,73 50,96 7,73 7,27" fill="url(#@(id)g1)" stroke="#64748B" stroke-width="1.5"/>
+  <polygon points="50,14 83,31 83,69 50,86 17,69 17,31" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+  <text x="50" y="57" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-display,'Oswald',sans-serif)" font-size="30" font-weight="700" fill="#e2e8f0" opacity=".9">1</text>
+</svg>
+}
+
+@if (lvl == 2) {
+@* ── Nível 2 — Aprendiz — Borda dupla, relevos, brilho suave ── *@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="Nível 2 — Aprendiz">
+  <defs>
+    <radialGradient id="@(id)g2" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="60%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#052e16"/>
+    </radialGradient>
+    <filter id="@(id)glow2">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  @* outer ring *@
+  <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="url(#@(id)g2)" stroke="#22c55e" stroke-width="1.2"/>
+  @* inner decorative ring *@
+  <polygon points="50,13 85,32 85,68 50,87 15,68 15,32" fill="none" stroke="rgba(74,222,128,.35)" stroke-width="1"/>
+  @* vertex dots *@
+  @foreach (var (cx, cy) in new[]{(50,3),(95,26.5),(95,73.5),(50,97),(5,73.5),(5,26.5)}) {
+  <circle cx="@cx" cy="@cy" r="2.5" fill="#4ade80" opacity=".7"/>
+  }
+  @* center star *@
+  <polygon points="50,34 53,46 65,46 55.5,53 59,65 50,58 41,65 44.5,53 35,46 47,46" fill="rgba(74,222,128,.2)" stroke="rgba(74,222,128,.5)" stroke-width=".8"/>
+  <text x="50" y="57" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-display,'Oswald',sans-serif)" font-size="26" font-weight="700" fill="#dcfce7" filter="url(#@(id)glow2)">2</text>
+</svg>
+}
+
+@if (lvl == 3) {
+@* ── Nível 3 — Intermediário — Cristais, molduras, energia leve ── *@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="Nível 3 — Intermediário">
+  <defs>
+    <radialGradient id="@(id)g3" cx="38%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="55%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#0c1e50"/>
+    </radialGradient>
+    <linearGradient id="@(id)cr3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(147,210,255,.8)"/>
+      <stop offset="100%" stop-color="rgba(59,130,246,.3)"/>
+    </linearGradient>
+    <filter id="@(id)glow3">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="url(#@(id)g3)" stroke="#3b82f6" stroke-width="1.2"/>
+  @* inner hex frame *@
+  <polygon points="50,12 86,32 86,68 50,88 14,68 14,32" fill="none" stroke="rgba(96,165,250,.3)" stroke-width=".8"/>
+  @* crystals at alternating vertices *@
+  <polygon points="50,3 54,11 46,11" fill="url(#@(id)cr3)" opacity=".85"/>
+  <polygon points="95,26.5 89,30 90,22" fill="url(#@(id)cr3)" opacity=".85"/>
+  <polygon points="95,73.5 89,70 90,78" fill="url(#@(id)cr3)" opacity=".85"/>
+  <polygon points="50,97 54,89 46,89" fill="url(#@(id)cr3)" opacity=".85"/>
+  <polygon points="5,73.5 11,70 10,78" fill="url(#@(id)cr3)" opacity=".85"/>
+  <polygon points="5,26.5 11,30 10,22" fill="url(#@(id)cr3)" opacity=".85"/>
+  @* inner lattice lines *@
+  <line x1="50" y1="12" x2="50" y2="88" stroke="rgba(96,165,250,.15)" stroke-width=".6"/>
+  <line x1="14" y1="32" x2="86" y2="68" stroke="rgba(96,165,250,.15)" stroke-width=".6"/>
+  <line x1="86" y1="32" x2="14" y2="68" stroke="rgba(96,165,250,.15)" stroke-width=".6"/>
+  @* particle dots *@
+  <circle cx="35" cy="38" r="1.5" fill="#93c5fd" opacity=".6"/>
+  <circle cx="65" cy="38" r="1.5" fill="#93c5fd" opacity=".6"/>
+  <circle cx="28" cy="55" r="1"   fill="#93c5fd" opacity=".5"/>
+  <circle cx="72" cy="55" r="1"   fill="#93c5fd" opacity=".5"/>
+  <circle cx="50" cy="30" r="1.5" fill="#93c5fd" opacity=".6"/>
+  <text x="50" y="58" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-display,'Oswald',sans-serif)" font-size="26" font-weight="700" fill="#dbeafe" filter="url(#@(id)glow3)">3</text>
+</svg>
+}
+
+@if (lvl == 4) {
+@* ── Nível 4 — Avançado — Moldura premium, cristais roxos, raios, pulsos ── *@
+<svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="Nível 4 — Avançado">
+  <defs>
+    <radialGradient id="@(id)g4" cx="40%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#1e0a36"/>
+    </radialGradient>
+    <radialGradient id="@(id)core4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(192,132,252,.3)"/>
+      <stop offset="100%" stop-color="rgba(124,58,237,0)"/>
+    </radialGradient>
+    <filter id="@(id)glow4" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  @* outer glow ring *@
+  <polygon points="55,4 102,29 102,79 55,104 8,79 8,29" fill="rgba(168,85,247,.1)" stroke="rgba(168,85,247,.5)" stroke-width=".8"/>
+  @* main body *@
+  <polygon points="55,10 98,33 98,75 55,98 12,75 12,33" fill="url(#@(id)g4)" stroke="#a855f7" stroke-width="1.4"/>
+  @* inner frame *@
+  <polygon points="55,20 88,38 88,70 55,88 22,70 22,38" fill="url(#@(id)core4)" stroke="rgba(192,132,252,.4)" stroke-width=".8"/>
+  @* corner spikes — top, bottom *@
+  <polygon points="55,4 51,14 59,14" fill="#c084fc" opacity=".9"/>
+  <polygon points="55,104 51,94 59,94" fill="#c084fc" opacity=".9"/>
+  @* side diamond ornaments *@
+  <polygon points="4,54 12,50 12,58" fill="rgba(192,132,252,.7)"/>
+  <polygon points="106,54 98,50 98,58" fill="rgba(192,132,252,.7)"/>
+  @* inner arc lines — energy *@
+  <path d="M55,28 Q70,38 68,54" stroke="rgba(216,180,254,.4)" stroke-width=".8"/>
+  <path d="M55,28 Q40,38 42,54" stroke="rgba(216,180,254,.4)" stroke-width=".8"/>
+  <path d="M55,80 Q68,70 68,54" stroke="rgba(216,180,254,.25)" stroke-width=".6"/>
+  <path d="M55,80 Q42,70 42,54" stroke="rgba(216,180,254,.25)" stroke-width=".6"/>
+  @* particle sparks *@
+  <circle cx="36" cy="42" r="1.5" fill="#d8b4fe" opacity=".7"/>
+  <circle cx="74" cy="42" r="1.5" fill="#d8b4fe" opacity=".7"/>
+  <circle cx="30" cy="60" r="1"   fill="#d8b4fe" opacity=".5"/>
+  <circle cx="80" cy="60" r="1"   fill="#d8b4fe" opacity=".5"/>
+  <circle cx="55" cy="25" r="2"   fill="#e9d5ff" opacity=".8"/>
+  <text x="55" y="60" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-display,'Oswald',sans-serif)" font-size="28" font-weight="700" fill="#f3e8ff" filter="url(#@(id)glow4)">4</text>
+</svg>
+}
+
+@if (lvl == 5) {
+@* ── Nível 5 — Lendário — Asas, coroa, fogo dourado, eletricidade ── *@
+<svg viewBox="0 0 140 130" xmlns="http://www.w3.org/2000/svg" fill="none" aria-label="Nível 5 — Lendário">
+  <defs>
+    <radialGradient id="@(id)gc5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+    <radialGradient id="@(id)gcore5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(254,240,138,.5)"/>
+      <stop offset="70%" stop-color="rgba(245,158,11,.1)"/>
+      <stop offset="100%" stop-color="rgba(255,176,32,0)"/>
+    </radialGradient>
+    <linearGradient id="@(id)gwing5" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="rgba(251,191,36,.05)"/>
+      <stop offset="50%" stop-color="rgba(251,191,36,.4)"/>
+      <stop offset="100%" stop-color="rgba(251,191,36,.05)"/>
+    </linearGradient>
+    <filter id="@(id)glow5" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="@(id)fireglow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  @* ── Wings (left) *@
+  <path d="M54,65 Q28,52 10,62 Q24,68 30,75 Q20,72 8,78 Q22,80 34,76 Q26,83 18,90 Q30,86 42,80 Q46,85 50,88 Q52,75 54,65Z" fill="url(#@(id)gwing5)" stroke="rgba(251,191,36,.4)" stroke-width=".8"/>
+  @* Wing feather lines *@
+  <path d="M54,65 Q30,64 10,62" stroke="rgba(251,191,36,.3)" stroke-width=".6"/>
+  <path d="M52,72 Q28,72 8,78" stroke="rgba(251,191,36,.2)" stroke-width=".5"/>
+  <path d="M50,80 Q26,82 18,90" stroke="rgba(251,191,36,.15)" stroke-width=".5"/>
+
+  @* ── Wings (right) *@
+  <path d="M86,65 Q112,52 130,62 Q116,68 110,75 Q120,72 132,78 Q118,80 106,76 Q114,83 122,90 Q110,86 98,80 Q94,85 90,88 Q88,75 86,65Z" fill="url(#@(id)gwing5)" stroke="rgba(251,191,36,.4)" stroke-width=".8"/>
+  <path d="M86,65 Q110,64 130,62" stroke="rgba(251,191,36,.3)" stroke-width=".6"/>
+  <path d="M88,72 Q112,72 132,78" stroke="rgba(251,191,36,.2)" stroke-width=".5"/>
+  <path d="M90,80 Q114,82 122,90" stroke="rgba(251,191,36,.15)" stroke-width=".5"/>
+
+  @* ── Outer glow aura *@
+  <polygon points="70,20 114,44 114,84 70,108 26,84 26,44" fill="rgba(255,176,32,.08)" stroke="rgba(255,176,32,.3)" stroke-width=".8"/>
+
+  @* ── Main hexagon body *@
+  <polygon points="70,26 110,48 110,82 70,104 30,82 30,48" fill="url(#@(id)gc5)" stroke="#f59e0b" stroke-width="1.6"/>
+
+  @* ── Inner ring *@
+  <polygon points="70,36 100,53 100,77 70,94 40,77 40,53" fill="url(#@(id)gcore5)" stroke="rgba(254,240,138,.4)" stroke-width=".8"/>
+
+  @* ── Crown on top *@
+  <path d="M57,28 L57,20 L63,25 L70,17 L77,25 L83,20 L83,28Z" fill="#fbbf24" stroke="#92400e" stroke-width=".8"/>
+  <circle cx="70" cy="17" r="2.5" fill="#fef08a"/>
+  <circle cx="57" cy="20" r="1.8" fill="#fde68a"/>
+  <circle cx="83" cy="20" r="1.8" fill="#fde68a"/>
+
+  @* ── Fire flames at base *@
+  <path d="M58,103 Q55,112 60,118 Q63,108 68,106 Q64,115 70,120 Q76,115 72,106 Q77,108 80,118 Q85,112 82,103" fill="rgba(251,191,36,.6)" stroke="rgba(251,191,36,.4)" stroke-width=".6" filter="url(#@(id)fireglow)"/>
+  <path d="M62,104 Q60,111 64,116 Q67,109 70,108 Q73,109 76,116 Q80,111 78,104" fill="rgba(252,211,77,.5)" stroke="none" filter="url(#@(id)fireglow)"/>
+
+  @* ── Electric sparks *@
+  <path d="M44,52 L48,56 L44,58 L50,64" stroke="#fde68a" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>
+  <path d="M96,52 L92,56 L96,58 L90,64" stroke="#fde68a" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>
+
+  @* ── Radial star rays *@
+  @foreach (var angle in new[]{0,60,120,180,240,300}) {
+    var rad = angle * Math.PI / 180;
+    var x1 = 70 + 28 * Math.Cos(rad);
+    var y1 = 65 + 28 * Math.Sin(rad);
+    var x2 = 70 + 40 * Math.Cos(rad);
+    var y2 = 65 + 40 * Math.Sin(rad);
+  <line x1="@x1.ToString("F1")" y1="@y1.ToString("F1")" x2="@x2.ToString("F1")" y2="@y2.ToString("F1")" stroke="rgba(254,240,138,.3)" stroke-width=".8"/>
+  }
+
+  @* ── Particle scatter *@
+  <circle cx="50" cy="46" r="1.5" fill="#fde68a" opacity=".8"/>
+  <circle cx="90" cy="46" r="1.5" fill="#fde68a" opacity=".8"/>
+  <circle cx="42" cy="68" r="1"   fill="#fbbf24" opacity=".7"/>
+  <circle cx="98" cy="68" r="1"   fill="#fbbf24" opacity=".7"/>
+  <circle cx="56" cy="88" r="1.5" fill="#fde68a" opacity=".6"/>
+  <circle cx="84" cy="88" r="1.5" fill="#fde68a" opacity=".6"/>
+  <circle cx="70" cy="38" r="2"   fill="#fef9c3" opacity=".9"/>
+
+  @* ── Number with glow *@
+  <text x="70" y="69" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-display,'Oswald',sans-serif)" font-size="28" font-weight="700" fill="#fef9c3" filter="url(#@(id)glow5)">5</text>
+</svg>
+}

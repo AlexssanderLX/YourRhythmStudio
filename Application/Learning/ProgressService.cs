@@ -158,8 +158,8 @@ public sealed class ProgressService
             .ToArrayAsync(cancellationToken);
 
         // When a PromotionRequired skill exists for this level but has not been mastered,
-        // XP beyond the level cap is frozen — it does not count toward the next level.
-        var blockedBySkill = LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel)
+        // the XP bar is capped at 100% — the student is waiting for the skill to be granted.
+        var blockedBySkill = LearningLevelCalculator.IsEligibleForPromotion(student.CurrentLevelXp, student.CurrentLevel)
             && await _dbContext.Skills.AnyAsync(
                 s => s.SchoolId == schoolId
                     && s.RequiredLevel == student.CurrentLevel
@@ -171,20 +171,21 @@ public sealed class ProgressService
                             && m.SkillId == s.Id),
                 cancellationToken);
 
-        var effectiveXp = blockedBySkill
-            ? Math.Min(student.CurrentXp, LearningLevelCalculator.GetLevel(student.CurrentLevel).MaxXp)
-            : student.CurrentXp;
+        // Cap displayed XP at the level target when blocked so the bar shows 100%, not overflow.
+        var effectiveLevelXp = blockedBySkill
+            ? Math.Min(student.CurrentLevelXp, LearningLevelCalculator.GetLevel(student.CurrentLevel).MaxXp)
+            : student.CurrentLevelXp;
 
-        var levelProgress = LearningLevelCalculator.CalculateProgress(effectiveXp, student.CurrentLevel);
+        var levelProgress = LearningLevelCalculator.CalculateProgress(effectiveLevelXp, student.CurrentLevel);
 
         return new ProgressSummary(
-            student.CurrentXp,
+            student.CurrentXp,      // total XP for stats display
             student.CurrentLevel,
             levelProgress.CurrentLevel.Name,
-            levelProgress.CurrentLevel.MinXp,
-            levelProgress.CurrentLevel.MaxXp,
-            levelProgress.XpInCurrentRange,
-            levelProgress.XpRequiredInCurrentRange,
+            levelProgress.CurrentLevel.MinXp, // always 0 in the new model
+            levelProgress.CurrentLevel.MaxXp, // level XP target (e.g. 2500 for Aprendiz)
+            levelProgress.XpInCurrentRange,   // = effectiveLevelXp
+            levelProgress.XpRequiredInCurrentRange, // = level.MaxXp
             levelProgress.Percent,
             blockedBySkill,
             levelProgress.NextLevel?.Name,

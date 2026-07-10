@@ -962,3 +962,43 @@
   }
 }
 .s-back-link svg { flex-shrink: 0; }
+
+/* ── Premium SVG badge wrappers ─────────────────────────────── */
+/* When _LevelBadge partial is used, remove the old clip-path/gradient
+   background from the container and let the inline SVG own its appearance. */
+.s-badge.s-badge-svg {
+  background: none;
+  clip-path: none;
+  padding: 0;
+  overflow: visible;
+}
+.s-badge.s-badge-svg svg {
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.s-ph-hex.s-ph-hex-svg {
+  background: none;
+  clip-path: none;
+  padding: 0;
+  overflow: visible;
+}
+.s-ph-hex.s-ph-hex-svg svg {
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Level card badges in Levels.cshtml journey cards */
+.lvl-tier-badge.lvl-tier-badge-svg {
+  background: none;
+  clip-path: none;
+  padding: 0;
+  overflow: visible;
+}
+.lvl-tier-badge.lvl-tier-badge-svg svg {
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}

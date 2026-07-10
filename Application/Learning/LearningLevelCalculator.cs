@@ -2,26 +2,19 @@ namespace YourRhythmStudio.Application.Learning;
 
 public static class LearningLevelCalculator
 {
-    // Single source of truth for XP ranges.
-    // MaxXp is the inclusive cap of each level (promotion eligible at xp >= MaxXp).
-    // MinXp is the first XP that belongs to that level (used for progress-bar range display).
+    // Single source of truth for per-level XP targets.
+    // Each level's XP bar runs independently from 0 to MaxXp.
+    // On promotion the student's CurrentLevelXp resets to 0.
     public static readonly IReadOnlyList<LevelDefinition> Levels =
     [
-        new(1, "Iniciante",     0,      500),
-        new(2, "Aprendiz",      501,    2_500),
-        new(3, "Intermediário", 2_501,  7_500),
-        new(4, "Avançado",      7_501,  15_000),
-        new(5, "Lendário",      15_001, 25_000),
+        new(1, "Iniciante",     0, 500),
+        new(2, "Aprendiz",      0, 2_500),
+        new(3, "Intermediário", 0, 7_500),
+        new(4, "Avançado",      0, 15_000),
+        new(5, "Lendário",      0, 25_000),
     ];
 
-    /// <summary>
-    /// Returns the maximum level suggested by XP only. This is informational:
-    /// real level changes still require the promotion skill gate.
-    /// </summary>
-    public static int CalculateLevel(int xp)
-        => Levels.FirstOrDefault(level => xp <= level.MaxXp)?.Level ?? Levels[^1].Level;
-
-    /// <summary>Returns the XP threshold required to be eligible for promotion FROM <paramref name="currentLevel"/>.</summary>
+    /// <summary>XP needed within a level to become eligible for promotion.</summary>
     public static int XpThresholdForNextLevel(int currentLevel) => GetLevel(currentLevel).MaxXp;
 
     public static string LevelName(int level) => GetLevel(level).Name;
@@ -32,27 +25,42 @@ public static class LearningLevelCalculator
         return Levels.First(item => item.Level == normalized);
     }
 
-    public static LevelProgress CalculateProgress(int xp, int currentLevel)
+    /// <summary>
+    /// Calculates progress from <paramref name="currentLevelXp"/> — XP earned within the current
+    /// level only (resets to 0 on each promotion). Never pass cumulative/total XP here.
+    /// </summary>
+    public static LevelProgress CalculateProgress(int currentLevelXp, int currentLevel)
     {
         var level = GetLevel(currentLevel);
-        var xpInRange = Math.Clamp(xp - level.MinXp, 0, level.MaxXp - level.MinXp);
-        var requiredInRange = level.MaxXp - level.MinXp;
-        var percent = requiredInRange > 0
-            ? Math.Min(100, xpInRange * 100 / requiredInRange)
+        var xpInRange = Math.Clamp(currentLevelXp, 0, level.MaxXp);
+        var percent = level.MaxXp > 0
+            ? Math.Min(100, xpInRange * 100 / level.MaxXp)
             : 100;
 
         return new LevelProgress(
             level,
             xpInRange,
-            requiredInRange,
+            level.MaxXp,
             percent,
-            currentLevel < Levels[^1].Level && xp >= level.MaxXp,
+            currentLevel < Levels[^1].Level && currentLevelXp >= level.MaxXp,
             currentLevel >= Levels[^1].Level ? null : GetLevel(currentLevel + 1));
     }
 
-    /// <summary>True when the student has enough XP to be eligible for promotion to the next level.</summary>
-    public static bool IsEligibleForPromotion(int xp, int currentLevel)
-        => currentLevel < Levels[^1].Level && xp >= XpThresholdForNextLevel(currentLevel);
+    /// <summary>True when the student has enough per-level XP to be eligible for promotion.</summary>
+    public static bool IsEligibleForPromotion(int currentLevelXp, int currentLevel)
+        => currentLevel < Levels[^1].Level && currentLevelXp >= XpThresholdForNextLevel(currentLevel);
+
+    /// <summary>Cumulative total XP that a student would have accumulated to REACH a given level
+    /// under the per-level model (sum of all previous levels' targets). Used only for migration and stats.</summary>
+    public static int CumulativeXpFloorForLevel(int level) => level switch
+    {
+        1 => 0,
+        2 => 500,
+        3 => 500 + 2_500,
+        4 => 500 + 2_500 + 7_500,
+        5 => 500 + 2_500 + 7_500 + 15_000,
+        _ => 0,
+    };
 
     /// <summary>Default XP reward for a new assignment of the given rarity.</summary>
     public static int DefaultXpForRarity(Domain.Learning.Enums.AssignmentRarity rarity) => rarity switch

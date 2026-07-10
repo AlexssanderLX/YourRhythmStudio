@@ -198,7 +198,8 @@ public sealed class AssignmentService
 
         if (!assignment.XpGranted && assignment.XpReward > 0)
         {
-            student.CurrentXp += assignment.XpReward;
+            student.CurrentXp      += assignment.XpReward; // total XP — never resets
+            student.CurrentLevelXp += assignment.XpReward; // per-level XP — resets on promotion
             assignment.MarkXpGranted();
 
             _dbContext.XpEvents.Add(new XpEvent(
@@ -245,7 +246,7 @@ public sealed class AssignmentService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
+        while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentLevelXp, student.CurrentLevel))
         {
             var hasRequiredSkill = await _dbContext.Skills.AnyAsync(
                 s => s.SchoolId == schoolId
@@ -258,7 +259,8 @@ public sealed class AssignmentService
                 break;
 
             var fromLevel = student.CurrentLevel;
-            student.CurrentLevel += 1;
+            student.CurrentLevel   += 1;
+            student.CurrentLevelXp  = 0; // XP resets to 0 on each promotion
 
             _dbContext.LevelUpEvents.Add(new LevelUpEvent(
                 schoolId,

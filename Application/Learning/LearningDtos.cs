@@ -73,11 +73,15 @@ public sealed record XpEventSummary(
     DateTime CreatedAtUtc);
 
 public sealed record ProgressSummary(
+    /// <summary>Cumulative total XP across all levels — for stats display only.</summary>
     int CurrentXp,
     int CurrentLevel,
     string CurrentLevelName,
+    /// <summary>Always 0 in the per-level XP model.</summary>
     int CurrentLevelMinXp,
+    /// <summary>XP target for the current level (e.g. 500 for Iniciante, 2500 for Aprendiz).</summary>
     int CurrentLevelMaxXp,
+    /// <summary>XP earned within the current level only (0 … CurrentLevelMaxXp).</summary>
     int XpInCurrentLevel,
     int XpRequiredForCurrentLevel,
     int CurrentLevelProgressPercent,
