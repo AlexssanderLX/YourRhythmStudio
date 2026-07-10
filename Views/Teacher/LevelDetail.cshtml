@@ -7,8 +7,12 @@
     ViewData["Role"] = "teacher";
     ViewData["DashTitle"] = $"Nível {Model.Config.Level} · {Model.Config.LevelName}";
 
-    var levelColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
-    var color = levelColors[Model.Config.Level];
+    var lvlColors = new[] { "", "#64748B", "#22C55E", "#3B82F6", "#A855F7", "#FFB020" };
+    var lvlGlow   = new[] { "", "rgba(100,116,139,.45)", "rgba(34,197,94,.45)", "rgba(59,130,246,.45)", "rgba(168,85,247,.45)", "rgba(255,176,32,.55)" };
+    var lvlTxtDark = new[] { false, false, true, false, false, true };
+    var color    = lvlColors[Model.Config.Level];
+    var glow     = lvlGlow[Model.Config.Level];
+    var badgeTxt = lvlTxtDark[Model.Config.Level] ? "#060810" : "#fff";
 }
 
 <div style="margin-bottom:16px">
@@ -22,103 +26,255 @@
     <div class="auth-validation" style="margin-bottom:16px">@error</div>
 }
 
-<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
-    <div>
-        <div class="card" style="margin-bottom:16px">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
-                <div style="width:48px;height:48px;border-radius:50%;background:@color;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:20px;color:#fff;flex-shrink:0">@Model.Config.Level</div>
-                <div>
-                    <div style="font-size:17px;font-weight:700;color:var(--ink)">@Model.Config.LevelName</div>
-                    <div style="font-size:12px;color:var(--muted)">@Model.Config.MinXp.ToString("N0") – @Model.Config.MaxXp.ToString("N0") XP</div>
-                </div>
-            </div>
+<form asp-action="SaveLevelConfig" asp-route-level="@Model.Config.Level" method="post" class="auth-form" id="lvlForm">
+    @Html.AntiForgeryToken()
+    <input asp-for="Form.Level" type="hidden" />
 
-            <form asp-action="SaveLevelConfig" asp-route-level="@Model.Config.Level" method="post" class="auth-form">
-                @Html.AntiForgeryToken()
-                <input asp-for="Form.Level" type="hidden" />
+    <div class="lvld-grid">
+
+        <!-- ── coluna esquerda ── -->
+        <div class="lvld-main">
+
+            <!-- Bloco 1: Identidade -->
+            <div class="card lvld-block" style="margin-bottom:16px">
+                <div class="lvld-block-header">
+                    <span class="lvld-block-num">1</span>
+                    <div>
+                        <div class="lvld-block-title">Identidade do Nível</div>
+                        <div class="lvld-block-sub">Informações fixas e o que aparece no momento da promoção.</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:14px;padding:14px 0 16px;border-bottom:1px solid var(--border-soft);margin-bottom:16px">
+                    <div class="lvld-badge-circle" style="background:@color;color:@badgeTxt;box-shadow:0 0 18px @glow">@Model.Config.Level</div>
+                    <div>
+                        <div style="font-size:17px;font-weight:700;color:var(--ink)">@Model.Config.LevelName</div>
+                        <div style="font-size:12px;color:var(--muted)">@Model.Config.MinXp.ToString("N0") – @Model.Config.MaxXp.ToString("N0") XP · somente leitura</div>
+                    </div>
+                </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                     <div>
-                        <label asp-for="Form.Subtitle">Subtítulo do nível</label>
-                        <input asp-for="Form.Subtitle" placeholder="Ex: Fundamentos consolidados" />
+                        <label asp-for="Form.Subtitle">Subtítulo</label>
+                        <input asp-for="Form.Subtitle" id="f-subtitle" placeholder="Ex: Fundamentos consolidados" oninput="livePreview()" />
                         <span asp-validation-for="Form.Subtitle" class="auth-error"></span>
+                        <div class="lvld-hint">Tagline curta mostrada na lista de níveis.</div>
                     </div>
                     <div>
                         <label asp-for="Form.ConquestMessage">Mensagem de conquista</label>
-                        <input asp-for="Form.ConquestMessage" placeholder="Parabéns! Você chegou ao nível @Model.Config.Level" />
+                        <input asp-for="Form.ConquestMessage" id="f-conquest" placeholder="Parabéns! Você chegou ao nível @Model.Config.Level" oninput="livePreview()" />
                         <span asp-validation-for="Form.ConquestMessage" class="auth-error"></span>
+                        <div class="lvld-hint">Exibida na tela de level-up quando o aluno sobe de nível.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloco 2: Significado Pedagógico -->
+            <div class="card lvld-block" style="margin-bottom:16px">
+                <div class="lvld-block-header">
+                    <span class="lvld-block-num">2</span>
+                    <div>
+                        <div class="lvld-block-title">Significado Pedagógico</div>
+                        <div class="lvld-block-sub">O que este nível representa no aprendizado — visível ao aluno.</div>
                     </div>
                 </div>
 
                 <div>
                     <label asp-for="Form.Description">Descrição do nível</label>
-                    <textarea asp-for="Form.Description" rows="3" placeholder="O que o aluno deve saber ao atingir este nível…"></textarea>
+                    <textarea asp-for="Form.Description" id="f-description" rows="3"
+                        placeholder="O que o aluno deve saber ao atingir este nível e qual etapa da jornada representa…"
+                        oninput="livePreview()"></textarea>
                     <span asp-validation-for="Form.Description" class="auth-error"></span>
+                    <div class="lvld-hint">Contexto geral do nível — exibido na página de Níveis do aluno.</div>
                 </div>
 
-                <div>
-                    <label asp-for="Form.TeacherExpectations">Expectativas do professor</label>
-                    <textarea asp-for="Form.TeacherExpectations" rows="3" placeholder="O que eu espero que o aluno demonstre…"></textarea>
-                    <span asp-validation-for="Form.TeacherExpectations" class="auth-error"></span>
-                </div>
-
-                <div>
+                <div style="margin-top:14px">
                     <label asp-for="Form.Objectives">Objetivos de aprendizado</label>
-                    <textarea asp-for="Form.Objectives" rows="3" placeholder="• Leitura de notas na clave de sol&#10;• Levada básica…"></textarea>
+                    <textarea asp-for="Form.Objectives" id="f-objectives" rows="3"
+                        placeholder="• Leitura de notas na clave de sol&#10;• Levada básica de bateria&#10;• ..."
+                        oninput="livePreview()"></textarea>
                     <span asp-validation-for="Form.Objectives" class="auth-error"></span>
+                    <div class="lvld-hint">Lista do que o aluno deve dominar para concluir este nível. Use • para marcar itens.</div>
+                </div>
+
+                <div style="margin-top:14px">
+                    <label asp-for="Form.TeacherExpectations">O que o professor avalia</label>
+                    <textarea asp-for="Form.TeacherExpectations" id="f-expectations" rows="3"
+                        placeholder="Demonstração de leitura à primeira vista, postura correta, fluidez rítmica…"
+                        oninput="livePreview()"></textarea>
+                    <span asp-validation-for="Form.TeacherExpectations" class="auth-error"></span>
+                    <div class="lvld-hint">Critérios de avaliação — o que você observa nas aulas para validar a promoção.</div>
+                </div>
+            </div>
+
+            <!-- Bloco 3: Orientação ao Aluno -->
+            <div class="card lvld-block" style="margin-bottom:20px">
+                <div class="lvld-block-header">
+                    <span class="lvld-block-num">3</span>
+                    <div>
+                        <div class="lvld-block-title">Orientação ao Aluno</div>
+                        <div class="lvld-block-sub">Mensagem motivacional exibida no painel do aluno enquanto ele está neste nível.</div>
+                    </div>
                 </div>
 
                 <div>
-                    <label asp-for="Form.OrientationMessage">Mensagem de orientação ao aluno</label>
-                    <textarea asp-for="Form.OrientationMessage" rows="2" placeholder="Mensagem motivacional exibida no painel do aluno…"></textarea>
+                    <label asp-for="Form.OrientationMessage">Mensagem de orientação</label>
+                    <textarea asp-for="Form.OrientationMessage" id="f-orientation" rows="3"
+                        placeholder="Foque em consolidar sua leitura musical. As atividades desta fase vão ajudar você a desenvolver…"
+                        oninput="livePreview()"></textarea>
                     <span asp-validation-for="Form.OrientationMessage" class="auth-error"></span>
+                    <div class="lvld-hint">Tom encorajador — o aluno vê isso no painel enquanto estiver neste nível.</div>
                 </div>
+            </div>
 
-                <button type="submit">Salvar configuração</button>
-            </form>
+            <button type="submit" style="width:100%">Salvar configuração</button>
         </div>
-    </div>
 
-    <aside>
-        <div class="card">
-            <h3 style="margin-bottom:12px">Habilidades deste nível</h3>
-            @if (Model.Skills.Any()) {
-                <div class="student-item-list">
-                    @foreach (var skill in Model.Skills.Where(s => s.IsActive)) {
-                        var typeLbl = skill.SkillType switch {
-                            SkillType.PromotionRequired => "Promoção",
-                            SkillType.MissionReward     => "Lendária",
-                            _                            => "Especial"
-                        };
-                        var typeCss = skill.SkillType switch {
-                            SkillType.PromotionRequired => "lvld-badge-promo",
-                            SkillType.MissionReward     => "lvld-badge-legend",
-                            _                            => "lvld-badge-special"
-                        };
-                        <article class="student-list-item" style="gap:8px">
-                            <div style="flex:1;min-width:0">
-                                <span><span class="lvld-badge @typeCss">@typeLbl</span></span>
-                                <strong style="display:block;margin-top:2px">@skill.Name</strong>
-                                @if (!string.IsNullOrEmpty(skill.AchievementText)) {
-                                    <small style="color:var(--muted)">@skill.AchievementText</small>
-                                }
+        <!-- ── coluna direita ── -->
+        <aside class="lvld-aside">
+
+            <!-- Preview ao vivo -->
+            <div class="card" style="margin-bottom:16px;padding:18px">
+                <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Preview do aluno</div>
+
+                <div class="lvld-preview-tier" id="prev-tier">
+                    <div class="lvld-pt-left">
+                        <div class="lvld-pt-badge" style="background:@color;color:@badgeTxt;box-shadow:0 0 14px @glow">@Model.Config.Level</div>
+                    </div>
+                    <div class="lvld-pt-body">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+                            <div>
+                                <div class="lvld-pt-name">@Model.Config.LevelName</div>
+                                <div class="lvld-pt-subtitle" id="prev-subtitle">@(Model.Config.Subtitle ?? "")</div>
                             </div>
-                        </article>
-                    }
-                    @if (!Model.Skills.Any(s => s.IsActive)) {
-                        <p class="student-empty-inline">Nenhuma habilidade ativa neste nível.</p>
-                    }
+                            <span class="lvld-pt-tag" style="background:color-mix(in srgb,@color 15%,transparent);color:@color;border-color:color-mix(in srgb,@color 30%,transparent)">atual</span>
+                        </div>
+                        <div class="lvld-pt-bar-wrap">
+                            <div class="lvld-pt-bar">
+                                <i style="width:62%;background:linear-gradient(90deg,@color,@lvlColors[Model.Config.Level]);box-shadow:0 0 8px @glow"></i>
+                            </div>
+                        </div>
+                        <div id="prev-description" class="lvld-pt-text" style="@(string.IsNullOrEmpty(Model.Config.Description) ? "display:none" : "")">@(Model.Config.Description ?? "")</div>
+                    </div>
                 </div>
-            } else {
-                <p class="student-empty-inline" style="padding:8px 0">Nenhuma habilidade vinculada a este nível.</p>
-                <a asp-action="Skills" style="font-size:13px">Gerenciar habilidades →</a>
-            }
-        </div>
-    </aside>
-</div>
+
+                <div id="prev-conquest-wrap" style="@(string.IsNullOrEmpty(Model.Config.ConquestMessage) ? "display:none" : "")">
+                    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Tela de level-up</div>
+                    <div class="lvld-bubble" style="text-align:center">
+                        <div style="font-size:18px;margin-bottom:4px">🎉</div>
+                        <div id="prev-conquest" style="font-size:13px;font-weight:600;color:var(--ink)">@(Model.Config.ConquestMessage ?? "")</div>
+                    </div>
+                </div>
+
+                <div id="prev-orientation-wrap" style="margin-top:12px;@(string.IsNullOrEmpty(Model.Config.OrientationMessage) ? "display:none" : "")">
+                    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Painel do aluno</div>
+                    <div class="lvld-bubble" style="text-align:left">
+                        <div id="prev-orientation" style="font-size:13px;color:var(--ink)">@(Model.Config.OrientationMessage ?? "")</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Habilidades -->
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <h3 style="margin:0">Habilidades</h3>
+                    <a asp-action="Skills" style="font-size:12px;color:var(--muted)">Gerenciar →</a>
+                </div>
+                @if (Model.Skills.Any(s => s.IsActive)) {
+                    <div class="student-item-list">
+                        @foreach (var skill in Model.Skills.Where(s => s.IsActive)) {
+                            var typeLbl = skill.SkillType switch {
+                                SkillType.PromotionRequired => "Promoção",
+                                SkillType.MissionReward     => "Lendária",
+                                _                            => "Especial"
+                            };
+                            var typeCss = skill.SkillType switch {
+                                SkillType.PromotionRequired => "lvld-badge-promo",
+                                SkillType.MissionReward     => "lvld-badge-legend",
+                                _                            => "lvld-badge-special"
+                            };
+                            <article class="student-list-item" style="gap:8px">
+                                <div style="flex:1;min-width:0">
+                                    <span><span class="lvld-type-badge @typeCss">@typeLbl</span></span>
+                                    <strong style="display:block;margin-top:2px">@skill.Name</strong>
+                                    @if (!string.IsNullOrEmpty(skill.AchievementText)) {
+                                        <small style="color:var(--muted)">@skill.AchievementText</small>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    </div>
+                } else {
+                    <p class="student-empty-inline" style="padding:8px 0">Nenhuma habilidade ativa neste nível.</p>
+                }
+            </div>
+        </aside>
+    </div>
+</form>
 
 <style>
-.lvld-badge {
+.lvld-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    align-items: start;
+}
+.lvld-aside { position: sticky; top: 80px; }
+
+.lvld-block-header {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 18px;
+}
+.lvld-block-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.lvld-block-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.lvld-block-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.lvld-hint        { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.lvld-badge-circle {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 22px;
+    flex-shrink: 0;
+}
+
+.lvld-preview-tier {
+    display: flex; gap: 12px;
+    padding: 12px; border-radius: 12px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 14px;
+}
+.lvld-pt-left { flex-shrink: 0; }
+.lvld-pt-badge {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+}
+.lvld-pt-body { flex: 1; min-width: 0; }
+.lvld-pt-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.lvld-pt-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; min-height: 14px; }
+.lvld-pt-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 100px;
+    white-space: nowrap; flex-shrink: 0; border: 1px solid;
+}
+.lvld-pt-bar-wrap { margin: 7px 0 0; }
+.lvld-pt-bar { height: 4px; border-radius: 100px; background: var(--border-soft); overflow: hidden; }
+.lvld-pt-bar i { display: block; height: 100%; border-radius: 100px; }
+.lvld-pt-text { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+
+.lvld-bubble {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.lvld-type-badge {
     display: inline-flex; align-items: center;
     font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
     padding: 2px 7px; border-radius: 6px;
@@ -127,13 +283,34 @@
 .lvld-badge-legend { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2);  }
 .lvld-badge-special{ background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
 
-@@media (max-width: 720px) {
-    div[style*="grid-template-columns:1fr 340px"] {
-        grid-template-columns: 1fr !important;
-    }
+@@media (max-width: 820px) {
+    .lvld-grid { grid-template-columns: 1fr; }
+    .lvld-aside { position: static; }
 }
 </style>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    function livePreview() {
+        const subtitle    = document.getElementById('f-subtitle')?.value    ?? '';
+        const conquest    = document.getElementById('f-conquest')?.value    ?? '';
+        const description = document.getElementById('f-description')?.value ?? '';
+        const orientation = document.getElementById('f-orientation')?.value ?? '';
+
+        const $sub  = document.getElementById('prev-subtitle');
+        const $desc = document.getElementById('prev-description');
+        const $con  = document.getElementById('prev-conquest');
+        const $conW = document.getElementById('prev-conquest-wrap');
+        const $ori  = document.getElementById('prev-orientation');
+        const $oriW = document.getElementById('prev-orientation-wrap');
+
+        if ($sub)  $sub.textContent = subtitle;
+        if ($desc) { $desc.textContent = description; $desc.style.display = description ? '' : 'none'; }
+        if ($con)  $con.textContent = conquest;
+        if ($conW) $conW.style.display = conquest ? '' : 'none';
+        if ($ori)  $ori.textContent = orientation;
+        if ($oriW) $oriW.style.display = orientation ? '' : 'none';
+    }
+    </script>
 }

@@ -669,6 +669,18 @@ public sealed class TeacherController : Controller
     public async Task<IActionResult> SaveLevelConfig(int level, [Bind(Prefix = "Form")] SaveLevelConfigViewModel model, CancellationToken cancellationToken)
     {
         if (level is < 1 or > 5) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            var profile2 = await CurrentProfile(cancellationToken);
+            var config2  = await _levelConfigService.GetForLevelAsync(profile2, level, cancellationToken);
+            var skills2  = await _skillService.ListSkillsAsync(profile2, cancellationToken);
+            return View(nameof(LevelDetail), new TeacherLevelDetailViewModel
+            {
+                Config = config2,
+                Skills = skills2.Where(s => s.RequiredLevel == level).ToArray(),
+                Form   = model
+            });
+        }
         var profile = await CurrentProfile(cancellationToken);
         try
         {

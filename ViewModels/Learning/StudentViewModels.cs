@@ -36,4 +36,5 @@ public sealed class StudentLevelsViewModel
 {
     public required ProgressSummary Progress { get; init; }
     public required IReadOnlyCollection<SkillWithMastery> Skills { get; init; }
+    public required IReadOnlyList<LevelConfigSummary> LevelConfigs { get; init; }
 }

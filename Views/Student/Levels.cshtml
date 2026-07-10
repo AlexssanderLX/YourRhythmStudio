@@ -9,18 +9,55 @@
     var xp    = Model.Progress.CurrentXp;
     var level = Model.Progress.CurrentLevel;
 
-    var xpIn = Model.Progress.XpInCurrentLevel;
+    var xpIn  = Model.Progress.XpInCurrentLevel;
     var xpNeed = Model.Progress.XpRequiredForCurrentLevel;
-    var xpPct = Model.Progress.CurrentLevelProgressPercent;
+    var xpPct  = Model.Progress.CurrentLevelProgressPercent;
     var waitingPromotion = Model.Progress.AwaitingPromotion;
 
-    var masteredCount = Model.Skills.Count(s => s.Mastered);
-    var totalSkills   = Model.Skills.Count;
+    var masteredCount  = Model.Skills.Count(s => s.Mastered);
+    var totalSkills    = Model.Skills.Count;
     var promotionSkill = level < 5
         ? Model.Skills.FirstOrDefault(s => s.SkillType == SkillType.PromotionRequired && s.RequiredLevel == level)
         : null;
 
     var tiers = LearningLevelCalculator.Levels;
+
+    var currentConfig = Model.LevelConfigs.FirstOrDefault(c => c.Level == level);
+
+    // serialise data for client-side modal
+    var levelPayload = Model.LevelConfigs.Select(cfg => new {
+        level           = cfg.Level,
+        levelName       = cfg.LevelName,
+        minXp           = cfg.MinXp,
+        maxXp           = cfg.MaxXp,
+        subtitle        = cfg.Subtitle,
+        description     = cfg.Description,
+        objectives      = cfg.Objectives,
+        expectations    = cfg.TeacherExpectations,
+        orientation     = cfg.OrientationMessage,
+        skills          = Model.Skills.Where(s => s.RequiredLevel == cfg.Level).Select(s => new {
+            name            = s.Name,
+            description     = s.Description,
+            mastered        = s.Mastered,
+            masteredAt      = s.MasteredAtUtc.HasValue
+                                ? s.MasteredAtUtc.Value.ToLocalTime().ToString("dd/MM/yy")
+                                : (string?)null,
+            inferred        = s.InferredFromCurrentLevel,
+            type            = s.SkillType == SkillType.PromotionRequired ? "promo"
+                            : s.SkillType == SkillType.MissionReward     ? "legend"
+                            : "special",
+            typeLabel       = s.SkillType == SkillType.PromotionRequired ? "Promoção"
+                            : s.SkillType == SkillType.MissionReward     ? "Lendária"
+                            : "Especial",
+            achievementText = s.AchievementText
+        }).ToArray()
+    }).ToArray();
+
+    var jsonOpts = new System.Text.Json.JsonSerializerOptions
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+    };
+    var levelJson = System.Text.Json.JsonSerializer.Serialize(levelPayload, jsonOpts);
 }
 
 @* ── Progress Hero ──────────────────────────────────────────────────── *@
@@ -47,7 +84,6 @@
         </div>
     </div>
 
-    @* Promotion skill callout *@
     @if (promotionSkill is not null) {
         <div class="promo-callout @(promotionSkill.Mastered ? "promo-callout-done" : "")" style="margin-top:14px">
             @if (promotionSkill.Mastered) {
@@ -57,6 +93,14 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                 <span>Habilidade de promoção: <b>@promotionSkill.Name</b></span>
             }
+        </div>
+    }
+
+    @* Orientation message from teacher for current level *@
+    @if (!string.IsNullOrEmpty(currentConfig?.OrientationMessage)) {
+        <div class="lvl-orientation-msg" style="margin-top:14px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>@currentConfig.OrientationMessage</span>
         </div>
     }
 
@@ -76,55 +120,45 @@
     </div>
 </div>
 
-@* ── Stat chips ─────────────────────────────────────────────────────── *@
-<div class="s-chips" style="margin-bottom:20px">
-    <div class="s-chip s-chip-ok" data-yr-reveal style="--d:.08s">
-        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></div>
-        <div class="s-chip-val" data-count="@masteredCount">@masteredCount</div>
-        <div class="s-chip-lbl">Dominadas</div>
-    </div>
-    <div class="s-chip s-chip-blue" data-yr-reveal style="--d:.14s">
-        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-        <div class="s-chip-val" data-count="@totalSkills">@totalSkills</div>
-        <div class="s-chip-lbl">Total</div>
-    </div>
-    <div class="s-chip s-chip-warn" data-yr-reveal style="--d:.20s">
-        <div class="s-chip-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg></div>
-        <div class="s-chip-val">@xp</div>
-        <div class="s-chip-lbl">XP Total</div>
-    </div>
+@* ── Journey — 5-level sequence ──────────────────────────────────────── *@
+<div class="s-sec" data-yr-reveal style="--d:.14s">
+    <span class="s-sec-title">Jornada de níveis</span>
 </div>
-
-@* ── Journey ─────────────────────────────────────────────────────────── *@
-<div class="s-sec" data-yr-reveal style="--d:.26s">
-    <span class="s-sec-title">Habilidades por nível</span>
-    <span class="s-sec-badge">definido pelo professor</span>
-</div>
-
-@if (!Model.Skills.Any()) {
-    <div class="s-empty" data-yr-reveal style="--d:.32s">
-        <div class="s-empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-        <div class="s-empty-msg">Seu professor ainda não definiu as habilidades por nível.</div>
-    </div>
-}
 
 <div class="lvl-journey">
     @{ int tierIdx = 0; }
     @foreach (var tier in tiers) {
         tierIdx++;
-        var tierSkills   = Model.Skills.Where(s => s.RequiredLevel == tier.Level).ToList();
-        var tierMastered = tierSkills.Count(s => s.Mastered);
-        var isCurrent    = level == tier.Level;
-        var isUnlocked   = level >= tier.Level;
-        var tierPct      = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
-        var delay        = (0.30 + tierIdx * 0.07).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        var xpRangeLabel = $"{tier.MinXp:N0} - {tier.MaxXp:N0} XP";
-        <div class="lvl-tier lvl-@tier.Level @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked")"
-             data-yr-reveal style="--d:@(delay)s" data-tier-pct="@tierPct">
+        var tierSkills    = Model.Skills.Where(s => s.RequiredLevel == tier.Level).ToList();
+        var tierMastered  = tierSkills.Count(s => s.Mastered);
+        var isCurrent     = level == tier.Level;
+        var isUnlocked    = level >= tier.Level;
+        var isMaxPromo    = level < tier.Level && tier.Level == level + 1;
+        var tierPct       = tierSkills.Count == 0 ? (isUnlocked ? 100 : 0) : tierMastered * 100 / tierSkills.Count;
+        var delay         = (0.18 + tierIdx * 0.06).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        var tierCfg       = Model.LevelConfigs.FirstOrDefault(c => c.Level == tier.Level);
+
+        string tagText = isCurrent ? "Atual"
+                       : (level > tier.Level) ? "Concluído"
+                       : (waitingPromotion && isMaxPromo) ? "Próximo"
+                       : "";
+        string tagCss = isCurrent   ? ""
+                      : (level > tier.Level) ? "lvl-tier-done"
+                      : "lvl-tier-next";
+
+        <div class="lvl-tier lvl-@tier.Level @(isUnlocked ? "lvl-tier-unlocked" : "lvl-tier-locked") @(isCurrent ? "lvl-tier-current" : "")"
+             data-yr-reveal style="--d:@(delay)s"
+             data-tier-pct="@tierPct"
+             data-level="@tier.Level"
+             role="button" tabindex="0" aria-label="Ver detalhes do Nível @tier.Level — @tier.Name">
             <div class="lvl-tier-left">
                 <div class="lvl-tier-badge">
                     @if (isUnlocked) { <span>@tier.Level</span> }
-                    else { <span style="opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> }
+                    else {
+                        <span style="opacity:.4;display:flex;align-items:center;justify-content:center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                        </span>
+                    }
                 </div>
                 @if (tier.Level < 5) {
                     <div class="lvl-tier-line @(isUnlocked ? "lvl-tier-line-on" : "")"></div>
@@ -134,61 +168,59 @@
             <div class="lvl-tier-body">
                 <div class="lvl-tier-head">
                     <div>
-                        <div class="lvl-tier-name">Nível @tier.Level — @tier.Name</div>
+                        <div class="lvl-tier-name">@tier.Name</div>
                         <div class="lvl-tier-range">
-                            @tierMastered/@tierSkills.Count habilidades
-                            <span>&middot; @xpRangeLabel</span>
-                        </div>
-                    </div>
-                    @if (isCurrent)      { <span class="lvl-tier-tag">Atual</span> }
-                    else if (isUnlocked) { <span class="lvl-tier-tag lvl-tier-done">Possui</span> }
-                </div>
-
-                    <div class="lvl-tier-bar-wrap">
-                        <div class="lvl-tier-bar">
-                            <i class="lvl-tier-bar-fill" style="width:0"></i>
-                        </div>
-                    </div>
-
-                    @if (tierSkills.Any()) {
-                        <div class="lvl-skills">
-                            @foreach (var skill in tierSkills) {
-                                var src = skill.InferredFromCurrentLevel
-                                    ? "pelo nível"
-                                    : skill.MasteredAtUtc.HasValue
-                                        ? skill.MasteredAtUtc.Value.ToLocalTime().ToString("dd/MM/yy")
-                                        : "pendente";
-                                var isPromotion = skill.SkillType == SkillType.PromotionRequired;
-                                var isLegendary = skill.SkillType == SkillType.MissionReward;
-                                <div class="lvl-skill @(skill.Mastered ? "lvl-skill-mastered" : "lvl-skill-pending") @(isPromotion ? "lvl-skill-promo" : "")">
-                                    <span class="lvl-skill-dot">@if(skill.Mastered){<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>}else{<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>}</span>
-                                    <span class="lvl-skill-name">@skill.Name</span>
-                                    @if (isPromotion) {
-                                        <span class="skill-type-badge skill-type-promo">Promoção</span>
-                                    } else if (isLegendary) {
-                                        <span class="skill-type-badge skill-type-legend">Lendária</span>
-                                    } else {
-                                        <span class="skill-type-badge skill-type-special">Especial</span>
-                                    }
-                                    <span style="font-size:11px;color:var(--muted);margin-left:4px">@src</span>
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(skill.Description)) {
-                                    <div style="font-size:12px;color:var(--muted);padding:2px 0 8px 34px;line-height:1.5">@skill.Description</div>
-                                }
+                            @tier.MinXp.ToString("N0") – @tier.MaxXp.ToString("N0") XP
+                            @if (tierSkills.Any()) {
+                                <span>&middot; @tierMastered/@tierSkills.Count habilidades</span>
                             }
                         </div>
-                    } else {
-                        <p class="s-muted" style="margin:8px 0 0;font-size:13px">Nenhuma habilidade definida para este nível.</p>
-                    }
+                        @if (!string.IsNullOrEmpty(tierCfg?.Subtitle)) {
+                            <div style="font-size:12px;color:var(--muted);margin-top:2px;font-style:italic">@tierCfg.Subtitle</div>
+                        }
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                        @if (!string.IsNullOrEmpty(tagText)) {
+                            <span class="lvl-tier-tag @tagCss">@tagText</span>
+                        }
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                </div>
+
+                <div class="lvl-tier-bar-wrap">
+                    <div class="lvl-tier-bar">
+                        <i class="lvl-tier-bar-fill" style="width:0"></i>
+                    </div>
+                </div>
             </div>
         </div>
     }
 </div>
 
+@* ── Level Detail Modal ──────────────────────────────────────────────── *@
+<div id="lvlModal" class="lvlm-overlay" role="dialog" aria-modal="true" aria-label="Detalhe do nível" hidden>
+    <div class="lvlm-card" id="lvlModalCard">
+        <button class="lvlm-close" id="lvlModalClose" aria-label="Fechar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <div class="lvlm-header" id="lvlModalHeader">
+            <div class="lvlm-badge" id="lvlModalBadge"></div>
+            <div>
+                <div class="lvlm-level-name" id="lvlModalName"></div>
+                <div class="lvlm-range" id="lvlModalRange"></div>
+            </div>
+            <span class="lvlm-status" id="lvlModalStatus"></span>
+        </div>
+
+        <div id="lvlModalBody" class="lvlm-body"></div>
+    </div>
+</div>
+
 <style>
 .promo-callout {
     display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-radius: 10px; margin-top: 14px;
+    padding: 10px 14px; border-radius: 10px;
     background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
     font-size: 13px; color: rgba(255,255,255,.75); position: relative; z-index: 1;
 }
@@ -196,73 +228,295 @@
 .promo-callout-done { background: rgba(95,208,160,.08); border-color: rgba(95,208,160,.25); color: #5fd0a0; }
 .promo-callout-done svg { color: #5fd0a0; opacity: 1; }
 
-.skill-type-badge {
-    display: inline-flex; align-items: center;
-    font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
-    padding: 2px 7px; border-radius: 6px; flex-shrink: 0; margin-left: auto;
+.lvl-orientation-msg {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 14px; border-radius: 10px;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+    font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.5;
+    position: relative; z-index: 1;
 }
-.skill-type-promo  { background: rgba(255,176,32,.12);  color: #ffb020; border: 1px solid rgba(255,176,32,.2);  }
-.skill-type-legend { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2);  }
-.skill-type-special{ background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
-
-.lvl-skill-promo { border-left: 2px solid rgba(255,176,32,.4); padding-left: 8px; }
-.lvl-skill-promo.lvl-skill-mastered { border-left-color: #ffb020; }
 
 .s-xp-fill-full { background: linear-gradient(90deg, var(--lvl-a, var(--xp)), var(--lvl-b, var(--xp))); animation: yr-xp-pulse 2s ease-in-out infinite; }
 @@keyframes yr-xp-pulse { 0%,100%{opacity:1} 50%{opacity:.75} }
+
+/* ── Journey cards ── */
+.lvl-tier {
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+    border-radius: 14px;
+}
+.lvl-tier:hover { background: rgba(255,255,255,.03); box-shadow: 0 0 0 1px var(--border-soft); }
+.lvl-tier:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lvl-tier-current:hover { box-shadow: 0 0 0 1px rgba(var(--accent-rgb),.3); }
+
+.lvl-tier-next { background: rgba(59,130,246,.08); color: #60a5fa; border-color: rgba(59,130,246,.2); }
+
+/* ── Modal ── */
+.lvlm-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+}
+.lvlm-overlay[hidden] { display: none !important; }
+
+.lvlm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%; max-width: 520px;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    position: relative;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    animation: lvlm-in .2s ease-out;
+}
+@@keyframes lvlm-in { from { opacity: 0; transform: scale(.95) translateY(8px); } to { opacity: 1; transform: none; } }
+
+.lvlm-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,.07); border: 1px solid var(--border-soft);
+    color: var(--muted); cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, color .15s;
+}
+.lvlm-close:hover { background: rgba(255,255,255,.12); color: var(--ink); }
+
+.lvlm-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 22px 22px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+}
+.lvlm-badge {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 22px;
+}
+.lvlm-level-name { font-size: 17px; font-weight: 700; color: var(--ink); }
+.lvlm-range { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.lvlm-status {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 100px;
+    border: 1px solid;
+}
+
+.lvlm-body { overflow-y: auto; padding: 18px 22px 22px; flex: 1; }
+
+.lvlm-section { margin-bottom: 18px; }
+.lvlm-section:last-child { margin-bottom: 0; }
+.lvlm-section-title {
+    font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+}
+.lvlm-section-text { font-size: 13px; color: var(--ink-soft, var(--ink)); line-height: 1.6; white-space: pre-line; }
+
+.lvlm-skill-list { display: flex; flex-direction: column; gap: 4px; }
+.lvlm-skill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 10px; font-size: 13px;
+}
+.lvlm-skill-mastered { background: rgba(34,208,122,.07); border: 1px solid rgba(34,208,122,.15); }
+.lvlm-skill-pending  { background: rgba(255,255,255,.03); border: 1px solid var(--border-soft); }
+.lvlm-skill-dot {
+    width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+}
+.lvlm-skill-mastered .lvlm-skill-dot { background: rgba(34,208,122,.2); color: #22D07A; }
+.lvlm-skill-pending  .lvlm-skill-dot { background: rgba(255,255,255,.06); color: var(--muted); }
+.lvlm-skill-name { flex: 1; font-weight: 500; }
+.lvlm-skill-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 6px; flex-shrink: 0;
+}
+.lvlm-badge-promo   { background: rgba(255,176,32,.12);  color: #ffb020; border: 1px solid rgba(255,176,32,.2); }
+.lvlm-badge-legend  { background: rgba(168,85,247,.12);  color: #c084fc; border: 1px solid rgba(168,85,247,.2); }
+.lvlm-badge-special { background: rgba(59,130,246,.10);  color: #60a5fa; border: 1px solid rgba(59,130,246,.18); }
+
+.lvlm-empty { font-size: 13px; color: var(--muted); padding: 4px 0; }
+
+@@media (prefers-reduced-motion: reduce) {
+    .lvlm-card { animation: none; }
+}
 </style>
 
 @section Scripts {
 <script>
 (function(){
-    document.querySelectorAll('[data-yr-reveal]').forEach(function(el){
-        el.classList.add('yr-visible');
-    });
+    /* ── reveal / counter / bars ── */
+    document.querySelectorAll('[data-yr-reveal]').forEach(function(el){ el.classList.add('yr-visible'); });
 
     var bigEl = document.getElementById('lvlXpBig');
-    if (bigEl && window.yrCountUp) {
-        window.yrCountUp(bigEl, parseInt(bigEl.dataset.count || '0', 10), 900);
-    }
+    if (bigEl && window.yrCountUp) window.yrCountUp(bigEl, parseInt(bigEl.dataset.count||'0',10), 900);
 
     if (window.yrBarAnimate) {
         window.yrBarAnimate(document.getElementById('lvlXpFill'), @xpPct);
     } else {
-        var xpFill = document.getElementById('lvlXpFill');
-        if (xpFill) xpFill.style.width = '@xpPct%';
+        var xf = document.getElementById('lvlXpFill');
+        if (xf) xf.style.width = '@xpPct%';
     }
 
-    document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
-        if (window.yrCountUp) {
-            window.yrCountUp(el, parseInt(el.dataset.count || '0', 10), 700);
-        }
-    });
-
+    /* tier progress bars */
     function fillTierBars() {
-        document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(tier){
-            var fill = tier.querySelector('.lvl-tier-bar-fill');
-            if (fill) fill.style.width = tier.dataset.tierPct + '%';
+        document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(t){
+            var f = t.querySelector('.lvl-tier-bar-fill');
+            if (f) f.style.width = t.dataset.tierPct + '%';
         });
     }
-
     fillTierBars();
-
-    if (!window.IntersectionObserver || window.yrTier === 'low') {
-        return;
+    if (window.IntersectionObserver && window.yrTier !== 'low') {
+        var obs = new IntersectionObserver(function(entries){
+            entries.forEach(function(e){
+                if (!e.isIntersecting) return;
+                var t = e.target, f = t.querySelector('.lvl-tier-bar-fill');
+                if (f) setTimeout(function(){ f.style.width = t.dataset.tierPct+'%'; }, 200);
+                obs.unobserve(t);
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(t){ obs.observe(t); });
     }
 
-    var barObserver = new IntersectionObserver(function(entries){
-        entries.forEach(function(e){
-            if (!e.isIntersecting) return;
-            var tier = e.target;
-            var fill = tier.querySelector('.lvl-tier-bar-fill');
-            if (fill) setTimeout(function(){ fill.style.width = tier.dataset.tierPct + '%'; }, 200);
-            barObserver.unobserve(tier);
-        });
-    }, { threshold: 0.1 });
+    /* ── Level color map ── */
+    var lvlColors = { 1:'#64748B', 2:'#22C55E', 3:'#3B82F6', 4:'#A855F7', 5:'#FFB020' };
+    var lvlGlow   = { 1:'rgba(100,116,139,.45)', 2:'rgba(34,197,94,.45)', 3:'rgba(59,130,246,.45)', 4:'rgba(168,85,247,.45)', 5:'rgba(255,176,32,.55)' };
+    var lvlTxtDark = { 2:true, 5:true };
+    var currentLevel = @level;
 
-    document.querySelectorAll('.lvl-tier[data-tier-pct]').forEach(function(tier){
-        barObserver.observe(tier);
+    /* ── Embedded level data ── */
+    var LEVELS = @Html.Raw(levelJson);
+    function levelById(n) { return LEVELS.find(function(l){ return l.level === n; }); }
+
+    /* ── Status label / style per level ── */
+    function statusFor(l) {
+        var awaiting = @Json.Serialize(waitingPromotion);
+        if (l === currentLevel)    return { text:'Atual',    css:'background:color-mix(in srgb,'+lvlColors[l]+' 15%,transparent);color:'+lvlColors[l]+';border-color:color-mix(in srgb,'+lvlColors[l]+' 30%,transparent)' };
+        if (l < currentLevel)      return { text:'Concluído', css:'background:rgba(34,208,122,.12);color:#22D07A;border-color:rgba(34,208,122,.25)' };
+        if (awaiting && l === currentLevel + 1) return { text:'Próximo', css:'background:rgba(59,130,246,.08);color:#60a5fa;border-color:rgba(59,130,246,.2)' };
+        return { text:'Bloqueado', css:'background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--border-soft)' };
+    }
+
+    /* ── Modal open ── */
+    var overlay = document.getElementById('lvlModal');
+    var modalCard = document.getElementById('lvlModalCard');
+
+    function openModal(lvlNum) {
+        var data = levelById(lvlNum);
+        if (!data) return;
+        var color    = lvlColors[lvlNum] || '#64748B';
+        var glow     = lvlGlow[lvlNum]   || 'rgba(100,116,139,.45)';
+        var txtColor = lvlTxtDark[lvlNum] ? '#060810' : '#fff';
+        var status   = statusFor(lvlNum);
+
+        /* header */
+        var badge = document.getElementById('lvlModalBadge');
+        badge.textContent = lvlNum;
+        badge.style.cssText = 'background:'+color+';color:'+txtColor+';box-shadow:0 0 18px '+glow;
+
+        document.getElementById('lvlModalName').textContent = data.levelName;
+        document.getElementById('lvlModalRange').textContent = fmtXp(data.minXp) + ' – ' + fmtXp(data.maxXp) + ' XP';
+
+        var st = document.getElementById('lvlModalStatus');
+        st.textContent = status.text;
+        st.setAttribute('style', st.getAttribute('style-base') || '');
+        st.style.cssText = status.css;
+
+        /* subtitle in name */
+        if (data.subtitle) {
+            document.getElementById('lvlModalName').textContent = data.levelName + ' — ' + data.subtitle;
+        }
+
+        /* body */
+        var body = document.getElementById('lvlModalBody');
+        body.innerHTML = '';
+
+        appendSection(body, 'Sobre este nível', data.description);
+        appendSection(body, 'Objetivos de aprendizado', data.objectives);
+        appendSection(body, 'O que o professor avalia', data.expectations);
+        appendSection(body, 'Orientação do professor', data.orientation);
+        appendSkills(body, data.skills);
+
+        if (body.children.length === 0) {
+            body.innerHTML = '<p class="lvlm-empty">Nenhuma informação configurada para este nível.</p>';
+        }
+
+        overlay.hidden = false;
+        document.body.style.overflow = 'hidden';
+        modalCard.focus();
+    }
+
+    function closeModal() {
+        overlay.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    function appendSection(parent, title, text) {
+        if (!text) return;
+        var sec = document.createElement('div');
+        sec.className = 'lvlm-section';
+        var t = document.createElement('div');
+        t.className = 'lvlm-section-title';
+        t.textContent = title;
+        var p = document.createElement('div');
+        p.className = 'lvlm-section-text';
+        p.textContent = text;
+        sec.appendChild(t);
+        sec.appendChild(p);
+        parent.appendChild(sec);
+    }
+
+    function appendSkills(parent, skills) {
+        if (!skills || skills.length === 0) return;
+        var sec = document.createElement('div');
+        sec.className = 'lvlm-section';
+        var t = document.createElement('div');
+        t.className = 'lvlm-section-title';
+        t.textContent = 'Habilidades';
+        sec.appendChild(t);
+        var list = document.createElement('div');
+        list.className = 'lvlm-skill-list';
+        skills.forEach(function(s){
+            var row = document.createElement('div');
+            row.className = 'lvlm-skill ' + (s.mastered ? 'lvlm-skill-mastered' : 'lvlm-skill-pending');
+            var dot = document.createElement('span');
+            dot.className = 'lvlm-skill-dot';
+            dot.innerHTML = s.mastered
+                ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>'
+                : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>';
+            var name = document.createElement('span');
+            name.className = 'lvlm-skill-name';
+            name.textContent = s.name;
+            var badgeCss = s.type === 'promo' ? 'lvlm-badge-promo' : s.type === 'legend' ? 'lvlm-badge-legend' : 'lvlm-badge-special';
+            var badge = document.createElement('span');
+            badge.className = 'lvlm-skill-badge ' + badgeCss;
+            badge.textContent = s.typeLabel;
+            row.appendChild(dot);
+            row.appendChild(name);
+            row.appendChild(badge);
+            list.appendChild(row);
+            if (s.achievementText) {
+                var sub = document.createElement('div');
+                sub.style.cssText = 'font-size:11.5px;color:var(--muted);padding:2px 0 4px 42px;line-height:1.4';
+                sub.textContent = s.achievementText;
+                list.appendChild(sub);
+            }
+        });
+        sec.appendChild(list);
+        parent.appendChild(sec);
+    }
+
+    function fmtXp(n) { return n.toLocaleString('pt-BR'); }
+
+    /* ── Event wiring ── */
+    document.querySelectorAll('.lvl-tier[data-level]').forEach(function(el){
+        el.addEventListener('click', function(){ openModal(parseInt(el.dataset.level,10)); });
+        el.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openModal(parseInt(el.dataset.level,10)); } });
     });
+    document.getElementById('lvlModalClose').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !overlay.hidden) closeModal(); });
+
 }());
 </script>
 }

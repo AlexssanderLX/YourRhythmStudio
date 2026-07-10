@@ -137,12 +137,18 @@ public sealed class StudentController : Controller
     public async Task<IActionResult> Levels(CancellationToken cancellationToken)
     {
         var profile = await CurrentProfile(cancellationToken);
-        var progress = await _progressService.GetCurrentStudentProgressAsync(profile, cancellationToken);
-        var skills = await _skillService.GetStudentSkillsForStudentAsync(profile, cancellationToken);
+        var progressTask    = _progressService.GetCurrentStudentProgressAsync(profile, cancellationToken);
+        var skillsTask      = _skillService.GetStudentSkillsForStudentAsync(profile, cancellationToken);
+        var levelConfigsTask = _levelConfigService.GetAllForStudentAsync(profile, cancellationToken);
+        await Task.WhenAll(progressTask, skillsTask, levelConfigsTask);
+        var progress     = progressTask.Result;
+        var skills       = skillsTask.Result;
+        var levelConfigs = levelConfigsTask.Result;
         return View(new StudentLevelsViewModel
         {
             Progress = progress,
-            Skills = skills
+            Skills = skills,
+            LevelConfigs = levelConfigs
         });
     }
 

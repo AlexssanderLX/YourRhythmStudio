@@ -82,6 +82,22 @@ public sealed class LevelConfigService
         return ToSummary(def, config);
     }
 
+    public async Task<IReadOnlyList<LevelConfigSummary>> GetAllForStudentAsync(
+        AuthenticatedUserProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, _) = LearningAuthorization.RequireStudent(profile);
+
+        var configs = await _db.LevelConfigs
+            .AsNoTracking()
+            .Where(lc => lc.SchoolId == schoolId)
+            .ToDictionaryAsync(lc => lc.Level, cancellationToken);
+
+        return LearningLevelCalculator.Levels
+            .Select(def => ToSummary(def, configs.GetValueOrDefault(def.Level)))
+            .ToArray();
+    }
+
     public async Task<LevelUpEventDto?> GetPendingLevelUpAsync(
         AuthenticatedUserProfile profile,
         CancellationToken cancellationToken = default)
