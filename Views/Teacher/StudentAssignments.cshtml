@@ -16,7 +16,10 @@
 <section class="teacher-student-page">
     <div class="module-header">
         <div>
-            <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo de @student.DisplayName</a>
+            <a class="student-back-link module-summary-link" asp-action="StudentDetail" asp-route-studentId="@studentId">
+                <span aria-hidden="true">←</span>
+                <span>Resumo de @student.DisplayName</span>
+            </a>
             <h1>Missoes</h1>
             <p>@student.DisplayName · Nivel @student.CurrentLevel · @student.CurrentXp XP</p>
         </div>

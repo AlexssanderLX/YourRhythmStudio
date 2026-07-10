@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain.Learning.Enums;
+using YourRhythmStudio.Domain.Learning;
 using YourRhythmStudio.Infrastructure.Data;
 
 namespace YourRhythmStudio.Application.Learning;
@@ -156,7 +157,25 @@ public sealed class ProgressService
             .Select(item => new XpEventSummary(item.Id, item.Points, item.Description, item.CreatedAtUtc))
             .ToArrayAsync(cancellationToken);
 
-        var levelProgress = LearningLevelCalculator.CalculateProgress(student.CurrentXp, student.CurrentLevel);
+        // When a PromotionRequired skill exists for this level but has not been mastered,
+        // XP beyond the level cap is frozen — it does not count toward the next level.
+        var blockedBySkill = LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel)
+            && await _dbContext.Skills.AnyAsync(
+                s => s.SchoolId == schoolId
+                    && s.RequiredLevel == student.CurrentLevel
+                    && s.IsActive
+                    && s.SkillType == SkillType.PromotionRequired
+                    && !_dbContext.StudentSkillMasteries.Any(
+                        m => m.SchoolId == schoolId
+                            && m.StudentProfileId == studentProfileId
+                            && m.SkillId == s.Id),
+                cancellationToken);
+
+        var effectiveXp = blockedBySkill
+            ? Math.Min(student.CurrentXp, LearningLevelCalculator.GetLevel(student.CurrentLevel).MaxXp)
+            : student.CurrentXp;
+
+        var levelProgress = LearningLevelCalculator.CalculateProgress(effectiveXp, student.CurrentLevel);
 
         return new ProgressSummary(
             student.CurrentXp,
@@ -167,7 +186,7 @@ public sealed class ProgressService
             levelProgress.XpInCurrentRange,
             levelProgress.XpRequiredInCurrentRange,
             levelProgress.Percent,
-            levelProgress.AwaitingPromotion,
+            blockedBySkill,
             levelProgress.NextLevel?.Name,
             pending,
             completed,

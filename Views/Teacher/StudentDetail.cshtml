@@ -47,6 +47,21 @@
                 <strong>@student.CurrentXp</strong>
                 <span>XP total</span>
             </div>
+            @if (Model.AccessLink is not null)
+            {
+                <section class="student-access-panel">
+                    <div>
+                        <span class="student-section-kicker">Acesso seguro do aluno</span>
+                        <strong>Envie este link para @student.DisplayName entrar no app</strong>
+                    </div>
+                    <div class="student-access-row">
+                        <input id="student-access-link" type="text" readonly value="@Model.AccessLink.Url" aria-label="Link seguro de acesso do aluno" />
+                        <button type="button" class="btn btn-ghost btn-sm" data-copy-link data-copy-target="student-access-link">Copiar</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-qr-modal>QR Code</button>
+                    </div>
+                    <p class="student-copy-feedback" data-copy-feedback hidden>Link copiado.</p>
+                </section>
+            }
         </div>
 
         <div class="student-quick-stats" aria-label="Resumo do aluno">
@@ -63,21 +78,6 @@
             <em>@(progress?.CurrentLevelProgressPercent ?? 0)%</em>
         </div>
 
-        @if (Model.AccessLink is not null)
-        {
-            <section class="student-access-panel">
-                <div>
-                    <span class="student-section-kicker">Acesso seguro do aluno</span>
-                    <strong>Envie este link para @student.DisplayName entrar no app</strong>
-                </div>
-                <div class="student-access-row">
-                    <input id="student-access-link" type="text" readonly value="@Model.AccessLink.Url" aria-label="Link seguro de acesso do aluno" />
-                    <button type="button" class="btn btn-ghost btn-sm" data-copy-link data-copy-target="student-access-link">Copiar</button>
-                    <button type="button" class="btn btn-primary btn-sm" data-qr-modal>QR Code</button>
-                </div>
-                <p class="student-copy-feedback" data-copy-feedback hidden>Link copiado.</p>
-            </section>
-        }
     </section>
 
     <section class="student-workspace">

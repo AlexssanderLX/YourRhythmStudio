@@ -16,6 +16,7 @@ namespace YourRhythmStudio.Controllers;
 [Route("Teacher")]
 public sealed class TeacherController : Controller
 {
+    private readonly ILogger<TeacherController> _logger;
     private readonly IUserProfileResolver _profileResolver;
     private readonly TeacherStudentService _teacherStudentService;
     private readonly LessonService _lessonService;
@@ -29,6 +30,7 @@ public sealed class TeacherController : Controller
     private readonly LevelConfigService _levelConfigService;
 
     public TeacherController(
+        ILogger<TeacherController> logger,
         IUserProfileResolver profileResolver,
         TeacherStudentService teacherStudentService,
         LessonService lessonService,
@@ -41,6 +43,7 @@ public sealed class TeacherController : Controller
         ProgressService progressService,
         LevelConfigService levelConfigService)
     {
+        _logger = logger;
         _profileResolver = profileResolver;
         _teacherStudentService = teacherStudentService;
         _lessonService = lessonService;
@@ -94,7 +97,7 @@ public sealed class TeacherController : Controller
                 profile,
                 new CreateTeacherStudentRequest(
                     model.DisplayName,
-                    model.Email,
+                    model.Contact,
                     model.Instrument,
                     model.Level,
                     model.Notes),
@@ -103,12 +106,19 @@ public sealed class TeacherController : Controller
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Microsoft.EntityFrameworkCore.DbUpdateException)
         {
             var message = ex is Microsoft.EntityFrameworkCore.DbUpdateException
-                ? "Verifique se o e-mail ja esta cadastrado ou tente novamente."
+                ? "Verifique os dados informados ou tente novamente."
                 : ex.Message;
             ModelState.AddModelError(string.Empty, $"Nao foi possivel cadastrar o aluno: {message}");
             return View(model);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while creating a student for the current teacher.");
+            ModelState.AddModelError(string.Empty, "Nao foi possivel cadastrar o aluno agora. Tente novamente em alguns instantes.");
+            return View(model);
+        }
 
+        TempData["Success"] = $"Aluno {student.DisplayName} criado com sucesso.";
         return RedirectToAction(nameof(StudentDetail), new { studentId = student.StudentProfileId });
     }
 

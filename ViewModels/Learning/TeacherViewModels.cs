@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Mail;
 using Microsoft.AspNetCore.Http;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
@@ -16,25 +17,44 @@ public sealed class TeacherStudentsViewModel
     public required IReadOnlyCollection<TeacherStudentSummary> Students { get; init; }
 }
 
-public sealed class CreateStudentViewModel
+public sealed class CreateStudentViewModel : IValidatableObject
 {
     [Required(ErrorMessage = "Nome do aluno e obrigatorio.")]
     [StringLength(160)]
     public string DisplayName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "E-mail do aluno e obrigatorio.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail valido.")]
     [StringLength(256)]
-    public string Email { get; set; } = string.Empty;
+    public string? Contact { get; set; }
 
+    [Required(ErrorMessage = "Informe o instrumento do aluno.")]
     [StringLength(120)]
     public string Instrument { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Selecione o nivel inicial.")]
+    [RegularExpression("^[1-5]$", ErrorMessage = "Selecione um nivel entre 1 e 5.")]
     [StringLength(80)]
     public string Level { get; set; } = "1";
 
     [StringLength(1000)]
     public string Notes { get; set; } = string.Empty;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var contact = Contact?.Trim();
+        if (string.IsNullOrWhiteSpace(contact) || !contact.Contains('@'))
+            yield break;
+
+        var validEmail = true;
+        try { _ = new MailAddress(contact); }
+        catch (FormatException) { validEmail = false; }
+
+        if (!validEmail)
+        {
+            yield return new ValidationResult(
+                "Informe um e-mail valido ou use um contato sem @.",
+                new[] { nameof(Contact) });
+        }
+    }
 }
 
 public sealed class TeacherStudentDetailViewModel

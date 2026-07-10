@@ -11,51 +11,89 @@
     Voltar para alunos
 </a>
 
-<div class="card" style="max-width:560px">
-    <h3 style="margin-bottom:4px">Novo aluno</h3>
-    <div class="card-sub" style="margin-bottom:20px">Cadastre o aluno para liberar o acompanhamento no app.</div>
-
-    <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
-
-        <div>
-            <label asp-for="DisplayName">Nome completo</label>
-            <input asp-for="DisplayName" placeholder="Ex: Sofia Almeida" autocomplete="name" />
-            <span asp-validation-for="DisplayName" class="field-error"></span>
+<section class="create-student-shell">
+    <div class="card create-student-card">
+        <div class="student-panel-head compact">
+            <div>
+                <span class="student-section-kicker">Novo aluno</span>
+                <h2>Cadastrar aluno</h2>
+            </div>
         </div>
+        <p class="create-student-intro">Informe o essencial para acompanhar aulas, missoes, repertorio e progresso.</p>
 
-        <div>
-            <label asp-for="Email">E-mail</label>
-            <input asp-for="Email" type="email" placeholder="aluno@email.com" autocomplete="email" />
-            <span asp-validation-for="Email" class="field-error"></span>
-        </div>
+        <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form create-student-form" data-create-student-form novalidate>
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="auth-validation" role="alert"></div>
 
-        <div>
-            <label asp-for="Instrument">Instrumento</label>
-            <input asp-for="Instrument" placeholder="Ex: Piano, Violao, Teclado..." />
-        </div>
+            <div>
+                <label asp-for="DisplayName">Nome completo <span class="required-mark">*</span></label>
+                <input asp-for="DisplayName" placeholder="Ex: Sofia Almeida" autocomplete="name" aria-required="true" />
+                <span asp-validation-for="DisplayName" class="field-error"></span>
+            </div>
 
-        <div>
-            <label asp-for="Level">Nivel inicial</label>
-            <select asp-for="Level">
-                <option value="1">Nivel 1</option>
-                <option value="2">Nivel 2</option>
-                <option value="3">Nivel 3</option>
-                <option value="4">Nivel 4</option>
-                <option value="5">Nivel 5</option>
-            </select>
-        </div>
+            <div>
+                <label asp-for="Contact">Email ou contato <span class="optional-mark">opcional</span></label>
+                <input asp-for="Contact" type="text" placeholder="Email, telefone dos pais ou observacao administrativa" autocomplete="off" />
+                <p class="field-hint">Pode ser do aluno, responsavel, pais ou apenas um registro administrativo.</p>
+                <span asp-validation-for="Contact" class="field-error"></span>
+            </div>
 
-        <div>
-            <label asp-for="Notes">Observacoes (opcional)</label>
-            <textarea asp-for="Notes" placeholder="Historico, objetivos, dificuldades..."></textarea>
-        </div>
+            <div>
+                <label asp-for="Instrument">Instrumento <span class="required-mark">*</span></label>
+                <input asp-for="Instrument" placeholder="Ex: Piano, Violao, Teclado..." aria-required="true" />
+                <span asp-validation-for="Instrument" class="field-error"></span>
+            </div>
 
-        <button type="submit" class="btn-full">Cadastrar aluno</button>
-    </form>
-</div>
+            <div>
+                <label asp-for="Level">Nivel inicial <span class="required-mark">*</span></label>
+                <select asp-for="Level" class="level-select" aria-required="true">
+                    <option value="1">Nivel 1 - Iniciante</option>
+                    <option value="2">Nivel 2 - Aprendiz</option>
+                    <option value="3">Nivel 3 - Intermediario</option>
+                    <option value="4">Nivel 4 - Avancado</option>
+                    <option value="5">Nivel 5 - Lendario</option>
+                </select>
+                <span asp-validation-for="Level" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Notes">Observacoes <span class="optional-mark">opcional</span></label>
+                <textarea asp-for="Notes" placeholder="Historico, objetivos, dificuldades..."></textarea>
+                <span asp-validation-for="Notes" class="field-error"></span>
+            </div>
+
+            <button type="submit" class="btn-full" data-submit-label="Cadastrar aluno">
+                <span data-button-text>Cadastrar aluno</span>
+            </button>
+        </form>
+    </div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function(){
+        var form = document.querySelector('[data-create-student-form]');
+        if (!form) return;
+        var button = form.querySelector('button[type="submit"]');
+        var buttonText = form.querySelector('[data-button-text]');
+        var hasErrors = form.querySelector('.field-error:not(:empty), .auth-validation:not(:empty)');
+        if (hasErrors) {
+            var invalid = form.querySelector('.input-validation-error, [aria-invalid="true"]');
+            if (invalid && typeof invalid.focus === 'function') invalid.focus();
+        }
+        form.addEventListener('submit', function(event){
+            if (form.dataset.submitting === 'true') {
+                event.preventDefault();
+                return;
+            }
+            if (window.jQuery && !window.jQuery(form).valid()) {
+                return;
+            }
+            form.dataset.submitting = 'true';
+            if (button) button.disabled = true;
+            if (buttonText) buttonText.textContent = 'Salvando...';
+        });
+    }());
+    </script>
 }

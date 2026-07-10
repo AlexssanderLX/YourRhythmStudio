@@ -184,6 +184,30 @@ public sealed class SkillService
                         fromLevel,
                         student.CurrentLevel,
                         DateTime.UtcNow));
+
+                    // Continue leveling if the new level also has no PromotionRequired skill.
+                    while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
+                    {
+                        var nextHasRequired = await _db.Skills.AnyAsync(
+                            s => s.SchoolId == schoolId
+                                && s.RequiredLevel == student.CurrentLevel
+                                && s.IsActive
+                                && s.SkillType == SkillType.PromotionRequired,
+                            cancellationToken);
+
+                        if (nextHasRequired)
+                            break;
+
+                        var nextFrom = student.CurrentLevel;
+                        student.CurrentLevel += 1;
+
+                        _db.LevelUpEvents.Add(new LevelUpEvent(
+                            schoolId,
+                            studentProfileId,
+                            nextFrom,
+                            student.CurrentLevel,
+                            DateTime.UtcNow));
+                    }
                 }
             }
         }

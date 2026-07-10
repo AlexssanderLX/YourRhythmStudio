@@ -104,7 +104,7 @@ public sealed record StudentDashboardSummary(
 
 public sealed record CreateTeacherStudentRequest(
     string DisplayName,
-    string Email,
+    string? Contact,
     string Instrument,
     string Level,
     string Notes);

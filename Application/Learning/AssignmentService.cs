@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
+using YourRhythmStudio.Domain.Users;
 using YourRhythmStudio.Infrastructure.Data;
 
 
@@ -195,7 +196,6 @@ public sealed class AssignmentService
         var now = DateTime.UtcNow;
         assignment.Complete(now);
 
-        // XP accumulates freely; level-up is gated behind a PromotionRequired skill (see SkillService).
         if (!assignment.XpGranted && assignment.XpReward > 0)
         {
             student.CurrentXp += assignment.XpReward;
@@ -210,6 +210,9 @@ public sealed class AssignmentService
                 now,
                 assignment.TeacherProfileId,
                 assignment.Id));
+
+            // Auto level-up when no PromotionRequired skill exists for the current level.
+            await TryAutoLevelUpAsync(schoolId, studentProfileId, student, now, cancellationToken);
         }
 
         // Auto-grant the linked skill reward (if any) when not already mastered.
@@ -233,6 +236,37 @@ public sealed class AssignmentService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task TryAutoLevelUpAsync(
+        Guid schoolId,
+        Guid studentProfileId,
+        StudentProfile student,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        while (LearningLevelCalculator.IsEligibleForPromotion(student.CurrentXp, student.CurrentLevel))
+        {
+            var hasRequiredSkill = await _dbContext.Skills.AnyAsync(
+                s => s.SchoolId == schoolId
+                    && s.RequiredLevel == student.CurrentLevel
+                    && s.IsActive
+                    && s.SkillType == SkillType.PromotionRequired,
+                cancellationToken);
+
+            if (hasRequiredSkill)
+                break;
+
+            var fromLevel = student.CurrentLevel;
+            student.CurrentLevel += 1;
+
+            _dbContext.LevelUpEvents.Add(new LevelUpEvent(
+                schoolId,
+                studentProfileId,
+                fromLevel,
+                student.CurrentLevel,
+                now));
+        }
     }
 
     private IQueryable<AssignmentSummary> QueryAssignments(Guid schoolId, Guid studentProfileId, Guid? teacherProfileId)

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Learning;
@@ -161,12 +162,20 @@ public sealed class TeacherStudentService
         CancellationToken cancellationToken = default)
     {
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
-        var email = NormalizeEmail(request.Email);
+        var contact = OptionalText(request.Contact);
+        if (LooksLikeEmail(contact) && !IsEmail(contact))
+            throw new ArgumentException("Informe um e-mail valido ou deixe o contato como texto sem @.", nameof(request.Contact));
 
-        var existingSchoolUser = await _dbContext.SchoolUsers
-            .FirstOrDefaultAsync(
-                user => user.SchoolId == schoolId && user.Email == email,
-                cancellationToken);
+        var contactEmail = IsEmail(contact) ? NormalizeEmail(contact!) : null;
+        var technicalEmail = contactEmail ?? BuildAdministrativeEmail();
+        var instrument = RequireText(request.Instrument, nameof(request.Instrument));
+
+        var existingSchoolUser = contactEmail is null
+            ? null
+            : await _dbContext.SchoolUsers
+                .FirstOrDefaultAsync(
+                    user => user.SchoolId == schoolId && user.Email == contactEmail,
+                    cancellationToken);
 
         StudentProfile studentProfile;
         if (existingSchoolUser is null)
@@ -175,15 +184,16 @@ public sealed class TeacherStudentService
             {
                 SchoolId = schoolId,
                 DisplayName = RequireText(request.DisplayName, nameof(request.DisplayName)),
-                Email = email,
-                Role = YourRhythmRoles.Student
+                Email = technicalEmail,
+                Role = YourRhythmRoles.Student,
+                Phone = contactEmail is null ? contact : null
             };
 
             studentProfile = new StudentProfile
             {
                 SchoolId = schoolId,
                 SchoolUserId = schoolUser.Id,
-                Instrument = OptionalText(request.Instrument) ?? string.Empty,
+                Instrument = instrument,
                 Level = OptionalText(request.Level) ?? string.Empty,
                 Notes = OptionalText(request.Notes) ?? string.Empty,
                 CurrentLevel = ParseInitialLevel(request.Level)
@@ -201,6 +211,8 @@ public sealed class TeacherStudentService
 
             existingSchoolUser.DisplayName = RequireText(request.DisplayName, nameof(request.DisplayName));
             existingSchoolUser.IsActive = true;
+            if (contactEmail is null)
+                existingSchoolUser.Phone = contact;
 
             var existingStudent = await _dbContext.StudentProfiles
                 .FirstOrDefaultAsync(
@@ -213,7 +225,7 @@ public sealed class TeacherStudentService
                 {
                     SchoolId = schoolId,
                     SchoolUserId = existingSchoolUser.Id,
-                    Instrument = OptionalText(request.Instrument) ?? string.Empty,
+                    Instrument = instrument,
                     Level = OptionalText(request.Level) ?? string.Empty,
                     Notes = OptionalText(request.Notes) ?? string.Empty,
                     CurrentLevel = ParseInitialLevel(request.Level)
@@ -224,7 +236,7 @@ public sealed class TeacherStudentService
             else
             {
                 studentProfile = existingStudent;
-                studentProfile.Instrument = OptionalText(request.Instrument) ?? studentProfile.Instrument;
+                studentProfile.Instrument = instrument;
                 studentProfile.Level = OptionalText(request.Level) ?? studentProfile.Level;
                 studentProfile.Notes = OptionalText(request.Notes) ?? studentProfile.Notes;
                 studentProfile.CurrentLevel = ParseInitialLevel(request.Level);
@@ -392,6 +404,26 @@ public sealed class TeacherStudentService
     private static string? OptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string NormalizeEmail(string email) => RequireText(email, nameof(email)).ToUpperInvariant();
+
+    private static string BuildAdministrativeEmail() => $"student-{Guid.NewGuid():N}@local.yourrhythm.internal".ToUpperInvariant();
+
+    private static bool LooksLikeEmail(string? value) => !string.IsNullOrWhiteSpace(value) && value.Contains('@');
+
+    private static bool IsEmail(string? value)
+    {
+        if (!LooksLikeEmail(value))
+            return false;
+
+        try
+        {
+            _ = new MailAddress(value!.Trim());
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 
     private static int ParseInitialLevel(string? level)
     {
