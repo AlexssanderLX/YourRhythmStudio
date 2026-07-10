@@ -2,139 +2,219 @@
 @using YourRhythmStudio.Domain.Learning.Enums
 @{
     Layout = "_DashboardLayout";
-    ViewData["Title"] = $"Missões · {Model.Base.Detail.Student.DisplayName}";
+    ViewData["Title"] = $"Missoes · {Model.Base.Detail.Student.DisplayName}";
     ViewData["Role"] = "teacher";
-    ViewData["DashTitle"] = "Missões";
+    ViewData["DashTitle"] = "Missoes";
     var student = Model.Base.Detail.Student;
     var studentId = student.StudentProfileId;
+    var missionRewardSkills = Model.Skills
+        .Where(s => s.SkillType == SkillType.MissionReward)
+        .OrderBy(s => s.Name)
+        .ToList();
 }
 
 <section class="teacher-student-page">
-    <div class="student-detail-topline">
-        <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a>
+    <div class="module-header">
+        <div>
+            <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo de @student.DisplayName</a>
+            <h1>Missoes</h1>
+            <p>@student.DisplayName · Nivel @student.CurrentLevel · @student.CurrentXp XP</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar missao</button>
     </div>
 
-    <nav class="student-action-bar student-module-nav">
-        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
-        <a class="student-jump-btn active" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
-        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
-        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
-        <a class="student-jump-btn" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
-        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
-    </nav>
-
     @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }
+    @if (TempData["Success"] is string success) { <div class="auth-success">@success</div> }
 
-    <section class="student-workspace">
-        <div class="student-form-panel">
-            <div class="student-panel-head">
-                <div><span class="student-section-kicker">Nova missão</span><h2>Objetivo da semana</h2></div>
-                <span class="student-soft-pill" id="xpPreview">100 XP</span>
-            </div>
-            <form asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
-                @Html.AntiForgeryToken()
-                <input asp-for="Base.Assignment.StudentProfileId" type="hidden" value="@studentId" />
-                <div>
-                    <label asp-for="Base.Assignment.Title">Título</label>
-                    <input asp-for="Base.Assignment.Title" placeholder="Ex: Praticar levada com metrônomo" />
-                </div>
-                <div>
-                    <label asp-for="Base.Assignment.Description">Descrição opcional</label>
-                    <textarea asp-for="Base.Assignment.Description" placeholder="Detalhe o que o aluno deve fazer."></textarea>
-                </div>
-                <div class="form-grid-compact">
-                    <div>
-                        <label asp-for="Base.Assignment.Rarity">Categoria</label>
-                        <select asp-for="Base.Assignment.Rarity" id="assignRarity">
-                            <option value="Comum">Comum · 100 XP</option>
-                            <option value="Rara">Rara · 400 XP</option>
-                            <option value="MuitoRara">Muito rara · 1.500 XP</option>
-                            <option value="Epica">Épica · 5.000 XP</option>
-                            <option value="Lendaria">Lendária · 25.000 XP</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label asp-for="Base.Assignment.DueAtUtc">Prazo opcional</label>
-                        <input asp-for="Base.Assignment.DueAtUtc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" />
-                    </div>
-                </div>
-                @{
-                    var missionRewardSkills = Model.Skills
-                        .Where(s => s.SkillType == YourRhythmStudio.Domain.Learning.Enums.SkillType.MissionReward)
-                        .OrderBy(s => s.Name)
-                        .ToList();
-                }
-                @if (missionRewardSkills.Any()) {
-                    <div id="skillRewardWrap" style="display:none">
-                        <label asp-for="Base.Assignment.SkillRewardId">Recompensa de habilidade <span style="font-size:11px;color:var(--muted)">(apenas Épica / Lendária)</span></label>
-                        <select asp-for="Base.Assignment.SkillRewardId" id="assignSkillReward">
-                            <option value="">— Nenhuma —</option>
-                            @foreach (var sk in missionRewardSkills) {
-                                <option value="@sk.Id">@sk.Name</option>
-                            }
-                        </select>
-                    </div>
-                }
-                <label class="auth-check">
-                    <input asp-for="Base.Assignment.UseDefaultXp" id="useDefaultXp" type="checkbox" checked />
-                    <span>Manter XP padrão da categoria</span>
-                </label>
-                <div>
-                    <label asp-for="Base.Assignment.XpReward">XP personalizado</label>
-                    <input asp-for="Base.Assignment.XpReward" id="assignXp" type="number" min="0" max="50000" value="100" />
-                </div>
-                <button type="submit">Criar missão</button>
-            </form>
+    <section class="student-form-panel module-list-panel">
+        <div class="student-panel-head compact">
+            <div><span class="student-section-kicker">Lista</span><h2>@Model.Base.Detail.Assignments.Count missoes</h2></div>
         </div>
-
-        <aside class="student-side-panel">
-            <section>
-                <div class="student-panel-head compact">
-                    <div><span class="student-section-kicker">Histórico</span><h2>@Model.Base.Detail.Assignments.Count missões</h2></div>
+        <div class="module-list">
+            @foreach (var item in Model.Base.Detail.Assignments.OrderBy(a => a.Status == AssignmentStatus.Completed).ThenBy(a => a.DueAtUtc ?? DateTime.MaxValue))
+            {
+                <button type="button"
+                        class="module-row"
+                        data-open-edit
+                        data-id="@item.Id"
+                        data-title="@item.Title"
+                        data-description="@item.Description"
+                        data-due="@(item.DueAtUtc?.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") ?? "")"
+                        data-xp="@item.XpReward"
+                        data-rarity="@item.Rarity"
+                        data-skill="@item.SkillRewardId">
+                    <span class="module-row-main">
+                        <strong>@item.Title</strong>
+                        <small>@item.Rarity · @Status(item.Status) · @(item.DueAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "sem prazo")</small>
+                    </span>
+                    <span class="module-row-meta">+@item.XpReward XP</span>
+                </button>
+            }
+            @if (!Model.Base.Detail.Assignments.Any())
+            {
+                <div class="module-empty">
+                    <strong>Nenhuma missao criada.</strong>
+                    <p>Crie a primeira missao para orientar o proximo estudo do aluno.</p>
                 </div>
-                <div class="student-item-list">
-                    @foreach (var item in Model.Base.Detail.Assignments.OrderBy(a => a.Status == AssignmentStatus.Completed).ThenBy(a => a.DueAtUtc ?? DateTime.MaxValue))
-                    {
-                        <article class="student-list-item">
-                            <div>
-                                <span>@Status(item.Status) · @(item.DueAtUtc?.ToLocalTime().ToString("dd/MM") ?? "sem prazo")</span>
-                                <strong>@item.Title</strong>
-                            </div>
-                            <em>+@item.XpReward XP</em>
-                        </article>
-                    }
-                    @if (!Model.Base.Detail.Assignments.Any()) { <p class="student-empty-inline">Nenhuma missão criada.</p> }
-                </div>
-            </section>
-        </aside>
+            }
+        </div>
     </section>
 </section>
+
+<div class="student-action-modal" data-create-panel hidden>
+    <div class="student-action-modal-backdrop" data-close-modal></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Criar missao">
+        <div class="student-panel-head">
+            <div><span class="student-section-kicker">Nova missao</span><h2>@student.DisplayName</h2></div>
+            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+        </div>
+        <form asp-action="CreateAssignment" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
+            @Html.AntiForgeryToken()
+            <input name="Assignment.StudentProfileId" type="hidden" value="@studentId" />
+            <div>
+                <label>Titulo</label>
+                <input name="Assignment.Title" required maxlength="180" placeholder="Ex: Praticar escalas por 20min" />
+            </div>
+            <div>
+                <label>Descricao opcional</label>
+                <textarea name="Assignment.Description" maxlength="2000" placeholder="Detalhe a tarefa."></textarea>
+            </div>
+            <div class="form-grid-compact">
+                <div>
+                    <label>Raridade</label>
+                    <select name="Assignment.Rarity" data-rarity-create>
+                        <option value="Comum">Comum · 100 XP</option>
+                        <option value="Rara">Rara · 400 XP</option>
+                        <option value="MuitoRara">Muito rara · 1.500 XP</option>
+                        <option value="Epica">Epica · 5.000 XP</option>
+                        <option value="Lendaria">Lendaria · 25.000 XP</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Prazo</label>
+                    <input name="Assignment.DueAtUtc" type="datetime-local" step="60" />
+                </div>
+                <div>
+                    <label>XP</label>
+                    <input name="Assignment.XpReward" data-xp-create type="number" min="0" max="50000" value="100" />
+                </div>
+            </div>
+            <input name="Assignment.UseDefaultXp" type="hidden" value="false" />
+            @if (missionRewardSkills.Any())
+            {
+                <div data-skill-wrap-create hidden>
+                    <label>Skill de recompensa</label>
+                    <select name="Assignment.SkillRewardId">
+                        <option value="">Nenhuma</option>
+                        @foreach (var skill in missionRewardSkills)
+                        {
+                            <option value="@skill.Id">@skill.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+            <button type="submit">Criar missao</button>
+        </form>
+    </section>
+</div>
+
+<div class="student-action-modal" data-edit-panel hidden>
+    <div class="student-action-modal-backdrop" data-close-modal></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Editar missao">
+        <div class="student-panel-head">
+            <div><span class="student-section-kicker">Editar missao</span><h2 data-edit-heading>Missao</h2></div>
+            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+        </div>
+        <form method="post" class="auth-form compact-form" data-edit-form>
+            @Html.AntiForgeryToken()
+            <input name="StudentProfileId" type="hidden" value="@studentId" />
+            <input name="AssignmentId" type="hidden" data-edit-id />
+            <div>
+                <label>Titulo</label>
+                <input name="Title" data-edit-title required maxlength="180" />
+            </div>
+            <div>
+                <label>Descricao opcional</label>
+                <textarea name="Description" data-edit-description maxlength="2000"></textarea>
+            </div>
+            <div class="form-grid-compact">
+                <div>
+                    <label>Raridade</label>
+                    <select name="Rarity" data-edit-rarity>
+                        <option value="Comum">Comum</option>
+                        <option value="Rara">Rara</option>
+                        <option value="MuitoRara">Muito rara</option>
+                        <option value="Epica">Epica</option>
+                        <option value="Lendaria">Lendaria</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Prazo</label>
+                    <input name="DueAtUtc" data-edit-due type="datetime-local" step="60" />
+                </div>
+                <div>
+                    <label>XP</label>
+                    <input name="XpReward" data-edit-xp type="number" min="0" max="50000" />
+                </div>
+            </div>
+            @if (missionRewardSkills.Any())
+            {
+                <div data-skill-wrap-edit>
+                    <label>Skill de recompensa</label>
+                    <select name="SkillRewardId" data-edit-skill>
+                        <option value="">Nenhuma</option>
+                        @foreach (var skill in missionRewardSkills)
+                        {
+                            <option value="@skill.Id">@skill.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+            <button type="submit">Salvar missao</button>
+        </form>
+    </section>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
     (function(){
-        var rarity = document.getElementById('assignRarity');
-        var xp = document.getElementById('assignXp');
-        var keep = document.getElementById('useDefaultXp');
-        var preview = document.getElementById('xpPreview');
-        var skillWrap = document.getElementById('skillRewardWrap');
-        var skillSel = document.getElementById('assignSkillReward');
-        var map = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
-        function sync(){
-            var value = map[rarity.value] || 100;
-            if (keep.checked) xp.value = value;
-            preview.textContent = (keep.checked ? value : Math.max(0, parseInt(xp.value || '0', 10))) + ' XP';
-            if (skillWrap) {
-                var epic = rarity.value === 'Epica' || rarity.value === 'Lendaria';
-                skillWrap.style.display = epic ? '' : 'none';
-                if (!epic && skillSel) skillSel.value = '';
-            }
+        var studentId = '@studentId';
+        var createPanel = document.querySelector('[data-create-panel]');
+        var editPanel = document.querySelector('[data-edit-panel]');
+        var xpMap = { Comum:100, Rara:400, MuitoRara:1500, Epica:5000, Lendaria:25000 };
+        function open(panel){ panel.hidden = false; document.body.classList.add('modal-open'); }
+        function close(){ document.querySelectorAll('.student-action-modal').forEach(function(p){ p.hidden = true; }); document.body.classList.remove('modal-open'); }
+        document.querySelector('[data-open-create]')?.addEventListener('click', function(){ open(createPanel); });
+        document.querySelectorAll('[data-close-modal]').forEach(function(btn){ btn.addEventListener('click', close); });
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+        var rarityCreate = document.querySelector('[data-rarity-create]');
+        var xpCreate = document.querySelector('[data-xp-create]');
+        var skillCreate = document.querySelector('[data-skill-wrap-create]');
+        function syncCreate(){
+            if (!rarityCreate) return;
+            xpCreate.value = xpMap[rarityCreate.value] || 100;
+            if (skillCreate) skillCreate.hidden = !(rarityCreate.value === 'Epica' || rarityCreate.value === 'Lendaria');
         }
-        rarity && rarity.addEventListener('change', sync);
-        keep && keep.addEventListener('change', sync);
-        xp && xp.addEventListener('input', sync);
-        sync();
+        rarityCreate?.addEventListener('change', syncCreate);
+        syncCreate();
+        document.querySelectorAll('[data-open-edit]').forEach(function(row){
+            row.addEventListener('click', function(){
+                var id = row.dataset.id;
+                var form = document.querySelector('[data-edit-form]');
+                form.action = '/Teacher/Students/' + studentId + '/Assignments/' + id;
+                document.querySelector('[data-edit-id]').value = id;
+                document.querySelector('[data-edit-title]').value = row.dataset.title || '';
+                document.querySelector('[data-edit-description]').value = row.dataset.description || '';
+                document.querySelector('[data-edit-due]').value = row.dataset.due || '';
+                document.querySelector('[data-edit-xp]').value = row.dataset.xp || '0';
+                document.querySelector('[data-edit-rarity]').value = row.dataset.rarity || 'Comum';
+                var skill = document.querySelector('[data-edit-skill]');
+                if (skill) skill.value = row.dataset.skill || '';
+                document.querySelector('[data-edit-heading]').textContent = row.dataset.title || 'Missao';
+                open(editPanel);
+            });
+        });
     }());
     </script>
 }
@@ -144,7 +224,7 @@
     {
         AssignmentStatus.Pending => "Pendente",
         AssignmentStatus.InProgress => "Em andamento",
-        AssignmentStatus.Completed => "Concluída",
+        AssignmentStatus.Completed => "Concluida",
         AssignmentStatus.Skipped => "Ignorada",
         _ => status.ToString()
     };

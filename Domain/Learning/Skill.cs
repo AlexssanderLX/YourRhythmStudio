@@ -56,6 +56,7 @@ public sealed class Skill
     public void Update(
         string name,
         string? description,
+        int requiredLevel,
         SkillType skillType,
         string? iconName,
         string? achievementText,
@@ -63,8 +64,10 @@ public sealed class Skill
         DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
+        if (requiredLevel is < 1 or > 5) throw new ArgumentOutOfRangeException(nameof(requiredLevel));
         Name = name.Trim();
         Description = description?.Trim();
+        RequiredLevel = requiredLevel;
         SkillType = skillType;
         IconName = iconName?.Trim();
         AchievementText = achievementText?.Trim();

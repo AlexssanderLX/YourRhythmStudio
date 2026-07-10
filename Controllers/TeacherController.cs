@@ -1,7 +1,9 @@
+using Foundation.SecureLinks.Abstractions;
 using Foundation.SecureLinks.Models;
 using Foundation.SecureLinks.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
@@ -21,6 +23,7 @@ public sealed class TeacherController : Controller
     private readonly AssignmentService _assignmentService;
     private readonly FeedbackService _feedbackService;
     private readonly SecureLinkService _secureLinkService;
+    private readonly IQrArtifactGenerator _qrArtifactGenerator;
     private readonly SkillService _skillService;
     private readonly ProgressService _progressService;
     private readonly LevelConfigService _levelConfigService;
@@ -33,6 +36,7 @@ public sealed class TeacherController : Controller
         AssignmentService assignmentService,
         FeedbackService feedbackService,
         SecureLinkService secureLinkService,
+        IQrArtifactGenerator qrArtifactGenerator,
         SkillService skillService,
         ProgressService progressService,
         LevelConfigService levelConfigService)
@@ -44,6 +48,7 @@ public sealed class TeacherController : Controller
         _assignmentService = assignmentService;
         _feedbackService = feedbackService;
         _secureLinkService = secureLinkService;
+        _qrArtifactGenerator = qrArtifactGenerator;
         _skillService = skillService;
         _progressService = progressService;
         _levelConfigService = levelConfigService;
@@ -115,7 +120,8 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         var skills = await _skillService.GetStudentSkillsAsync(profile, studentId, cancellationToken);
         var progress = await _progressService.GetTeacherStudentProgressAsync(profile, studentId, cancellationToken);
-        return View(new TeacherStudentDetailWithSkillsViewModel { Base = detail, Skills = skills, Progress = progress, ActiveModule = "Summary" });
+        var accessLink = await BuildStudentAccessLinkAsync(detail.Detail.Student, cancellationToken);
+        return View(new TeacherStudentDetailWithSkillsViewModel { Base = detail, Skills = skills, Progress = progress, ActiveModule = "Summary", AccessLink = accessLink });
     }
 
     [HttpGet("Students/{studentId:guid}/Assignments")]
@@ -167,6 +173,33 @@ public sealed class TeacherController : Controller
             profile,
             new CreateLessonRequest(studentId, BuildLessonTitle(model.Title, model.LessonDateUtc), model.LessonDateUtc, model.Notes),
             cancellationToken);
+
+        return RedirectToAction(nameof(StudentLessons), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Lessons/{lessonId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateLesson(Guid studentId, Guid lessonId, EditLessonViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId || model.LessonId != lessonId)
+        {
+            TempData["Error"] = "Dados da aula invalidos.";
+            return RedirectToAction(nameof(StudentLessons), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _lessonService.UpdateLessonAsync(
+                profile,
+                new UpdateLessonRequest(studentId, lessonId, BuildLessonTitle(model.Title, model.LessonDateUtc), model.LessonDateUtc, model.Notes),
+                cancellationToken);
+            TempData["Success"] = "Aula atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
 
         return RedirectToAction(nameof(StudentLessons), new { studentId });
     }
@@ -235,6 +268,45 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(StudentRepertoire), new { studentId });
     }
 
+    [HttpPost("Students/{studentId:guid}/Repertoire/{repertoireItemId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateRepertoire(
+        Guid studentId,
+        Guid repertoireItemId,
+        EditRepertoireViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId || model.RepertoireItemId != repertoireItemId)
+        {
+            TempData["Error"] = "Dados do repertorio invalidos.";
+            return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            var audio = model.AudioFile is null
+                ? null
+                : new RepertoireAudioUpload(
+                    model.AudioFile.FileName,
+                    model.AudioFile.ContentType,
+                    model.AudioFile.Length,
+                    model.AudioFile.OpenReadStream);
+
+            await _repertoireService.UpdateRepertoireAsync(
+                profile,
+                new UpdateRepertoireRequest(studentId, repertoireItemId, model.Title, model.Notes, model.ReferenceUrl, audio),
+                cancellationToken);
+            TempData["Success"] = "Repertorio atualizado.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+    }
+
     [HttpPost("Students/{studentId:guid}/Assignments")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateAssignment(
@@ -278,6 +350,41 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(StudentAssignments), new { studentId });
     }
 
+    [HttpPost("Students/{studentId:guid}/Assignments/{assignmentId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateAssignment(Guid studentId, Guid assignmentId, EditAssignmentViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId || model.AssignmentId != assignmentId)
+        {
+            TempData["Error"] = "Dados da missao invalidos.";
+            return RedirectToAction(nameof(StudentAssignments), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _assignmentService.UpdateAssignmentAsync(
+                profile,
+                new UpdateAssignmentRequest(
+                    studentId,
+                    assignmentId,
+                    model.Title,
+                    string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
+                    model.DueAtUtc,
+                    model.XpReward,
+                    model.Rarity,
+                    model.SkillRewardId),
+                cancellationToken);
+            TempData["Success"] = "Missao atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(StudentAssignments), new { studentId });
+    }
+
     [HttpPost("Students/{studentId:guid}/Feedback")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateFeedback(
@@ -300,6 +407,60 @@ public sealed class TeacherController : Controller
             cancellationToken);
 
         return RedirectToAction(nameof(StudentFeedback), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Feedback/{feedbackId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateFeedback(Guid studentId, Guid feedbackId, EditFeedbackViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId || model.FeedbackId != feedbackId)
+        {
+            TempData["Error"] = "Dados do feedback invalidos.";
+            return RedirectToAction(nameof(StudentFeedback), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _feedbackService.UpdateFeedbackAsync(
+                profile,
+                new UpdateFeedbackRequest(studentId, feedbackId, model.Message, model.VisibleToStudent),
+                cancellationToken);
+            TempData["Success"] = "Feedback atualizado.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(StudentFeedback), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateStudent(Guid studentId, [Bind(Prefix = "Base.EditStudent")] EditStudentViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId)
+        {
+            TempData["Error"] = "Dados do aluno invalidos.";
+            return RedirectToAction(nameof(StudentDetail), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _teacherStudentService.UpdateStudentAsync(
+                profile,
+                new UpdateTeacherStudentRequest(studentId, model.DisplayName, model.Instrument, model.Level, model.Notes),
+                cancellationToken);
+            TempData["Success"] = "Aluno atualizado.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
 
     [HttpPost("Students/{studentId:guid}/AccessLink")]
@@ -326,7 +487,7 @@ public sealed class TeacherController : Controller
         }
 
         var issued = result.Value!;
-        var accessUrl = $"{Request.Scheme}://{Request.Host}/Auth/StudentAccess?code={issued.PublicCode}";
+        var accessUrl = QueryHelpers.AddQueryString(issued.AbsoluteUrl, "code", issued.PublicCode);
         TempData["StudentAccessLink"] = accessUrl;
         return RedirectToAction(nameof(StudentDetail), new { studentId });
     }
@@ -354,6 +515,68 @@ public sealed class TeacherController : Controller
             model.Name, model.Description, model.RequiredLevel, model.SkillType, model.IconName,
             model.AchievementText, model.ConquestCriteria), cancellationToken);
         return RedirectToAction(nameof(Skills));
+    }
+
+    [HttpPost("Students/{studentId:guid}/Skills")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateStudentSkill(Guid studentId, DefineSkillViewModel model, CancellationToken cancellationToken)
+    {
+        var detail = await LoadStudentDetail(studentId, cancellationToken);
+        if (detail is null) return Forbid();
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "Dados da skill invalidos.";
+            return RedirectToAction(nameof(StudentSkills), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        await _skillService.CreateSkillAsync(profile, new CreateSkillRequest(
+            model.Name,
+            model.Description,
+            model.RequiredLevel,
+            model.SkillType,
+            model.IconName,
+            model.AchievementText,
+            model.ConquestCriteria), cancellationToken);
+
+        TempData["Success"] = "Skill criada.";
+        return RedirectToAction(nameof(StudentSkills), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Skills/{skillId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateStudentSkill(Guid studentId, Guid skillId, EditSkillViewModel model, CancellationToken cancellationToken)
+    {
+        var detail = await LoadStudentDetail(studentId, cancellationToken);
+        if (detail is null) return Forbid();
+
+        if (!ModelState.IsValid || model.SkillId != skillId)
+        {
+            TempData["Error"] = "Dados da skill invalidos.";
+            return RedirectToAction(nameof(StudentSkills), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _skillService.UpdateSkillAsync(profile, new UpdateSkillRequest(
+                skillId,
+                model.Name,
+                model.Description,
+                model.RequiredLevel,
+                model.SkillType,
+                model.IconName,
+                model.AchievementText,
+                model.ConquestCriteria), cancellationToken);
+            TempData["Success"] = "Skill atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(StudentSkills), new { studentId });
     }
 
     [HttpPost("Skills/{skillId:guid}/Delete")]
@@ -473,7 +696,15 @@ public sealed class TeacherController : Controller
                 Lesson = new CreateLessonViewModel { StudentProfileId = studentId, LessonDateUtc = DateTime.UtcNow },
                 Repertoire = new AddRepertoireViewModel { StudentProfileId = studentId },
                 Assignment = new CreateAssignmentViewModel { StudentProfileId = studentId, XpReward = DefaultXpFor(AssignmentRarity.Comum) },
-                Feedback = new CreateFeedbackViewModel { StudentProfileId = studentId, VisibleToStudent = true }
+                Feedback = new CreateFeedbackViewModel { StudentProfileId = studentId, VisibleToStudent = true },
+                EditStudent = new EditStudentViewModel
+                {
+                    StudentProfileId = studentId,
+                    DisplayName = detail.Student.DisplayName,
+                    Instrument = detail.Student.Instrument,
+                    Level = detail.Student.Level,
+                    Notes = detail.Student.Notes
+                }
             };
         }
         catch (UnauthorizedAccessException)
@@ -494,14 +725,36 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         var skills = await _skillService.GetStudentSkillsAsync(profile, studentId, cancellationToken);
         var progress = await _progressService.GetTeacherStudentProgressAsync(profile, studentId, cancellationToken);
+        var accessLink = await BuildStudentAccessLinkAsync(detail.Detail.Student, cancellationToken);
 
         return View($"Student{module}", new TeacherStudentDetailWithSkillsViewModel
         {
             Base = detail,
             Skills = skills,
             Progress = progress,
-            ActiveModule = module
+            ActiveModule = module,
+            AccessLink = accessLink
         });
+    }
+
+    private async Task<StudentAccessLinkViewModel?> BuildStudentAccessLinkAsync(TeacherStudentSummary student, CancellationToken cancellationToken)
+    {
+        var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
+        var result = await _secureLinkService.CreateAsync(
+            baseUri,
+            new CreateSecureLinkRequest(
+                Label: $"Acesso aluno {student.DisplayName}",
+                ResourceKey: student.StudentProfileId.ToString(),
+                RelativePath: "/Auth/StudentAccess"),
+            cancellationToken);
+
+        if (result.IsFailure || result.Value is null)
+            return null;
+
+        var issued = result.Value;
+        var accessUrl = QueryHelpers.AddQueryString(issued.AbsoluteUrl, "code", issued.PublicCode);
+        var qr = await _qrArtifactGenerator.GenerateSvgAsync(accessUrl, $"student-access-{student.StudentProfileId:N}", cancellationToken);
+        return new StudentAccessLinkViewModel(accessUrl, qr.DataUri);
     }
 
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)

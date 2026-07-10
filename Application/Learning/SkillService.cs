@@ -80,6 +80,34 @@ public sealed class SkillService
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<SkillSummary> UpdateSkillAsync(
+        AuthenticatedUserProfile profile,
+        UpdateSkillRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        var skill = await _db.Skills.FirstOrDefaultAsync(
+            s => s.Id == request.SkillId
+                && s.SchoolId == schoolId
+                && s.TeacherProfileId == teacherProfileId
+                && s.IsActive,
+            cancellationToken)
+            ?? throw new KeyNotFoundException("Skill was not found.");
+
+        skill.Update(
+            request.Name,
+            request.Description,
+            request.RequiredLevel,
+            request.SkillType,
+            request.IconName,
+            request.AchievementText,
+            request.ConquestCriteria,
+            DateTime.UtcNow);
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return ToSummary(skill);
+    }
+
     public async Task<IReadOnlyCollection<SkillWithMastery>> GetStudentSkillsAsync(
         AuthenticatedUserProfile profile,
         Guid studentProfileId,
@@ -196,6 +224,7 @@ public sealed class SkillService
 
             return new SkillWithMastery(
                 s.Id, s.Name, s.Description, s.RequiredLevel, s.SkillType, s.IconName, s.AchievementText,
+                s.ConquestCriteria,
                 mastered,
                 masteryMap.TryGetValue(s.Id, out var d) ? d : null,
                 inferredByLevel);

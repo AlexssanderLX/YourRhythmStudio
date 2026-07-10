@@ -120,6 +120,19 @@ public sealed class Assignment
         UpdatedAtUtc = utcNow;
     }
 
+    public void UpdateRewardMetadata(AssignmentRarity rarity, Guid? skillRewardId, DateTime utcNow)
+    {
+        if (Status == AssignmentStatus.Completed)
+            throw new InvalidOperationException("Completed assignments cannot be edited.");
+
+        if (Status == AssignmentStatus.Skipped)
+            throw new InvalidOperationException("Skipped assignments cannot be edited.");
+
+        Rarity = rarity;
+        SkillRewardId = skillRewardId;
+        UpdatedAtUtc = utcNow;
+    }
+
     public void Start(DateTime utcNow)
     {
         if (Status == AssignmentStatus.Completed)

@@ -10,49 +10,222 @@
 }
 
 <section class="teacher-student-page">
-    <div class="student-detail-topline"><a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">← Resumo de @student.DisplayName</a></div>
-    <nav class="student-action-bar student-module-nav">
-        <a class="student-jump-btn" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo</a>
-        <a class="student-jump-btn" asp-action="StudentAssignments" asp-route-studentId="@studentId">Missões</a>
-        <a class="student-jump-btn" asp-action="StudentRepertoire" asp-route-studentId="@studentId">Repertório</a>
-        <a class="student-jump-btn" asp-action="StudentFeedback" asp-route-studentId="@studentId">Feedbacks</a>
-        <a class="student-jump-btn active" asp-action="StudentSkills" asp-route-studentId="@studentId">Skills</a>
-        <a class="student-jump-btn" asp-action="StudentLessons" asp-route-studentId="@studentId">Aulas</a>
-    </nav>
-
-    <section class="student-form-panel">
-        <div class="student-panel-head">
-            <div><span class="student-section-kicker">Regras de evolução</span><h2>Skills do aluno</h2></div>
-            <a class="student-inline-link" asp-action="Skills">Editar base de skills</a>
+    <div class="module-header">
+        <div>
+            <a class="student-back-link" asp-action="StudentDetail" asp-route-studentId="@studentId">Resumo de @student.DisplayName</a>
+            <h1>Skills por nivel</h1>
+            <p>Requisitos definidos pelo professor para evolucao do aluno.</p>
         </div>
+        <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar skill</button>
+    </div>
+
+    @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }
+    @if (TempData["Success"] is string success) { <div class="auth-success">@success</div> }
+
+    <section class="skills-board">
         @foreach (var level in Enumerable.Range(1, 5))
         {
-            var items = Model.Skills.Where(s => s.RequiredLevel == level).ToArray();
-            <section class="skill-level-group">
-                <strong>Nível @level</strong>
-                @if (!items.Any())
-                {
-                    <p class="student-empty-inline">Nenhuma skill definida para este nível.</p>
-                }
-                @foreach (var skill in items)
-                {
-                    var label = skill.SkillType switch
+            var items = Model.Skills.Where(s => s.RequiredLevel == level).OrderBy(s => s.SkillType).ThenBy(s => s.Name).ToArray();
+            var completed = items.Count(s => s.Mastered);
+            var pct = items.Length == 0 ? 0 : (int)Math.Round(completed * 100d / items.Length);
+            <article class="skill-level-card @(student.CurrentLevel == level ? "current" : student.CurrentLevel > level ? "owned" : "locked")">
+                <header>
+                    <div>
+                        <span class="student-section-kicker">Nivel @level</span>
+                        <h2>@LevelName(level)</h2>
+                    </div>
+                    <strong>@completed/@items.Length</strong>
+                </header>
+                <div class="student-mini-bar"><i style="width:@pct%"></i></div>
+                <div class="skill-card-list">
+                    @foreach (var skill in items)
                     {
-                        SkillType.PromotionRequired => "Obrigatória para subir",
-                        SkillType.MissionReward => "Recompensa lendária",
-                        _ => "Opcional"
-                    };
-                    <form asp-action="ToggleSkillMastery" asp-route-studentId="@studentId" asp-route-skillId="@skill.Id" method="post">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" disabled="@skill.InferredFromCurrentLevel" class="skill-toggle @(skill.Mastered ? "mastered" : "")">
-                            <span>@(skill.Mastered ? "OK" : "")</span>
-                            <em>@skill.Name</em>
-                            <small>@label · @(skill.InferredFromCurrentLevel ? "pelo nível" : skill.Mastered ? "conquistada" : "pendente")</small>
+                        var label = skill.SkillType == SkillType.PromotionRequired ? "obrigatoria" : skill.SkillType == SkillType.MissionReward ? "recompensa" : "opcional";
+                        var status = skill.InferredFromCurrentLevel ? "pelo nivel" : skill.Mastered ? "concluida" : "pendente";
+                        <button type="button"
+                                class="skill-compact @(skill.Mastered ? "mastered" : "") @(skill.SkillType == SkillType.PromotionRequired ? "required" : "")"
+                                data-open-edit
+                                data-id="@skill.Id"
+                                data-name="@skill.Name"
+                                data-description="@skill.Description"
+                                data-level="@skill.RequiredLevel"
+                                data-type="@skill.SkillType"
+                                data-icon="@skill.IconName"
+                                data-achievement="@skill.AchievementText"
+                                data-criteria="@skill.ConquestCriteria"
+                                data-mastered="@skill.Mastered.ToString().ToLowerInvariant()"
+                                data-inferred="@skill.InferredFromCurrentLevel.ToString().ToLowerInvariant()"
+                                data-status="@status"
+                                data-label="@label">
+                            <span class="skill-dot">@(skill.Mastered ? "OK" : skill.SkillType == SkillType.PromotionRequired ? "!" : "")</span>
+                            <span>
+                                <strong>@skill.Name</strong>
+                                <small>@label · @status</small>
+                            </span>
                         </button>
-                    </form>
-                    @if (!string.IsNullOrWhiteSpace(skill.Description)) { <p class="student-help-text">@skill.Description</p> }
-                }
-            </section>
+                    }
+                    @if (!items.Any())
+                    {
+                        <p class="student-empty-inline">Nenhuma skill definida para este nivel.</p>
+                    }
+                </div>
+            </article>
         }
     </section>
 </section>
+
+<div class="student-action-modal" data-create-panel hidden>
+    <div class="student-action-modal-backdrop" data-close-modal></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Criar skill">
+        <div class="student-panel-head">
+            <div><span class="student-section-kicker">Nova skill</span><h2>Requisito por nivel</h2></div>
+            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+        </div>
+        <form asp-action="CreateStudentSkill" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
+            @Html.AntiForgeryToken()
+            <div>
+                <label>Nome</label>
+                <input name="Name" required maxlength="200" />
+            </div>
+            <div class="form-grid-compact two">
+                <div>
+                    <label>Nivel</label>
+                    <select name="RequiredLevel">
+                        @foreach (var level in Enumerable.Range(1, 5)) { <option value="@level">Nivel @level</option> }
+                    </select>
+                </div>
+                <div>
+                    <label>Tipo</label>
+                    <select name="SkillType">
+                        <option value="ProfessorSpecial">Opcional</option>
+                        <option value="PromotionRequired">Obrigatoria para subir</option>
+                        <option value="MissionReward">Recompensa de missao</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label>Descricao</label>
+                <textarea name="Description" maxlength="1000"></textarea>
+            </div>
+            <div>
+                <label>Criterio</label>
+                <input name="ConquestCriteria" maxlength="500" />
+            </div>
+            <button type="submit">Criar skill</button>
+        </form>
+    </section>
+</div>
+
+<div class="student-action-modal" data-edit-panel hidden>
+    <div class="student-action-modal-backdrop" data-close-modal></div>
+    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Detalhes da skill">
+        <div class="student-panel-head">
+            <div><span class="student-section-kicker">Skill</span><h2 data-skill-heading>Detalhe</h2></div>
+            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+        </div>
+        <div class="skill-detail-summary">
+            <span data-skill-label></span>
+            <strong data-skill-status></strong>
+            <p data-skill-description></p>
+            <p><b>Impacto:</b> <span data-skill-impact></span></p>
+        </div>
+        <form method="post" class="auth-form compact-form" data-edit-form>
+            @Html.AntiForgeryToken()
+            <input name="SkillId" type="hidden" data-edit-id />
+            <div>
+                <label>Nome</label>
+                <input name="Name" data-edit-name required maxlength="200" />
+            </div>
+            <div class="form-grid-compact two">
+                <div>
+                    <label>Nivel</label>
+                    <select name="RequiredLevel" data-edit-level>
+                        @foreach (var level in Enumerable.Range(1, 5)) { <option value="@level">Nivel @level</option> }
+                    </select>
+                </div>
+                <div>
+                    <label>Tipo</label>
+                    <select name="SkillType" data-edit-type>
+                        <option value="ProfessorSpecial">Opcional</option>
+                        <option value="PromotionRequired">Obrigatoria para subir</option>
+                        <option value="MissionReward">Recompensa de missao</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label>Descricao</label>
+                <textarea name="Description" data-edit-description maxlength="1000"></textarea>
+            </div>
+            <div>
+                <label>Criterio</label>
+                <input name="ConquestCriteria" data-edit-criteria maxlength="500" />
+            </div>
+            <input name="IconName" data-edit-icon type="hidden" />
+            <input name="AchievementText" data-edit-achievement type="hidden" />
+            <button type="submit">Salvar skill</button>
+        </form>
+        <form method="post" data-toggle-form class="student-toggle-mastery-form">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-ghost btn-full" data-toggle-button>Alternar conquista deste aluno</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function(){
+        var studentId = '@studentId';
+        var createPanel = document.querySelector('[data-create-panel]');
+        var editPanel = document.querySelector('[data-edit-panel]');
+        function open(panel){ panel.hidden = false; document.body.classList.add('modal-open'); }
+        function close(){ document.querySelectorAll('.student-action-modal').forEach(function(p){ p.hidden = true; }); document.body.classList.remove('modal-open'); }
+        document.querySelector('[data-open-create]')?.addEventListener('click', function(){ open(createPanel); });
+        document.querySelectorAll('[data-close-modal]').forEach(function(btn){ btn.addEventListener('click', close); });
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+        document.querySelectorAll('[data-open-edit]').forEach(function(row){
+            row.addEventListener('click', function(){
+                var id = row.dataset.id;
+                var editForm = document.querySelector('[data-edit-form]');
+                var toggleForm = document.querySelector('[data-toggle-form]');
+                editForm.action = '/Teacher/Students/' + studentId + '/Skills/' + id;
+                toggleForm.action = '/Teacher/Students/' + studentId + '/Skills/' + id + '/Toggle';
+                document.querySelector('[data-edit-id]').value = id;
+                document.querySelector('[data-edit-name]').value = row.dataset.name || '';
+                document.querySelector('[data-edit-description]').value = row.dataset.description || '';
+                document.querySelector('[data-edit-level]').value = row.dataset.level || '1';
+                document.querySelector('[data-edit-type]').value = row.dataset.type || 'ProfessorSpecial';
+                document.querySelector('[data-edit-icon]').value = row.dataset.icon || '';
+                document.querySelector('[data-edit-achievement]').value = row.dataset.achievement || '';
+                document.querySelector('[data-edit-criteria]').value = row.dataset.criteria || '';
+                document.querySelector('[data-skill-heading]').textContent = row.dataset.name || 'Skill';
+                document.querySelector('[data-skill-label]').textContent = row.dataset.label || '';
+                document.querySelector('[data-skill-status]').textContent = row.dataset.status || '';
+                document.querySelector('[data-skill-description]').textContent = row.dataset.description || 'Sem descricao detalhada.';
+                document.querySelector('[data-skill-impact]').textContent = row.dataset.type === 'PromotionRequired'
+                    ? 'Bloqueia a promocao ate ser concluida.'
+                    : row.dataset.type === 'MissionReward'
+                        ? 'Pode ser liberada por missao Epica ou Lendaria.'
+                        : 'Ajuda a organizar o progresso pedagogico.';
+                var toggleButton = document.querySelector('[data-toggle-button]');
+                toggleButton.disabled = row.dataset.inferred === 'true';
+                toggleButton.textContent = row.dataset.mastered === 'true' ? 'Marcar como pendente' : 'Marcar como concluida';
+                if (row.dataset.inferred === 'true') toggleButton.textContent = 'Conquista inferida pelo nivel';
+                open(editPanel);
+            });
+        });
+    }());
+    </script>
+}
+
+@functions {
+    private static string LevelName(int level) => level switch
+    {
+        1 => "Iniciante",
+        2 => "Aprendiz",
+        3 => "Intermediario",
+        4 => "Avancado",
+        5 => "Lendario",
+        _ => $"Nivel {level}"
+    };
+}

@@ -101,6 +101,59 @@ public sealed class AssignmentService
         return await QueryAssignments(schoolId, studentProfileId, null).ToArrayAsync(cancellationToken);
     }
 
+    public async Task<AssignmentSummary> UpdateAssignmentAsync(
+        AuthenticatedUserProfile profile,
+        UpdateAssignmentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            request.StudentProfileId,
+            cancellationToken);
+
+        if (request.SkillRewardId.HasValue
+            && request.Rarity is not (AssignmentRarity.Epica or AssignmentRarity.Lendaria))
+        {
+            throw new InvalidOperationException(
+                "Recompensa de habilidade so pode ser vinculada a missoes Epicas ou Lendarias.");
+        }
+
+        if (request.SkillRewardId.HasValue)
+        {
+            var skillExists = await _dbContext.Skills.AnyAsync(
+                skill => skill.Id == request.SkillRewardId.Value
+                    && skill.SchoolId == schoolId
+                    && skill.TeacherProfileId == teacherProfileId
+                    && skill.IsActive,
+                cancellationToken);
+            if (!skillExists)
+                throw new KeyNotFoundException("Habilidade selecionada nao encontrada.");
+        }
+
+        var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(
+            item => item.Id == request.AssignmentId
+                && item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == request.StudentProfileId,
+            cancellationToken)
+            ?? throw new KeyNotFoundException("Assignment was not found.");
+
+        var now = DateTime.UtcNow;
+        assignment.UpdateDetails(
+            request.Title,
+            string.IsNullOrWhiteSpace(request.Description) ? request.Title : request.Description,
+            request.DueAtUtc,
+            request.XpReward,
+            now);
+        assignment.UpdateRewardMetadata(request.Rarity, request.SkillRewardId, now);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToSummary(assignment);
+    }
+
     public async Task StartAssignmentAsync(
         AuthenticatedUserProfile profile,
         Guid assignmentId,
@@ -204,7 +257,8 @@ public sealed class AssignmentService
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
-                assignment.Rarity));
+                assignment.Rarity,
+                assignment.SkillRewardId));
     }
 
     private static AssignmentSummary ToSummary(Assignment assignment)
@@ -218,6 +272,7 @@ public sealed class AssignmentService
             assignment.CompletedAtUtc,
             assignment.XpReward,
             assignment.XpGranted,
-            assignment.Rarity);
+            assignment.Rarity,
+            assignment.SkillRewardId);
     }
 }

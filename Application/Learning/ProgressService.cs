@@ -62,7 +62,8 @@ public sealed class ProgressService
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
-                assignment.Rarity))
+                assignment.Rarity,
+                assignment.SkillRewardId))
             .ToArrayAsync(cancellationToken);
 
         var completed = await _dbContext.Assignments
@@ -81,7 +82,8 @@ public sealed class ProgressService
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
-                assignment.Rarity))
+                assignment.Rarity,
+                assignment.SkillRewardId))
             .ToArrayAsync(cancellationToken);
 
         var repertoire = await _dbContext.RepertoireItems
@@ -101,7 +103,8 @@ public sealed class ProgressService
                 item.AudioOriginalFileName,
                 item.AudioContentType,
                 item.AudioSizeBytes,
-                item.AudioStoredFileName != null))
+                item.AudioStoredFileName != null,
+                item.CreatedAtUtc))
             .ToArrayAsync(cancellationToken);
 
         var feedback = await _dbContext.FeedbackEntries

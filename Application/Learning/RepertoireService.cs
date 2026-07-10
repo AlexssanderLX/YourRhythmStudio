@@ -95,6 +95,58 @@ public sealed class RepertoireService
         return await QueryRepertoire(schoolId, studentProfileId, null).ToArrayAsync(cancellationToken);
     }
 
+    public async Task<RepertoireSummary> UpdateRepertoireAsync(
+        AuthenticatedUserProfile profile,
+        UpdateRepertoireRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            request.StudentProfileId,
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(request.ReferenceUrl) && request.Audio is null)
+        {
+            var hasExistingAudio = await _dbContext.RepertoireItems.AnyAsync(
+                item => item.Id == request.RepertoireItemId
+                    && item.SchoolId == schoolId
+                    && item.TeacherProfileId == teacherProfileId
+                    && item.StudentProfileId == request.StudentProfileId
+                    && item.AudioStoredFileName != null,
+                cancellationToken);
+            if (!hasExistingAudio)
+                throw new ArgumentException("Informe um link, um arquivo de audio ou os dois.");
+        }
+
+        var item = await _dbContext.RepertoireItems.FirstOrDefaultAsync(
+            entry => entry.Id == request.RepertoireItemId
+                && entry.SchoolId == schoolId
+                && entry.TeacherProfileId == teacherProfileId
+                && entry.StudentProfileId == request.StudentProfileId,
+            cancellationToken)
+            ?? throw new KeyNotFoundException("Repertoire item was not found.");
+
+        var now = DateTime.UtcNow;
+        item.UpdateDetails(request.Title, request.Notes, NormalizeReferenceUrl(request.ReferenceUrl), now);
+
+        if (request.Audio is not null)
+        {
+            var savedAudio = await SaveAudioAsync(request.Audio, cancellationToken);
+            item.AttachAudio(
+                savedAudio.StoredFileName,
+                savedAudio.OriginalFileName,
+                savedAudio.ContentType,
+                savedAudio.SizeBytes,
+                now);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToSummary(item);
+    }
+
     public async Task<RepertoireSummary?> GetByIdForCurrentStudentAsync(
         AuthenticatedUserProfile profile,
         Guid id,
@@ -249,7 +301,8 @@ public sealed class RepertoireService
                 item.AudioOriginalFileName,
                 item.AudioContentType,
                 item.AudioSizeBytes,
-                item.AudioStoredFileName != null));
+                item.AudioStoredFileName != null,
+                item.CreatedAtUtc));
     }
 
     private static RepertoireSummary ToSummary(RepertoireItem item)
@@ -264,7 +317,8 @@ public sealed class RepertoireService
             item.AudioOriginalFileName,
             item.AudioContentType,
             item.AudioSizeBytes,
-            item.AudioStoredFileName != null);
+            item.AudioStoredFileName != null,
+            item.CreatedAtUtc);
     }
 
     private async Task<SavedAudio> SaveAudioAsync(RepertoireAudioUpload upload, CancellationToken cancellationToken)

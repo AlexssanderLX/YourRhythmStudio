@@ -125,6 +125,7 @@ public sealed class LessonService
                 user.Email,
                 profileRow.Instrument,
                 profileRow.Level,
+                profileRow.Notes,
                 profileRow.CurrentXp,
                 profileRow.CurrentLevel,
                 0,
@@ -132,6 +133,32 @@ public sealed class LessonService
             .FirstAsync(cancellationToken);
 
         return new LessonDetailSummary(lesson, student);
+    }
+
+    public async Task<LessonSummary> UpdateLessonAsync(
+        AuthenticatedUserProfile profile,
+        UpdateLessonRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            request.StudentProfileId,
+            cancellationToken);
+
+        var lesson = await _dbContext.Lessons.FirstOrDefaultAsync(
+            item => item.Id == request.LessonId
+                && item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == request.StudentProfileId,
+            cancellationToken)
+            ?? throw new KeyNotFoundException("Lesson was not found.");
+
+        lesson.UpdateDetails(request.Title, request.LessonDateUtc, request.Notes, DateTime.UtcNow);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToSummary(lesson);
     }
 
     public async Task CompleteLessonAsync(

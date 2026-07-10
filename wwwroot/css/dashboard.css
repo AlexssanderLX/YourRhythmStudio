@@ -81,6 +81,31 @@
     border-radius: 12px;
 }
 
+.student-modal-link {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 86px;
+    padding: 14px;
+    color: var(--ink);
+    text-align: left;
+    background: rgba(255,255,255,.035);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.student-modal-link:hover {
+    border-color: var(--blue-bright);
+}
+
+.student-modal-link span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 .student-modal-grid a:hover {
     border-color: var(--blue-bright);
 }
@@ -334,6 +359,11 @@
     background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.25);
     color: #ffb0b0; font-size: 13.5px;
 }
+.auth-success {
+    padding: 12px 16px; border-radius: 12px;
+    background: rgba(34,208,122,0.08); border: 1px solid rgba(34,208,122,0.25);
+    color: #a9f3c8; font-size: 13.5px;
+}
 .auth-check { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--muted); }
 .auth-check input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--blue-bright); flex-shrink: 0; }
 .field-error { font-size: 12px; color: #ffb0b0; margin-top: -8px; }
@@ -583,6 +613,16 @@
         linear-gradient(180deg, rgba(16,22,40,.82), rgba(9,12,22,.92));
 }
 
+.student-command-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.student-profile-card-command {
+    border-radius: 22px;
+}
+
 .student-avatar-lg {
     width: 52px;
     height: 52px;
@@ -734,6 +774,26 @@
     background: rgba(34,208,122,.055);
 }
 
+.student-copy-feedback {
+    margin: 0;
+    color: #a9f3c8;
+    font-size: 12px;
+}
+
+.qr-modal-card {
+    max-width: 430px;
+}
+
+.student-qr-code {
+    display: block;
+    width: min(260px, 74vw);
+    aspect-ratio: 1;
+    margin: 8px auto 18px;
+    padding: 14px;
+    border-radius: 18px;
+    background: #fff;
+}
+
 .student-access-panel strong {
     display: block;
     margin-top: 3px;
@@ -858,6 +918,10 @@
     gap: 10px;
 }
 
+.form-grid-compact.two {
+    grid-template-columns: 1fr;
+}
+
 .student-help-text {
     margin: -4px 0 14px;
     color: var(--muted);
@@ -887,6 +951,12 @@
     border-radius: 15px;
     border: 1px solid var(--border-soft);
     background: rgba(255,255,255,.035);
+    color: inherit;
+    text-decoration: none;
+}
+
+.student-list-item:hover {
+    border-color: rgba(107,192,255,.35);
 }
 
 .student-list-item div {
@@ -1007,6 +1077,247 @@
     opacity: .86;
 }
 
+.module-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.module-header h1 {
+    margin: 6px 0 4px;
+    font-family: var(--font-display);
+    font-size: clamp(26px, 8vw, 42px);
+    line-height: 1;
+    overflow-wrap: anywhere;
+}
+
+.module-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.module-list-panel {
+    padding: 14px;
+}
+
+.module-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.module-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px;
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,255,255,.035);
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.module-row:hover,
+.module-row:focus-visible {
+    border-color: rgba(107,192,255,.42);
+    outline: none;
+}
+
+.module-row-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.module-row-main strong {
+    font-size: 14px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.module-row-main small {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.module-row-meta {
+    flex-shrink: 0;
+    color: var(--blue-bright);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.module-empty {
+    padding: 28px 16px;
+    border-radius: 16px;
+    border: 1px dashed var(--border-soft);
+    background: rgba(255,255,255,.025);
+    text-align: center;
+}
+
+.module-empty strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.module-empty p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.skills-board {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.skill-level-card {
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, rgba(16,22,40,.7), rgba(9,12,22,.84));
+}
+
+.skill-level-card.current {
+    border-color: rgba(167,82,255,.5);
+    box-shadow: 0 18px 60px -42px rgba(167,82,255,.7);
+}
+
+.skill-level-card.owned {
+    border-color: rgba(34,208,122,.26);
+}
+
+.skill-level-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.skill-level-card h2 {
+    margin: 3px 0 0;
+    font-family: var(--font-display);
+    font-size: 18px;
+}
+
+.skill-level-card header strong {
+    color: var(--blue-bright);
+    font-family: var(--font-display);
+}
+
+.skill-card-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.skill-compact {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 30px minmax(0,1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 11px;
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,255,255,.032);
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.skill-compact.required {
+    border-color: rgba(245,166,35,.32);
+}
+
+.skill-compact.mastered {
+    border-color: rgba(34,208,122,.32);
+    background: rgba(34,208,122,.06);
+}
+
+.skill-dot {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--blue-bright);
+    background: rgba(46,155,255,.12);
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.skill-compact.mastered .skill-dot {
+    color: #a9f3c8;
+    background: rgba(34,208,122,.18);
+}
+
+.skill-compact strong,
+.skill-compact small {
+    display: block;
+    min-width: 0;
+}
+
+.skill-compact strong {
+    font-size: 13.5px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.skill-compact small {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+.skill-detail-summary {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 13px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.035);
+    border: 1px solid var(--border-soft);
+}
+
+.skill-detail-summary span {
+    color: var(--blue-bright);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.skill-detail-summary strong {
+    font-size: 17px;
+}
+
+.skill-detail-summary p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.student-toggle-mastery-form {
+    margin-top: 12px;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
 @media (min-width: 680px) {
     .student-profile-card {
         grid-template-columns: 64px minmax(0, 1fr) auto;
@@ -1032,6 +1343,14 @@
     .form-grid-compact {
         grid-template-columns: 1.2fr .8fr .7fr;
     }
+
+    .form-grid-compact.two {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .skills-board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (min-width: 980px) {
@@ -1048,9 +1367,40 @@
     .student-side-panel > section {
         padding: 20px;
     }
+
+    .student-hub-page .student-workspace {
+        grid-template-columns: minmax(360px, .82fr) minmax(360px, 1.18fr);
+    }
+
+    .module-list-panel {
+        padding: 20px;
+    }
+
+    .skills-board {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        align-items: start;
+    }
 }
 
 @media (max-width: 560px) {
+    .module-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .module-header .btn {
+        width: 100%;
+    }
+
+    .module-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .module-row-meta {
+        align-self: flex-start;
+    }
+
     .student-detail-topline {
         align-items: stretch;
     }

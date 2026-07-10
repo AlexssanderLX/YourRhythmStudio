@@ -80,7 +80,8 @@ public sealed class TeacherStudentService
                 item.AudioOriginalFileName,
                 item.AudioContentType,
                 item.AudioSizeBytes,
-                item.AudioStoredFileName != null))
+                item.AudioStoredFileName != null,
+                item.CreatedAtUtc))
             .ToArrayAsync(cancellationToken);
 
         var assignments = await _dbContext.Assignments
@@ -99,7 +100,8 @@ public sealed class TeacherStudentService
                 assignment.CompletedAtUtc,
                 assignment.XpReward,
                 assignment.XpGranted,
-                assignment.Rarity))
+                assignment.Rarity,
+                assignment.SkillRewardId))
             .ToArrayAsync(cancellationToken);
 
         var feedback = await _dbContext.FeedbackEntries
@@ -113,6 +115,44 @@ public sealed class TeacherStudentService
             .ToArrayAsync(cancellationToken);
 
         return new StudentDetailSummary(student, lessons, repertoire, assignments, feedback);
+    }
+
+    public async Task<TeacherStudentSummary> UpdateStudentAsync(
+        AuthenticatedUserProfile profile,
+        UpdateTeacherStudentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            request.StudentProfileId,
+            cancellationToken);
+
+        var studentProfile = await _dbContext.StudentProfiles
+            .FirstOrDefaultAsync(
+                student => student.SchoolId == schoolId && student.Id == request.StudentProfileId,
+                cancellationToken)
+            ?? throw new KeyNotFoundException("Student profile was not found.");
+
+        var schoolUser = await _dbContext.SchoolUsers
+            .FirstOrDefaultAsync(
+                user => user.SchoolId == schoolId && user.Id == studentProfile.SchoolUserId,
+                cancellationToken)
+            ?? throw new KeyNotFoundException("School user was not found.");
+
+        schoolUser.DisplayName = RequireText(request.DisplayName, nameof(request.DisplayName));
+        studentProfile.Instrument = OptionalText(request.Instrument) ?? string.Empty;
+        studentProfile.Level = OptionalText(request.Level) ?? string.Empty;
+        studentProfile.Notes = OptionalText(request.Notes) ?? string.Empty;
+        studentProfile.CurrentLevel = ParseInitialLevel(request.Level);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var rows = await QueryBaseStudents(schoolId, teacherProfileId, cancellationToken);
+        var all = await EnrichWithRepertoireAsync(rows, schoolId, cancellationToken);
+        return all.First(item => item.StudentProfileId == request.StudentProfileId);
     }
 
     public async Task<TeacherStudentSummary> CreateStudentAsync(
@@ -271,6 +311,7 @@ public sealed class TeacherStudentService
         string Email,
         string Instrument,
         string Level,
+        string Notes,
         int CurrentXp,
         int CurrentLevel);
 
@@ -292,6 +333,7 @@ public sealed class TeacherStudentService
                 user.Email,
                 student.Instrument,
                 student.Level,
+                student.Notes,
                 student.CurrentXp,
                 student.CurrentLevel))
             .ToListAsync(ct);
@@ -329,6 +371,7 @@ public sealed class TeacherStudentService
                 row.Email,
                 row.Instrument,
                 row.Level,
+                row.Notes,
                 row.CurrentXp,
                 row.CurrentLevel,
                 rep?.Progress ?? 0,

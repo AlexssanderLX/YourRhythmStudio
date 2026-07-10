@@ -9,6 +9,7 @@ public sealed record TeacherStudentSummary(
     string Email,
     string Instrument,
     string Level,
+    string Notes,
     int CurrentXp,
     int CurrentLevel,
     int RepertoireProgressPercent,
@@ -44,7 +45,8 @@ public sealed record RepertoireSummary(
     string? AudioOriginalFileName,
     string? AudioContentType,
     long? AudioSizeBytes,
-    bool HasAudio);
+    bool HasAudio,
+    DateTime CreatedAtUtc);
 
 public sealed record AssignmentSummary(
     Guid Id,
@@ -55,7 +57,8 @@ public sealed record AssignmentSummary(
     DateTime? CompletedAtUtc,
     int XpReward,
     bool XpGranted,
-    AssignmentRarity Rarity);
+    AssignmentRarity Rarity,
+    Guid? SkillRewardId);
 
 public sealed record FeedbackSummary(
     Guid Id,
@@ -106,14 +109,36 @@ public sealed record CreateTeacherStudentRequest(
     string Level,
     string Notes);
 
+public sealed record UpdateTeacherStudentRequest(
+    Guid StudentProfileId,
+    string DisplayName,
+    string Instrument,
+    string Level,
+    string Notes);
+
 public sealed record CreateLessonRequest(
     Guid StudentProfileId,
     string Title,
     DateTime LessonDateUtc,
     string? Notes);
 
+public sealed record UpdateLessonRequest(
+    Guid StudentProfileId,
+    Guid LessonId,
+    string Title,
+    DateTime LessonDateUtc,
+    string? Notes);
+
 public sealed record AddRepertoireRequest(
     Guid StudentProfileId,
+    string Title,
+    string? Notes,
+    string? ReferenceUrl,
+    RepertoireAudioUpload? Audio);
+
+public sealed record UpdateRepertoireRequest(
+    Guid StudentProfileId,
+    Guid RepertoireItemId,
     string Title,
     string? Notes,
     string? ReferenceUrl,
@@ -143,8 +168,24 @@ public sealed record CreateAssignmentRequest(
     AssignmentRarity Rarity = AssignmentRarity.Comum,
     Guid? SkillRewardId = null);
 
+public sealed record UpdateAssignmentRequest(
+    Guid StudentProfileId,
+    Guid AssignmentId,
+    string Title,
+    string Description,
+    DateTime? DueAtUtc,
+    int XpReward,
+    AssignmentRarity Rarity = AssignmentRarity.Comum,
+    Guid? SkillRewardId = null);
+
 public sealed record CreateFeedbackRequest(
     Guid StudentProfileId,
+    string Message,
+    bool VisibleToStudent);
+
+public sealed record UpdateFeedbackRequest(
+    Guid StudentProfileId,
+    Guid FeedbackId,
     string Message,
     bool VisibleToStudent);
 
@@ -169,6 +210,7 @@ public sealed record SkillWithMastery(
     SkillType SkillType,
     string? IconName,
     string? AchievementText,
+    string? ConquestCriteria,
     bool Mastered,
     DateTime? MasteredAtUtc,
     bool InferredFromCurrentLevel);
@@ -204,6 +246,16 @@ public sealed record LevelUpEventDto(
     DateTime CreatedAtUtc);
 
 public sealed record CreateSkillRequest(
+    string Name,
+    string? Description,
+    int RequiredLevel,
+    SkillType SkillType,
+    string? IconName,
+    string? AchievementText,
+    string? ConquestCriteria);
+
+public sealed record UpdateSkillRequest(
+    Guid SkillId,
     string Name,
     string? Description,
     int RequiredLevel,
