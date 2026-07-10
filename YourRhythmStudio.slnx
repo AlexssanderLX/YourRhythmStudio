@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/YourRhythmStudio.Tests.csproj" />
+  </Folder>
   <Project Path="Foundation/src/Foundation.Access/Foundation.Access.csproj" />
   <Project Path="Foundation/src/Foundation.Assistant/Foundation.Assistant.csproj" />
   <Project Path="Foundation/src/Foundation.Core/Foundation.Core.csproj" />
