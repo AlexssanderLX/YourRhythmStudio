@@ -2,13 +2,16 @@ namespace YourRhythmStudio.Application.Learning;
 
 public static class LearningLevelCalculator
 {
+    // Single source of truth for XP ranges.
+    // MaxXp is the inclusive cap of each level (promotion eligible at xp >= MaxXp).
+    // MinXp is the first XP that belongs to that level (used for progress-bar range display).
     public static readonly IReadOnlyList<LevelDefinition> Levels =
     [
-        new(1, "Iniciante", 0, 500),
-        new(2, "Aprendiz", 500, 2_500),
-        new(3, "Intermediário", 2_500, 7_500),
-        new(4, "Avançado", 7_500, 15_000),
-        new(5, "Lendário", 15_000, 25_000),
+        new(1, "Iniciante",     0,      500),
+        new(2, "Aprendiz",      501,    2_500),
+        new(3, "Intermediário", 2_501,  7_500),
+        new(4, "Avançado",      7_501,  15_000),
+        new(5, "Lendário",      15_001, 25_000),
     ];
 
     /// <summary>

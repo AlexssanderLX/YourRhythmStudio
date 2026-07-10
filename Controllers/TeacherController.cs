@@ -807,15 +807,8 @@ public sealed class TeacherController : Controller
         return $"Aula de {local:dd/MM/yyyy} as {local:HH:mm}";
     }
 
-    private static int DefaultXpFor(AssignmentRarity rarity) => rarity switch
-    {
-        AssignmentRarity.Comum => 100,
-        AssignmentRarity.Rara => 400,
-        AssignmentRarity.MuitoRara => 1500,
-        AssignmentRarity.Epica => 5000,
-        AssignmentRarity.Lendaria => 25000,
-        _ => 100
-    };
+    private static int DefaultXpFor(AssignmentRarity rarity)
+        => LearningLevelCalculator.DefaultXpForRarity(rarity);
 
     private CreateLessonViewModel ReadLessonForm(CreateLessonViewModel current)
     {
