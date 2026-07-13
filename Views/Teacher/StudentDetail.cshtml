@@ -37,7 +37,16 @@
 
     <section class="student-command-card">
         <div class="student-profile-card student-profile-card-command">
-            <div class="student-avatar-lg">@Initials(student.DisplayName)</div>
+            <div class="student-avatar-lg">
+                @if (!string.IsNullOrWhiteSpace(student.ProfilePhotoUrl))
+                {
+                    <img src="@student.ProfilePhotoUrl" alt="Foto de perfil de @student.DisplayName" />
+                }
+                else
+                {
+                    @Initials(student.DisplayName)
+                }
+            </div>
             <div class="student-profile-main">
                 <span class="student-kicker">Aluno YourRhythm</span>
                 <h1>@student.DisplayName</h1>

@@ -23,7 +23,16 @@
         @foreach (var student in Model.Students)
         {
             <a asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId" class="sl-row">
-                <div class="pavatar">@Initials(student.DisplayName)</div>
+                <div class="pavatar">
+                    @if (!string.IsNullOrWhiteSpace(student.ProfilePhotoUrl))
+                    {
+                        <img src="@student.ProfilePhotoUrl" alt="Foto de perfil de @student.DisplayName" />
+                    }
+                    else
+                    {
+                        @Initials(student.DisplayName)
+                    }
+                </div>
                 <div class="sl-info">
                     <span class="sl-name">@student.DisplayName</span>
                     <span class="sl-sub">@student.Instrument · @(student.CurrentRepertoireTitle ?? "Sem repertório")</span>

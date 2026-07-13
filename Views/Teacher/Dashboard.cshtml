@@ -63,7 +63,16 @@
             {
                 var repProgress = Math.Clamp(student.RepertoireProgressPercent, 0, 100);
                 <a class="teacher-student-card" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId">
-                    <div class="pavatar">@Initials(student.DisplayName)</div>
+                    <div class="pavatar">
+                        @if (!string.IsNullOrWhiteSpace(student.ProfilePhotoUrl))
+                        {
+                            <img src="@student.ProfilePhotoUrl" alt="Foto de perfil de @student.DisplayName" />
+                        }
+                        else
+                        {
+                            @Initials(student.DisplayName)
+                        }
+                    </div>
                     <div class="teacher-student-info">
                         <div class="teacher-student-top">
                             <strong>@student.DisplayName</strong>

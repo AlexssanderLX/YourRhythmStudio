@@ -372,7 +372,8 @@ public sealed class TeacherStudentService
         string Level,
         string Notes,
         int CurrentXp,
-        int CurrentLevel);
+        int CurrentLevel,
+        string? ProfilePhotoPath);
 
     private async Task<List<BaseStudentRow>> QueryBaseStudents(
         Guid schoolId, Guid teacherProfileId, CancellationToken ct)
@@ -394,7 +395,8 @@ public sealed class TeacherStudentService
                 student.Level,
                 student.Notes,
                 student.CurrentXp,
-                student.CurrentLevel))
+                student.CurrentLevel,
+                user.ProfilePhotoPath))
             .ToListAsync(ct);
     }
 
@@ -434,7 +436,8 @@ public sealed class TeacherStudentService
                 row.CurrentXp,
                 row.CurrentLevel,
                 rep?.Progress ?? 0,
-                rep?.Title);
+                rep?.Title,
+                ToPublicPhotoUrl(row.ProfilePhotoPath));
         }).ToList();
     }
 
@@ -483,4 +486,7 @@ public sealed class TeacherStudentService
 
         return 1;
     }
+
+    private static string? ToPublicPhotoUrl(string? relativePath)
+        => string.IsNullOrWhiteSpace(relativePath) ? null : "/" + relativePath.Replace('\\', '/');
 }

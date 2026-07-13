@@ -129,6 +129,7 @@ public sealed class LessonService
                 profileRow.CurrentXp,
                 profileRow.CurrentLevel,
                 0,
+                null,
                 null))
             .FirstAsync(cancellationToken);
 

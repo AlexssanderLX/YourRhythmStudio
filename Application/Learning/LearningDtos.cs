@@ -13,7 +13,8 @@ public sealed record TeacherStudentSummary(
     int CurrentXp,
     int CurrentLevel,
     int RepertoireProgressPercent,
-    string? CurrentRepertoireTitle);
+    string? CurrentRepertoireTitle,
+    string? ProfilePhotoUrl);
 
 public sealed record StudentDetailSummary(
     TeacherStudentSummary Student,
