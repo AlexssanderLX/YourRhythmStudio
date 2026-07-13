@@ -1,0 +1,165 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to deploy
+        required: false
+        default: main
+      health_check_url:
+        description: URL used after restart to validate the app
+        required: false
+        default: https://yourrhythmstudio.com.br/
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+  REMOTE_ROOT: /var/www/yourrhythm
+  SERVICE_NAME: yourrhythm
+
+jobs:
+  deploy:
+    name: Publish and deploy to VPS
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ./YourRhythmStudio.slnx
+
+      - name: Build
+        run: dotnet build ./YourRhythmStudio.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test ./Tests/YourRhythmStudio.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish linux-x64
+        run: |
+          rm -rf ./artifacts/publish-yourrhythm
+          dotnet publish ./YourRhythmStudio.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained false \
+            --output ./artifacts/publish-yourrhythm
+
+      - name: Remove local-only files from publish output
+        run: |
+          rm -f ./artifacts/publish-yourrhythm/appsettings.Development.json
+          rm -f ./artifacts/publish-yourrhythm/appsettings.Local.json
+          rm -f ./artifacts/publish-yourrhythm/appsettings.Production.json
+          rm -rf ./artifacts/publish-yourrhythm/Tests
+          rm -rf ./artifacts/publish-yourrhythm/Foundation
+          rm -rf ./artifacts/publish-yourrhythm/artifacts
+          rm -rf ./artifacts/publish-yourrhythm/wwwroot/uploads
+          rm -rf ./artifacts/publish-yourrhythm/storage/uploads
+
+      - name: Create deployment archive
+        id: package
+        run: |
+          release_id="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          archive="yourrhythm-${release_id}.tar.gz"
+          tar -czf "$archive" -C ./artifacts/publish-yourrhythm .
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          test -n "$VPS_SSH_KEY"
+          test -n "$VPS_HOST"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/yourrhythm_deploy
+          chmod 600 ~/.ssh/yourrhythm_deploy
+          ssh-keyscan -p "${VPS_PORT:-22}" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload archive
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+        run: |
+          test -n "$VPS_USER"
+          scp -P "${VPS_PORT:-22}" -i ~/.ssh/yourrhythm_deploy "$ARCHIVE" "$VPS_USER@$VPS_HOST:/tmp/$ARCHIVE"
+
+      - name: Activate release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+          RELEASE_ID: ${{ steps.package.outputs.release_id }}
+          HEALTH_CHECK_URL: ${{ inputs.health_check_url }}
+        run: |
+          ssh -p "${VPS_PORT:-22}" -i ~/.ssh/yourrhythm_deploy "$VPS_USER@$VPS_HOST" \
+            "ARCHIVE='$ARCHIVE' RELEASE_ID='$RELEASE_ID' REMOTE_ROOT='$REMOTE_ROOT' SERVICE_NAME='$SERVICE_NAME' HEALTH_CHECK_URL='$HEALTH_CHECK_URL' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          release="$REMOTE_ROOT/releases/$RELEASE_ID"
+          archive_path="/tmp/$ARCHIVE"
+          previous="$(readlink -f "$REMOTE_ROOT/current" || true)"
+
+          sudo mkdir -p "$release"
+          sudo tar -xzf "$archive_path" -C "$release"
+
+          sudo mkdir -p "$REMOTE_ROOT/shared/uploads/wwwroot"
+          sudo mkdir -p "$REMOTE_ROOT/shared/uploads/storage"
+          sudo mkdir -p "$REMOTE_ROOT/shared/logs"
+          sudo mkdir -p "$REMOTE_ROOT/shared/backups"
+
+          if [ -d "$release/wwwroot" ]; then
+            sudo rm -rf "$release/wwwroot/uploads"
+            sudo ln -sfn "$REMOTE_ROOT/shared/uploads/wwwroot" "$release/wwwroot/uploads"
+          fi
+
+          sudo mkdir -p "$release/storage"
+          sudo rm -rf "$release/storage/uploads"
+          sudo ln -sfn "$REMOTE_ROOT/shared/uploads/storage" "$release/storage/uploads"
+
+          sudo chown -R yourrhythm:yourrhythm "$release"
+          sudo chown -R yourrhythm:yourrhythm "$REMOTE_ROOT/shared"
+
+          sudo ln -sfn "$release" "$REMOTE_ROOT/current"
+          sudo chown -h yourrhythm:yourrhythm "$REMOTE_ROOT/current"
+
+          sudo systemctl restart "$SERVICE_NAME"
+          sudo systemctl is-active --quiet "$SERVICE_NAME"
+
+          if [ -n "$HEALTH_CHECK_URL" ]; then
+            curl --fail --silent --show-error --location --max-time 30 "$HEALTH_CHECK_URL" >/dev/null
+          fi
+
+          sudo rm -f "$archive_path"
+          sudo find "$REMOTE_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+            | sort -rn \
+            | tail -n +8 \
+            | awk '{print $2}' \
+            | while read -r old_release; do
+                if [ -n "$old_release" ] && [ "$old_release" != "$previous" ] && [ "$old_release" != "$release" ]; then
+                  sudo rm -rf "$old_release"
+                fi
+              done
+
+          echo "Active release: $(readlink -f "$REMOTE_ROOT/current")"
+          REMOTE

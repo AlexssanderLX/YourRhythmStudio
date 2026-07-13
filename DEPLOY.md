@@ -64,6 +64,7 @@ SSH efetivo:
 ## Usuarios
 
 - `alexssander`: usuario administrativo com sudo.
+- `github-deploy`: usuario tecnico para GitHub Actions, com chave SSH propria e sudo restrito para publicar releases.
 - `yourrhythm`: usuario de servico sem login interativo.
 - `root`: preservado apenas para recuperacao por chave.
 
@@ -205,9 +206,11 @@ root:root
 
 Depois do primeiro login, alterar a senha em `/Root/Settings` e remover esse arquivo.
 
-## Publish
+## Publish local legado
 
-Comandos usados localmente:
+O fluxo preferencial agora e pelo GitHub Actions, documentado na secao `GitHub Actions`.
+
+Comandos usados localmente em deploys anteriores:
 
 ```bash
 dotnet restore
@@ -216,18 +219,141 @@ dotnet test -c Release --no-build
 dotnet publish ./YourRhythmStudio.csproj -c Release -r linux-x64 --self-contained false -o ./artifacts/publish-yourrhythm
 ```
 
-Antes do envio, foram removidos do publish:
+Antes do envio, eram removidos do publish:
 
 - `appsettings.Development.json`
 - pastas de teste/build copiadas acidentalmente
 - uploads locais
 
-Artefatos enviados:
+Artefatos enviados em deploy manual anterior:
 
 ```text
 /tmp/yourrhythm-2026-07-13-0836.tar.gz
 /tmp/yourrhythm-migrations-2026-07-13-0836.sql
 ```
+
+## GitHub Actions
+
+O repositorio possui dois workflows:
+
+```text
+.github/workflows/ci.yml
+.github/workflows/deploy-production.yml
+```
+
+### CI automatico
+
+Workflow:
+
+```text
+CI
+```
+
+Dispara em:
+
+- push para `main`;
+- pull request para `main`.
+
+Etapas:
+
+```bash
+dotnet restore ./YourRhythmStudio.slnx
+dotnet build ./YourRhythmStudio.slnx --configuration Release --no-restore
+dotnet test ./Tests/YourRhythmStudio.Tests.csproj --configuration Release --no-build
+```
+
+### Deploy manual de producao
+
+Workflow:
+
+```text
+Deploy production
+```
+
+Disparo:
+
+```text
+GitHub -> Actions -> Deploy production -> Run workflow
+```
+
+Inputs:
+
+- `ref`: branch, tag ou SHA que sera publicado. Padrao: `main`.
+- `health_check_url`: URL validada depois do restart. Padrao: `https://yourrhythmstudio.com.br/`.
+
+O workflow:
+
+1. faz checkout do `ref`;
+2. instala .NET `10.0.x`;
+3. executa restore, build e testes;
+4. publica `linux-x64` sem self-contained;
+5. remove arquivos locais/sensiveis do publish;
+6. empacota a release;
+7. envia o pacote para a VPS via SSH;
+8. extrai em `/var/www/yourrhythm/releases/<release_id>`;
+9. recria symlinks para uploads persistentes;
+10. troca `/var/www/yourrhythm/current`;
+11. reinicia `yourrhythm.service`;
+12. executa health check;
+13. mantem releases recentes para rollback.
+
+O deploy nao executa migrations automaticamente. Quando houver migration nova, aplicar de forma consciente antes ou depois da publicacao, conforme o risco da mudanca.
+
+### Secrets necessarios
+
+Configurar em:
+
+```text
+GitHub -> Settings -> Secrets and variables -> Actions -> Repository secrets
+```
+
+Secrets:
+
+```text
+VPS_HOST=140.82.26.53
+VPS_PORT=22
+VPS_USER=github-deploy
+VPS_SSH_KEY=<conteudo da chave privada SSH autorizada na VPS>
+```
+
+Nao commitar a chave privada. O valor de `VPS_SSH_KEY` deve ser colado apenas no cofre de secrets do GitHub.
+
+Chave privada gerada localmente para copiar para o secret:
+
+```powershell
+Get-Content $env:USERPROFILE\.ssh\yourrhythm_github_actions_deploy -Raw | Set-Clipboard
+```
+
+Depois de criar e testar o secret no GitHub, remova a copia local para que a VPS seja acessada por deploy somente via GitHub Actions:
+
+```powershell
+Remove-Item $env:USERPROFILE\.ssh\yourrhythm_github_actions_deploy*
+```
+
+O usuario `VPS_USER` precisa conseguir executar os comandos de deploy com `sudo` sem prompt interativo para:
+
+```bash
+mkdir
+tar
+chown
+ln
+systemctl restart yourrhythm
+systemctl is-active yourrhythm
+rm
+find
+```
+
+### Rollback via GitHub Actions
+
+Para voltar uma versao pelo GitHub:
+
+1. abra `Actions`;
+2. selecione `Deploy production`;
+3. clique em `Run workflow`;
+4. informe no campo `ref` o SHA/tag/branch da versao desejada;
+5. execute o workflow.
+
+Rollback manual pela VPS continua documentado na secao `Rollback`.
 
 ## Systemd
 
