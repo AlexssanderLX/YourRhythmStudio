@@ -739,7 +739,7 @@ public sealed class TeacherController : Controller
         };
 
         await PopulateMissionCreateLookups(profile, model, cancellationToken);
-        return View(model);
+        return View("MissionCreate", model);
     }
 
     [HttpPost("Missions/Create")]
@@ -760,7 +760,7 @@ public sealed class TeacherController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View(model);
+            return View("MissionCreate", model);
         }
 
         List<CreateMissionQuestionRequest> questions;
@@ -775,14 +775,14 @@ public sealed class TeacherController : Controller
         {
             ModelState.AddModelError(string.Empty, "Perguntas invalidas. Tente novamente.");
             await PopulateMissionCreateLookups(profile, model, cancellationToken);
-            return View(model);
+            return View("MissionCreate", model);
         }
 
         if (questions.Count == 0)
         {
             ModelState.AddModelError(string.Empty, "Adicione ao menos uma pergunta a missao.");
             await PopulateMissionCreateLookups(profile, model, cancellationToken);
-            return View(model);
+            return View("MissionCreate", model);
         }
 
         try
@@ -814,7 +814,7 @@ public sealed class TeacherController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateMissionCreateLookups(profile, model, cancellationToken);
-            return View(model);
+            return View("MissionCreate", model);
         }
     }
 
