@@ -7,4 +7,5 @@ public static class YourRhythmRoles
     public const string SchoolAdmin = "school-admin";
     public const string Teacher = "teacher";
     public const string Student = "student";
+    public const string RootAdmin = "root-admin";
 }

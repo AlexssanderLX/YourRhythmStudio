@@ -16,6 +16,10 @@ public sealed class School
 
     public bool IsActive { get; set; } = true;
 
+    public long StorageUsedBytes { get; set; }
+
+    public long StorageQuotaBytes { get; set; }
+
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;
 
     public List<SchoolUser> Users { get; } = [];

@@ -10,7 +10,7 @@ public class RegisterViewModel
 
     [Required(ErrorMessage = "Informe seu nome.")]
     [MaxLength(160)]
-    [Display(Name = "Nome completo")]
+    [Display(Name = "Nome completo do responsavel")]
     public string DisplayName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Informe seu e-mail.")]
@@ -23,10 +23,20 @@ public class RegisterViewModel
     [Display(Name = "Nome da escola / studio")]
     public string SchoolName { get; set; } = string.Empty;
 
+    [MaxLength(40)]
+    [Display(Name = "Telefone / WhatsApp (opcional)")]
+    public string? Phone { get; set; }
+}
+
+public class SetPasswordViewModel
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Crie uma senha.")]
     [MinLength(8, ErrorMessage = "Minimo 8 caracteres.")]
     [DataType(DataType.Password)]
-    [Display(Name = "Senha")]
+    [Display(Name = "Nova senha")]
     public string Password { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Confirme sua senha.")]

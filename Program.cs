@@ -1,5 +1,6 @@
 using YourRhythmStudio.Infrastructure.Data;
 using YourRhythmStudio.Infrastructure.Foundation;
+using YourRhythmStudio.Infrastructure.Root;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,9 @@ if (app.Environment.IsDevelopment())
 {
     await app.Services.SeedFoundationDemoAccountAsync();
 }
+
+await RootBootstrap.EnsureRootAccountAsync(app.Services);
+await RootBootstrap.EnsureDefaultPlansAsync(app.Services);
 
 // Pipeline
 if (!app.Environment.IsDevelopment())

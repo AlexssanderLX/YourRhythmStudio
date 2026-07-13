@@ -1,0 +1,70 @@
+@model YourRhythmStudio.ViewModels.Root.RequestDetailViewModel
+@using YourRhythmStudio.Domain.Root
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Detalhe da Solicitação"; }
+
+<div style="margin-bottom:12px">
+    <a href="/Root/Requests" style="color:var(--muted);font-size:13px;text-decoration:none">← Voltar</a>
+</div>
+
+<div class="root-card">
+    <div class="root-card-title">Dados da Solicitação</div>
+    <dl style="display:grid;grid-template-columns:140px 1fr;gap:8px 16px;font-size:14px">
+        <dt style="color:var(--muted);font-weight:600">Status</dt>
+        <dd>
+            @{ var badgeClass = Model.Status switch {
+                AccessRequestStatus.Pending => "badge-yellow",
+                AccessRequestStatus.Approved => "badge-green",
+                AccessRequestStatus.Rejected => "badge-gray",
+                _ => "badge-gray" };
+               var statusLabel = Model.Status switch {
+                AccessRequestStatus.Pending => "Pendente",
+                AccessRequestStatus.Approved => "Aprovada",
+                AccessRequestStatus.Rejected => "Rejeitada",
+                _ => Model.Status.ToString() }; }
+            <span class="badge @badgeClass">@statusLabel</span>
+        </dd>
+        <dt style="color:var(--muted);font-weight:600">Responsável</dt><dd>@Model.ResponsibleName</dd>
+        <dt style="color:var(--muted);font-weight:600">E-mail</dt><dd>@Model.Email</dd>
+        <dt style="color:var(--muted);font-weight:600">Escola/Studio</dt><dd>@Model.SchoolName</dd>
+        <dt style="color:var(--muted);font-weight:600">Contato</dt><dd>@(Model.Phone ?? "—")</dd>
+        <dt style="color:var(--muted);font-weight:600">Plano</dt><dd>@(Model.PlanCode == "escola" ? "Escola" : "Professor")</dd>
+        <dt style="color:var(--muted);font-weight:600">Data</dt><dd>@Model.CreatedAtUtc.ToString("dd/MM/yyyy HH:mm") UTC</dd>
+        @if (Model.ReviewedAtUtc.HasValue)
+        {
+            <dt style="color:var(--muted);font-weight:600">Revisado em</dt><dd>@Model.ReviewedAtUtc.Value.ToString("dd/MM/yyyy HH:mm") UTC</dd>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ReviewNote))
+        {
+            <dt style="color:var(--muted);font-weight:600">Nota</dt><dd>@Model.ReviewNote</dd>
+        }
+    </dl>
+</div>
+
+@if (Model.Status == AccessRequestStatus.Pending)
+{
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+        <form method="post" action="/Root/Requests/@Model.Id/Approve" onsubmit="return confirm('Aprovar esta solicitação? Uma conta será criada e o e-mail enviado ao solicitante.')">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-root btn-success">✓ Aprovar</button>
+        </form>
+
+        <button type="button" class="btn-root btn-danger" onclick="document.getElementById('reject-form').style.display='block';this.style.display='none'">✕ Rejeitar</button>
+    </div>
+
+    <div id="reject-form" style="display:none" class="root-card">
+        <div class="root-card-title">Confirmar Rejeição</div>
+        <form method="post" action="/Root/Requests/@Model.Id/Reject">
+            @Html.AntiForgeryToken()
+            <div class="root-form">
+                <div class="form-group">
+                    <label for="reject-note">Nota interna (opcional)</label>
+                    <textarea id="reject-note" name="Note" rows="3" maxlength="500" placeholder="Motivo da rejeição (não é enviado ao solicitante)..."></textarea>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button type="submit" class="btn-root btn-danger">Confirmar rejeição</button>
+                    <button type="button" class="btn-root btn-ghost" onclick="document.getElementById('reject-form').style.display='none';document.querySelector('.btn-danger').style.display='inline-flex'">Cancelar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+}

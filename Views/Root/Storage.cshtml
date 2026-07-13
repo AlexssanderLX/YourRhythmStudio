@@ -1,0 +1,62 @@
+@model YourRhythmStudio.ViewModels.Root.StorageOverviewViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Armazenamento"; }
+
+@if (!Model.Items.Any())
+{
+    <div class="root-card" style="text-align:center;padding:40px">
+        <p style="color:var(--muted)">Nenhuma escola/studio registrada ainda.</p>
+    </div>
+}
+else
+{
+    <div class="root-card" style="padding:0;overflow:hidden">
+        <div class="root-table-wrap">
+            <table class="root-table" aria-label="Armazenamento por escola">
+                <thead>
+                    <tr>
+                        <th>Escola / Studio</th>
+                        <th>E-mail</th>
+                        <th>Uso</th>
+                        <th>Percentual</th>
+                        <th>Cota</th>
+                        <th>Alterar cota</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Items)
+                {
+                    var usedMb = row.UsedBytes / (1024.0 * 1024);
+                    var quotaGb = row.QuotaBytes / (1024.0 * 1024 * 1024);
+                    var barClass = row.Percent >= 90 ? "danger" : row.Percent >= 70 ? "warn" : "";
+                    <tr>
+                        <td style="font-weight:500">@row.SchoolName</td>
+                        <td style="font-size:13px">@row.OwnerEmail</td>
+                        <td style="font-size:13px">@usedMb.ToString("F0") MB</td>
+                        <td style="min-width:120px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div class="storage-bar-wrap" style="flex:1">
+                                    <div class="storage-bar-fill @barClass" style="width:@row.Percent%"
+                                         role="progressbar" aria-valuenow="@row.Percent" aria-valuemin="0" aria-valuemax="100"
+                                         aria-label="@row.Percent% usado"></div>
+                                </div>
+                                <span style="font-size:12px;color:var(--muted);flex-shrink:0">@row.Percent%</span>
+                            </div>
+                        </td>
+                        <td style="font-size:13px">@quotaGb.ToString("F0") GB</td>
+                        <td>
+                            <form method="post" action="/Root/Storage/@row.SchoolId/Quota" style="display:flex;gap:6px;align-items:center">
+                                @Html.AntiForgeryToken()
+                                <input type="number" name="QuotaGb" value="@((int)Math.Max(1, quotaGb))" min="1" max="10000"
+                                       style="width:70px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px"
+                                       aria-label="Nova cota em GB para @row.SchoolName" />
+                                <span style="font-size:12px;color:var(--muted)">GB</span>
+                                <button type="submit" class="btn-root btn-ghost btn-sm">Salvar</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

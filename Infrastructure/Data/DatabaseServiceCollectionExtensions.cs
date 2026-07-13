@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Application.Learning;
+using YourRhythmStudio.Application.Root;
 using YourRhythmStudio.Application.Users;
+using YourRhythmStudio.Infrastructure.Email;
 
 namespace YourRhythmStudio.Infrastructure.Data;
 
@@ -29,6 +31,9 @@ public static class DatabaseServiceCollectionExtensions
         services.AddScoped<SkillService>();
         services.AddScoped<LevelConfigService>();
         services.AddScoped<SettingsService>();
+        services.AddScoped<AccessRequestService>();
+        services.AddScoped<RootAdminService>();
+        services.AddSingleton<IEmailService, SmtpEmailService>();
 
         return services;
     }

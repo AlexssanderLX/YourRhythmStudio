@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Domain.Learning;
+using YourRhythmStudio.Domain.Root;
 using YourRhythmStudio.Domain.Users;
 
 namespace YourRhythmStudio.Infrastructure.Data;
@@ -40,6 +41,12 @@ public sealed class YourRhythmDbContext : DbContext
     public DbSet<LevelUpEvent> LevelUpEvents => Set<LevelUpEvent>();
 
     public DbSet<PersistedAccount> PersistedAccounts => Set<PersistedAccount>();
+
+    public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
+
+    public DbSet<Plan> Plans => Set<Plan>();
+
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -376,6 +383,52 @@ public sealed class YourRhythmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.StudentProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<School>(e =>
+        {
+            e.Property(s => s.StorageUsedBytes).HasDefaultValue(0L);
+            e.Property(s => s.StorageQuotaBytes).HasDefaultValue(0L);
+        });
+
+        modelBuilder.Entity<AccessRequest>(entity =>
+        {
+            entity.ToTable("access_requests");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.PlanCode).HasMaxLength(40).IsRequired();
+            entity.Property(r => r.ResponsibleName).HasMaxLength(160).IsRequired();
+            entity.Property(r => r.Email).HasMaxLength(256).IsRequired();
+            entity.Property(r => r.SchoolName).HasMaxLength(160).IsRequired();
+            entity.Property(r => r.Phone).HasMaxLength(40);
+            entity.Property(r => r.Status).HasConversion<int>();
+            entity.Property(r => r.ReviewNote).HasMaxLength(500);
+            entity.Property(r => r.SetPasswordToken).HasMaxLength(128);
+            entity.HasIndex(r => r.Email);
+            entity.HasIndex(r => r.Status);
+        });
+
+        modelBuilder.Entity<Plan>(entity =>
+        {
+            entity.ToTable("plans");
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Code).HasMaxLength(40).IsRequired();
+            entity.Property(p => p.Name).HasMaxLength(120).IsRequired();
+            entity.Property(p => p.Description).HasMaxLength(500);
+            entity.Property(p => p.MonthlyPriceBrl).HasColumnType("decimal(10,2)");
+            entity.HasIndex(p => p.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<AdminAuditLog>(entity =>
+        {
+            entity.ToTable("admin_audit_logs");
+            entity.HasKey(l => l.Id);
+            entity.Property(l => l.ActorEmail).HasMaxLength(256).IsRequired();
+            entity.Property(l => l.Action).HasMaxLength(80).IsRequired();
+            entity.Property(l => l.TargetType).HasMaxLength(80);
+            entity.Property(l => l.TargetId).HasMaxLength(80);
+            entity.Property(l => l.Notes).HasMaxLength(500);
+            entity.HasIndex(l => l.ActorAccountId);
+            entity.HasIndex(l => new { l.TargetType, l.TargetId });
         });
     }
 }

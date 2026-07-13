@@ -1,0 +1,42 @@
+@model YourRhythmStudio.ViewModels.Root.EditAccountViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Editar Conta"; }
+
+<div style="margin-bottom:12px">
+    <a href="/Root/Accounts/@Model.AccountId" style="color:var(--muted);font-size:13px;text-decoration:none">← Detalhe</a>
+</div>
+
+<div class="root-card" style="max-width:520px">
+    <form asp-controller="Root" asp-action="EditAccount" asp-route-id="@Model.AccountId" method="post" class="root-form" style="max-width:100%">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-error"></div>
+
+        <div class="form-group">
+            <label asp-for="DisplayName">Nome completo</label>
+            <input asp-for="DisplayName" />
+            <span asp-validation-for="DisplayName" class="field-error"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="SchoolName">Nome da escola / studio</label>
+            <input asp-for="SchoolName" />
+            <span asp-validation-for="SchoolName" class="field-error"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="Phone">Telefone</label>
+            <input asp-for="Phone" />
+        </div>
+        <div class="form-group">
+            <label asp-for="PlanCode">Plano</label>
+            <select asp-for="PlanCode">
+                <option value="professor">Professor</option>
+                <option value="escola">Escola</option>
+            </select>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px">
+            <button type="submit" class="btn-root btn-primary">Salvar</button>
+            <a href="/Root/Accounts/@Model.AccountId" class="btn-root btn-ghost">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

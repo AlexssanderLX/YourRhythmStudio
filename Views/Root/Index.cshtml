@@ -1,0 +1,74 @@
+@model YourRhythmStudio.ViewModels.Root.RootDashboardViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Visão Geral"; }
+
+<div class="root-stats">
+    <div class="root-stat">
+        <div class="root-stat-value">@Model.TotalAccounts</div>
+        <div class="root-stat-label">Total de Contas</div>
+    </div>
+    <div class="root-stat">
+        <div class="root-stat-value" style="color:#22c55e">@Model.ActiveAccounts</div>
+        <div class="root-stat-label">Ativas</div>
+    </div>
+    <div class="root-stat">
+        <div class="root-stat-value" style="color:#f59e0b">@Model.PendingAccounts</div>
+        <div class="root-stat-label">Pendentes</div>
+    </div>
+    <div class="root-stat">
+        <div class="root-stat-value" style="color:#ef4444">@Model.BlockedAccounts</div>
+        <div class="root-stat-label">Bloqueadas</div>
+    </div>
+    <div class="root-stat">
+        <div class="root-stat-value" style="color:#64748b">@Model.CancelledAccounts</div>
+        <div class="root-stat-label">Canceladas</div>
+    </div>
+    <div class="root-stat">
+        <div class="root-stat-value" style="color:#2563eb">@Model.PendingRequests</div>
+        <div class="root-stat-label">Solicitações pendentes</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    @if (Model.PendingRequests > 0)
+    {
+        <div class="root-card" style="border-color:rgba(37,99,235,.3)">
+            <div class="root-card-title">⚡ Ação necessária</div>
+            <p style="color:var(--muted);font-size:14px;margin-bottom:12px">
+                Há <strong style="color:var(--ink)">@Model.PendingRequests</strong> solicitação(ões) aguardando sua análise.
+            </p>
+            <a href="/Root/Requests" class="btn-root btn-primary">Ver solicitações</a>
+        </div>
+    }
+
+    <div class="root-card">
+        <div class="root-card-title">Distribuição por plano</div>
+        @if (!Model.PlanBreakdown.Any())
+        {
+            <p style="color:var(--muted);font-size:14px">Nenhuma conta registrada ainda.</p>
+        }
+        else
+        {
+            <div class="root-table-wrap">
+                <table class="root-table">
+                    <thead><tr><th>Plano</th><th>Contas ativas</th></tr></thead>
+                    <tbody>
+                    @foreach (var row in Model.PlanBreakdown)
+                    {
+                        <tr>
+                            <td>@row.PlanName</td>
+                            <td><strong>@row.Count</strong></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a href="/Root/Requests" class="btn-root btn-ghost">Solicitações</a>
+    <a href="/Root/Accounts" class="btn-root btn-ghost">Gerenciar Contas</a>
+    <a href="/Root/Plans" class="btn-root btn-ghost">Planos</a>
+    <a href="/Root/Storage" class="btn-root btn-ghost">Armazenamento</a>
+</div>

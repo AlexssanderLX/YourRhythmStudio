@@ -2,11 +2,10 @@
 
 @{
     Layout = "_LandingLayout";
-    ViewData["Title"] = "Criar conta";
+    ViewData["Title"] = "Solicitar acesso";
 }
 
 <style>
-/* Plan cards */
 .plan-step { margin-bottom: 28px; }
 .plan-step-label {
     display: block;
@@ -100,9 +99,9 @@
         </div>
 
         <div class="auth-copy">
-            <p class="auth-kicker">Comece gratuitamente · 14 dias gratis</p>
-            <h1 id="register-title">Crie seu studio</h1>
-            <p>Escolha seu plano e comece a acompanhar seus alunos em minutos.</p>
+            <p class="auth-kicker">Acesso mediante análise · Gratuito por 14 dias</p>
+            <h1 id="register-title">Solicite seu acesso</h1>
+            <p>Preencha o formulário e nossa equipe entrará em contato em breve.</p>
         </div>
 
         <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" novalidate id="reg-form">
@@ -125,7 +124,7 @@
                         <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                         <div class="plan-name">Professor</div>
                         <div class="plan-desc">Ideal para professores independentes. Ate 30 alunos.</div>
-                        <div class="plan-price"><strong>R$149</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes</span></div>
+                        <div class="plan-price"><strong>R$149</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes (informativo)</span></div>
                     </label>
 
                     <label class="plan-card" id="card-escola">
@@ -139,7 +138,7 @@
                         <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V15h6v6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                         <div class="plan-name">Escola</div>
                         <div class="plan-desc">Para escolas e studios. Multiplos professores, alunos ilimitados.</div>
-                        <div class="plan-price"><strong>R$249</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes</span></div>
+                        <div class="plan-price"><strong>R$249</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes (informativo)</span></div>
                     </label>
 
                 </div>
@@ -150,30 +149,25 @@
             </div>
 
             <!-- Dados pessoais -->
-            <label asp-for="DisplayName"></label>
+            <label asp-for="DisplayName">Nome completo do responsável</label>
             <input asp-for="DisplayName" autocomplete="name" placeholder="Ex.: Ana Silva" />
             <span asp-validation-for="DisplayName" class="field-error"></span>
 
-            <label asp-for="Email"></label>
+            <label asp-for="Email">E-mail</label>
             <input asp-for="Email" autocomplete="email" placeholder="seu@email.com" />
             <span asp-validation-for="Email" class="field-error"></span>
 
-            <label asp-for="SchoolName"></label>
+            <label asp-for="SchoolName">Nome da escola / studio</label>
             <input asp-for="SchoolName" autocomplete="organization" placeholder="Ex.: Studio Musica Viva" />
             <span asp-validation-for="SchoolName" class="field-error"></span>
 
-            <label asp-for="Password"></label>
-            <input asp-for="Password" autocomplete="new-password" placeholder="Minimo 8 caracteres" />
-            <span asp-validation-for="Password" class="field-error"></span>
+            <label asp-for="Phone">Telefone / WhatsApp (opcional)</label>
+            <input asp-for="Phone" autocomplete="tel" placeholder="(11) 99999-9999" />
 
-            <label asp-for="ConfirmPassword"></label>
-            <input asp-for="ConfirmPassword" autocomplete="new-password" placeholder="Repita a senha" />
-            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
-
-            <button type="submit" class="btn-full" id="submit-btn">Criar conta gratis</button>
+            <button type="submit" class="btn-full" id="submit-btn">Solicitar acesso</button>
 
             <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
-                14 dias gratis &middot; sem cartao &middot; cancele quando quiser
+                Preços informativos · Sem cobrança nesta etapa
             </p>
         </form>
 
@@ -203,11 +197,10 @@
                 }
             });
             if (submitBtn) {
-                submitBtn.textContent = anyChecked ? 'Criar conta gratis' : 'Selecione um plano';
+                submitBtn.textContent = anyChecked ? 'Solicitar acesso' : 'Selecione um plano';
             }
         }
 
-        // Restore state if server round-trip (validation error)
         var preSelected = '@Html.Raw(Model.PlanCode)';
         if (preSelected) {
             var pre = document.querySelector('input[name="PlanCode"][value="' + preSelected + '"]');

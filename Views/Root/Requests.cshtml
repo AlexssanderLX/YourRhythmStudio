@@ -1,0 +1,63 @@
+@model YourRhythmStudio.ViewModels.Root.RequestListViewModel
+@using YourRhythmStudio.Domain.Root
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Solicitações de Acesso"; }
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+    <a href="/Root/Requests" class="btn-root btn-sm @(Model.StatusFilter == null ? "btn-primary" : "btn-ghost")">Todas</a>
+    <a href="/Root/Requests?status=Pending" class="btn-root btn-sm @(Model.StatusFilter == "Pending" ? "btn-primary" : "btn-ghost")">Pendentes</a>
+    <a href="/Root/Requests?status=Approved" class="btn-root btn-sm @(Model.StatusFilter == "Approved" ? "btn-primary" : "btn-ghost")">Aprovadas</a>
+    <a href="/Root/Requests?status=Rejected" class="btn-root btn-sm @(Model.StatusFilter == "Rejected" ? "btn-primary" : "btn-ghost")">Rejeitadas</a>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="root-card" style="text-align:center;padding:40px">
+        <p style="color:var(--muted)">Nenhuma solicitação encontrada.</p>
+    </div>
+}
+else
+{
+    <div class="root-card" style="padding:0;overflow:hidden">
+        <div class="root-table-wrap">
+            <table class="root-table" aria-label="Solicitações de acesso">
+                <thead>
+                    <tr>
+                        <th>Responsável</th>
+                        <th>E-mail</th>
+                        <th>Escola/Studio</th>
+                        <th>Plano</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var badgeClass = item.Status switch {
+                        AccessRequestStatus.Pending => "badge-yellow",
+                        AccessRequestStatus.Approved => "badge-green",
+                        AccessRequestStatus.Rejected => "badge-gray",
+                        _ => "badge-gray"
+                    };
+                    var statusLabel = item.Status switch {
+                        AccessRequestStatus.Pending => "Pendente",
+                        AccessRequestStatus.Approved => "Aprovada",
+                        AccessRequestStatus.Rejected => "Rejeitada",
+                        _ => item.Status.ToString()
+                    };
+                    <tr>
+                        <td>@item.ResponsibleName</td>
+                        <td style="font-size:13px">@item.Email</td>
+                        <td>@item.SchoolName</td>
+                        <td><span class="badge badge-blue">@(item.PlanCode == "escola" ? "Escola" : "Professor")</span></td>
+                        <td><span class="badge @badgeClass">@statusLabel</span></td>
+                        <td style="font-size:12px;color:var(--muted)">@item.CreatedAtUtc.ToString("dd/MM/yy HH:mm")</td>
+                        <td><a href="/Root/Requests/@item.Id" class="btn-root btn-ghost btn-sm">Ver</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

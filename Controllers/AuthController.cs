@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using YourRhythmStudio.Application.Root;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Users;
@@ -32,6 +33,8 @@ public class AuthController : Controller
     private readonly IClock _clock;
     private readonly YourRhythmDbContext _db;
     private readonly SecureLinkService _secureLinkService;
+    private readonly AccessRequestService _accessRequestService;
+    private readonly RootAdminService _rootAdminService;
 
     public AuthController(
         SaasAccessService saasAccessService,
@@ -41,7 +44,9 @@ public class AuthController : Controller
         IPasswordHasher passwordHasher,
         IClock clock,
         YourRhythmDbContext db,
-        SecureLinkService secureLinkService)
+        SecureLinkService secureLinkService,
+        AccessRequestService accessRequestService,
+        RootAdminService rootAdminService)
     {
         _saasAccessService = saasAccessService;
         _userProfileResolver = userProfileResolver;
@@ -51,6 +56,8 @@ public class AuthController : Controller
         _clock = clock;
         _db = db;
         _secureLinkService = secureLinkService;
+        _accessRequestService = accessRequestService;
+        _rootAdminService = rootAdminService;
     }
 
     [HttpGet]
@@ -111,6 +118,9 @@ public class AuthController : Controller
                 ExpiresUtc = session.ExpiresAtUtc
             });
 
+        if (session.PlatformRole == PlatformAccessRole.PlatformAdmin && string.IsNullOrWhiteSpace(model.ReturnUrl))
+            return RedirectToAction("Index", "Root");
+
         return RedirectToLocal(model.ReturnUrl);
     }
 
@@ -135,92 +145,45 @@ public class AuthController : Controller
         if (!ModelState.IsValid)
             return View(model);
 
-        var emailNorm = model.Email.Trim().ToUpperInvariant();
+        await _accessRequestService.SubmitAsync(model);
+        return RedirectToAction(nameof(RequestSent));
+    }
 
-        var existing = await _accountStore.FindByEmailAsync(emailNorm);
-        if (existing is not null)
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult RequestSent() => View();
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetPassword(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return RedirectToAction(nameof(Login));
+
+        var request = await _rootAdminService.FindBySetPasswordTokenAsync(token);
+        if (request is null)
+            return View("SetPasswordInvalid");
+
+        return View(new SetPasswordViewModel { Token = token });
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPassword(SetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var (success, error) = await _rootAdminService.SetPasswordAsync(model.Token, model.Password);
+        if (!success)
         {
-            ModelState.AddModelError(nameof(model.Email), "Este e-mail ja esta em uso.");
+            ModelState.AddModelError(string.Empty, error ?? "Operacao invalida.");
             return View(model);
         }
 
-        var now = _clock.UtcNow;
-
-        var account = new Account
-        {
-            DisplayName = model.DisplayName.Trim(),
-            Email = emailNorm,
-            Status = AccountStatus.Active,
-            PlatformRole = PlatformAccessRole.None,
-            PasswordCredential = _passwordHasher.HashPassword(model.Password),
-            CreatedAtUtc = now,
-            ActivatedAtUtc = now,
-            SecurityStamp = Guid.NewGuid().ToString("N")
-        };
-
-        await _accountStore.SaveAsync(account);
-
-        var slug = GenerateSlug(model.SchoolName);
-        if (await _db.Schools.AnyAsync(s => s.Slug == slug))
-            slug = slug + "-" + Guid.NewGuid().ToString("N")[..6];
-
-        var school = new School
-        {
-            Name = model.SchoolName.Trim(),
-            Slug = slug,
-            PrimaryEmail = model.Email.Trim().ToLowerInvariant(),
-            OwnerAccountId = account.Id,
-            PlanCode = model.PlanCode,
-            CreatedAtUtc = now
-        };
-        _db.Schools.Add(school);
-
-        var schoolUser = new SchoolUser
-        {
-            SchoolId = school.Id,
-            AccountId = account.Id,
-            DisplayName = model.DisplayName.Trim(),
-            Email = model.Email.Trim().ToLowerInvariant(),
-            Role = YourRhythmRoles.Teacher,
-            CreatedAtUtc = now
-        };
-        _db.SchoolUsers.Add(schoolUser);
-
-        var teacher = new TeacherProfile
-        {
-            SchoolId = school.Id,
-            SchoolUserId = schoolUser.Id,
-            CanManageStudents = true
-        };
-        _db.TeacherProfiles.Add(teacher);
-
-        await _db.SaveChangesAsync();
-
-        // auto-login
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, account.Id.ToString()),
-            new(ClaimTypes.Name, account.DisplayName),
-            new(ClaimTypes.Email, model.Email.Trim().ToLowerInvariant()),
-            new("SessionId", Guid.NewGuid().ToString()),
-            new("PlatformRole", PlatformAccessRole.None.ToString())
-        };
-        claims.Add(new Claim(UserProfileResolver.RoleClaim, YourRhythmRoles.Teacher));
-        claims.Add(new Claim(ClaimTypes.Role, YourRhythmRoles.Teacher));
-        claims.Add(new Claim(UserProfileResolver.SchoolIdClaim, school.Id.ToString()));
-        claims.Add(new Claim(UserProfileResolver.SchoolUserIdClaim, schoolUser.Id.ToString()));
-        claims.Add(new Claim(UserProfileResolver.TeacherProfileIdClaim, teacher.Id.ToString()));
-
-        var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(CookieScheme, principal, new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = now.AddDays(30)
-        });
-
-        return RedirectToAction("Dashboard", "Teacher");
+        TempData["SuccessMessage"] = "Senha definida com sucesso! Faca login para acessar o sistema.";
+        return RedirectToAction(nameof(Login));
     }
 
     private static string GenerateSlug(string name)
@@ -306,7 +269,7 @@ public class AuthController : Controller
         }
 
         return session.PlatformRole == PlatformAccessRole.PlatformAdmin
-            ? YourRhythmRoles.PlatformAdmin
+            ? YourRhythmRoles.RootAdmin
             : null;
     }
 

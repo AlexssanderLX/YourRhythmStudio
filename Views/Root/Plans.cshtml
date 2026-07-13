@@ -1,0 +1,101 @@
+@model YourRhythmStudio.ViewModels.Root.PlansViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Planos"; }
+
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div class="root-card" style="flex:1;min-width:280px;padding:0;overflow:hidden">
+        <div class="root-table-wrap">
+            <table class="root-table" aria-label="Planos">
+                <thead>
+                    <tr>
+                        <th>Código</th><th>Nome</th><th>Preço</th><th>Alunos</th><th>Armazenamento</th><th>Contas</th><th>Status</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var p in Model.Plans)
+                {
+                    var quotaGb = p.StorageQuotaBytes / (1024.0 * 1024 * 1024);
+                    <tr>
+                        <td><code>@p.Code</code></td>
+                        <td style="font-weight:500">@p.Name</td>
+                        <td>R$ @p.MonthlyPriceBrl.ToString("F2")/mês</td>
+                        <td>@(p.MaxStudents?.ToString() ?? "Ilimitado")</td>
+                        <td>@quotaGb.ToString("F0") GB</td>
+                        <td>@p.ActiveSchools</td>
+                        <td><span class="badge @(p.IsActive ? "badge-green" : "badge-gray")">@(p.IsActive ? "Ativo" : "Inativo")</span></td>
+                        <td>
+                            <button type="button" class="btn-root btn-ghost btn-sm"
+                                    onclick="fillEditForm('@p.Id','@p.Code','@p.Name','@p.MonthlyPriceBrl','@(p.MaxStudents ?? 0)','@((int)(p.StorageQuotaBytes/(1024.0*1024*1024)))','@p.IsActive','@p.Description')">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="root-card" style="max-width:520px" id="plan-form-card">
+    <div class="root-card-title" id="plan-form-title">Novo Plano</div>
+    <form asp-controller="Root" asp-action="UpsertPlan" method="post" class="root-form" style="max-width:100%">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" id="plan-id" />
+        <div class="form-group">
+            <label>Código (slug)</label>
+            <input name="Code" id="plan-code" placeholder="ex.: professor-plus" maxlength="40" required />
+        </div>
+        <div class="form-group">
+            <label>Nome</label>
+            <input name="Name" id="plan-name" placeholder="ex.: Professor Plus" required />
+        </div>
+        <div class="form-group">
+            <label>Descrição</label>
+            <input name="Description" id="plan-desc" placeholder="Opcional" />
+        </div>
+        <div class="form-group">
+            <label>Preço mensal (R$)</label>
+            <input name="MonthlyPriceBrl" id="plan-price" type="number" step="0.01" min="0" value="0" required />
+        </div>
+        <div class="form-group">
+            <label>Limite de alunos (0 = ilimitado)</label>
+            <input name="MaxStudentsInput" id="plan-students" type="number" min="0" value="0" />
+        </div>
+        <div class="form-group">
+            <label>Armazenamento (GB)</label>
+            <input name="StorageQuotaGb" id="plan-quota" type="number" min="1" value="5" required />
+        </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+                <input type="checkbox" name="IsActive" id="plan-active" value="true" checked style="width:auto" />
+                Ativo
+            </label>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn-root btn-primary">Salvar plano</button>
+            <button type="button" class="btn-root btn-ghost" onclick="resetForm()">Novo</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function fillEditForm(id, code, name, price, students, quotaGb, isActive, desc) {
+    document.getElementById('plan-id').value = id;
+    document.getElementById('plan-code').value = code;
+    document.getElementById('plan-name').value = name;
+    document.getElementById('plan-desc').value = desc || '';
+    document.getElementById('plan-price').value = price;
+    document.getElementById('plan-students').value = students;
+    document.getElementById('plan-quota').value = quotaGb;
+    document.getElementById('plan-active').checked = isActive === 'True';
+    document.getElementById('plan-form-title').textContent = 'Editar Plano';
+    document.getElementById('plan-form-card').scrollIntoView({ behavior: 'smooth' });
+}
+function resetForm() {
+    document.getElementById('plan-id').value = '';
+    document.getElementById('plan-form-title').textContent = 'Novo Plano';
+    document.querySelector('form').reset();
+}
+</script>
+}

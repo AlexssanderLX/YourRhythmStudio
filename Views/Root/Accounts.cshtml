@@ -1,0 +1,99 @@
+@model YourRhythmStudio.ViewModels.Root.AccountListViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Contas"; }
+
+@{
+    var inputStyle = "padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px";
+}
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <form method="get" action="/Root/Accounts" style="display:contents">
+        <input type="text" name="search" value="@Model.Search" placeholder="Buscar por nome, e-mail ou escola…"
+               style="@inputStyle;min-width:220px" aria-label="Buscar contas" />
+        <select name="status" style="@inputStyle" aria-label="Filtrar por status">
+            <option value="">Todos os status</option>
+            @foreach (var opt in new[] { ("Active","Ativa"), ("PendingApproval","Pendente"), ("Suspended","Bloqueada"), ("Archived","Cancelada") })
+            {
+                if (Model.StatusFilter == opt.Item1)
+                {
+                    <option value="@opt.Item1" selected="selected">@opt.Item2</option>
+                }
+                else
+                {
+                    <option value="@opt.Item1">@opt.Item2</option>
+                }
+            }
+        </select>
+        <select name="plan" style="@inputStyle" aria-label="Filtrar por plano">
+            <option value="">Todos os planos</option>
+            @foreach (var opt in new[] { ("professor","Professor"), ("escola","Escola") })
+            {
+                if (Model.PlanFilter == opt.Item1)
+                {
+                    <option value="@opt.Item1" selected="selected">@opt.Item2</option>
+                }
+                else
+                {
+                    <option value="@opt.Item1">@opt.Item2</option>
+                }
+            }
+        </select>
+        <button type="submit" class="btn-root btn-primary btn-sm">Filtrar</button>
+        <a href="/Root/Accounts" class="btn-root btn-ghost btn-sm">Limpar</a>
+    </form>
+    <div style="margin-left:auto">
+        <a href="/Root/Accounts/Create" class="btn-root btn-primary btn-sm">+ Nova conta</a>
+    </div>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="root-card" style="text-align:center;padding:40px">
+        <p style="color:var(--muted)">Nenhuma conta encontrada.</p>
+    </div>
+}
+else
+{
+    <div class="root-card" style="padding:0;overflow:hidden">
+        <div class="root-table-wrap">
+            <table class="root-table" aria-label="Contas">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Escola/Studio</th>
+                        <th>Plano</th>
+                        <th>Status</th>
+                        <th>Criada em</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var badgeClass = item.Status switch {
+                        "Active" => "badge-green",
+                        "PendingApproval" => "badge-yellow",
+                        "Suspended" => "badge-red",
+                        "Archived" => "badge-gray",
+                        _ => "badge-gray" };
+                    var statusLabel = item.Status switch {
+                        "Active" => "Ativa",
+                        "PendingApproval" => "Pendente",
+                        "Suspended" => "Bloqueada",
+                        "Archived" => "Cancelada",
+                        _ => item.Status };
+                    <tr>
+                        <td style="font-weight:500">@item.DisplayName</td>
+                        <td style="font-size:13px">@item.Email</td>
+                        <td style="font-size:13px">@item.SchoolName</td>
+                        <td><span class="badge badge-blue">@(item.PlanCode == "escola" ? "Escola" : "Professor")</span></td>
+                        <td><span class="badge @badgeClass">@statusLabel</span></td>
+                        <td style="font-size:12px;color:var(--muted)">@item.CreatedAtUtc.ToString("dd/MM/yy")</td>
+                        <td><a href="/Root/Accounts/@item.AccountId" class="btn-root btn-ghost btn-sm">Ver</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

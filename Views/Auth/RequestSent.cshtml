@@ -1,0 +1,30 @@
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = "Solicitação recebida";
+}
+
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="sent-title" style="max-width:480px;text-align:center">
+        <div class="auth-brand">
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+            <span>YourRhythm<span>.</span></span>
+        </div>
+
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(37,99,235,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+
+        <h1 id="sent-title" style="font-size:20px;margin-bottom:10px">Solicitação recebida!</h1>
+        <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px">
+            Sua solicitação de acesso foi registrada com sucesso.<br>
+            Nossa equipe irá analisá-la e você receberá um e-mail com os próximos passos.
+        </p>
+
+        <a asp-controller="Home" asp-action="Index"
+           style="color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--border-soft);padding:8px 16px;border-radius:8px;display:inline-block">
+            Voltar ao início
+        </a>
+    </section>
+</main>

@@ -1,0 +1,99 @@
+@model YourRhythmStudio.ViewModels.Root.AccountDetailViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = Model.DisplayName; }
+
+<div style="margin-bottom:12px">
+    <a href="/Root/Accounts" style="color:var(--muted);font-size:13px;text-decoration:none">← Contas</a>
+</div>
+
+@{ var badgeClass = Model.Status switch {
+    "Active" => "badge-green", "PendingApproval" => "badge-yellow",
+    "Suspended" => "badge-red", "Archived" => "badge-gray", _ => "badge-gray" };
+   var statusLabel = Model.Status switch {
+    "Active" => "Ativa", "PendingApproval" => "Pendente",
+    "Suspended" => "Bloqueada", "Archived" => "Cancelada", _ => Model.Status }; }
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="root-card">
+        <div class="root-card-title">Dados da Conta</div>
+        <dl style="display:grid;grid-template-columns:120px 1fr;gap:8px 16px;font-size:14px">
+            <dt style="color:var(--muted);font-weight:600">Status</dt>
+            <dd><span class="badge @badgeClass">@statusLabel</span></dd>
+            <dt style="color:var(--muted);font-weight:600">Nome</dt><dd>@Model.DisplayName</dd>
+            <dt style="color:var(--muted);font-weight:600">E-mail</dt><dd>@Model.Email</dd>
+            <dt style="color:var(--muted);font-weight:600">Escola</dt><dd>@Model.SchoolName</dd>
+            <dt style="color:var(--muted);font-weight:600">Plano</dt><dd>@(Model.PlanCode == "escola" ? "Escola" : "Professor")</dd>
+            <dt style="color:var(--muted);font-weight:600">Criada em</dt><dd>@Model.CreatedAtUtc.ToString("dd/MM/yyyy")</dd>
+            @if (Model.ActivatedAtUtc.HasValue) {
+                <dt style="color:var(--muted);font-weight:600">Ativada em</dt><dd>@Model.ActivatedAtUtc.Value.ToString("dd/MM/yyyy")</dd>
+            }
+        </dl>
+    </div>
+
+    <div class="root-card">
+        <div class="root-card-title">Uso</div>
+        <dl style="display:grid;grid-template-columns:120px 1fr;gap:8px 16px;font-size:14px">
+            <dt style="color:var(--muted);font-weight:600">Alunos</dt><dd>@Model.StudentCount</dd>
+            <dt style="color:var(--muted);font-weight:600">Professores</dt><dd>@Model.TeacherCount</dd>
+            <dt style="color:var(--muted);font-weight:600">Armazenamento</dt>
+            <dd>
+                @{ var usedMb = Model.StorageUsedBytes / (1024.0 * 1024);
+                   var quotaMb = Model.StorageQuotaBytes / (1024.0 * 1024);
+                   var pct = Model.StorageQuotaBytes > 0 ? (int)Math.Min(100, Model.StorageUsedBytes * 100 / Model.StorageQuotaBytes) : 0;
+                   var barClass = pct >= 90 ? "danger" : pct >= 70 ? "warn" : ""; }
+                <span style="font-size:13px">@usedMb.ToString("F0") MB / @(quotaMb >= 1024 ? $"{(quotaMb/1024):F0} GB" : $"{quotaMb:F0} MB") (@pct%)</span>
+                <div class="storage-bar-wrap" style="margin-top:6px">
+                    <div class="storage-bar-fill @barClass" style="width:@pct%" role="progressbar" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100" aria-label="@pct% usado"></div>
+                </div>
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
+    <a href="/Root/Accounts/@Model.AccountId/Edit" class="btn-root btn-ghost btn-sm">Editar</a>
+
+    @if (Model.Status == "Active")
+    {
+        <form method="post" action="/Root/Accounts/@Model.AccountId/Block" onsubmit="return confirm('Bloquear esta conta?')">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-root btn-warning btn-sm">Bloquear</button>
+        </form>
+    }
+    @if (Model.Status == "Suspended")
+    {
+        <form method="post" action="/Root/Accounts/@Model.AccountId/Unblock">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-root btn-success btn-sm">Reativar</button>
+        </form>
+    }
+    @if (Model.Status != "Archived")
+    {
+        <form method="post" action="/Root/Accounts/@Model.AccountId/Cancel" onsubmit="return confirm('Cancelar esta conta? Esta ação não pode ser desfeita facilmente.')">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-root btn-danger btn-sm">Cancelar conta</button>
+        </form>
+    }
+</div>
+
+@if (Model.AuditLogs.Any())
+{
+    <div class="root-card">
+        <div class="root-card-title">Histórico de ações</div>
+        <div class="root-table-wrap">
+            <table class="root-table">
+                <thead><tr><th>Ação</th><th>Por</th><th>Nota</th><th>Data</th></tr></thead>
+                <tbody>
+                @foreach (var log in Model.AuditLogs)
+                {
+                    <tr>
+                        <td style="font-weight:500">@log.Action</td>
+                        <td style="font-size:12px">@log.ActorEmail</td>
+                        <td style="font-size:12px;color:var(--muted)">@(log.Notes ?? "—")</td>
+                        <td style="font-size:12px;color:var(--muted)">@log.CreatedAtUtc.ToString("dd/MM/yy HH:mm")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
