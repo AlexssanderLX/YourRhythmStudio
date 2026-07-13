@@ -35,7 +35,8 @@
 .plan-card input[type=radio] {
     position: absolute;
     opacity: 0;
-    width: 0; height: 0;
+    width: 0;
+    height: 0;
 }
 .plan-card.selected {
     border-color: var(--blue-bright);
@@ -43,12 +44,14 @@
     background: color-mix(in srgb, var(--blue-bright) 6%, var(--surface));
 }
 .plan-check {
-    width: 20px; height: 20px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     border: 2px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 10px;
-    transition: background .2s, border-color .2s;
 }
 .plan-card.selected .plan-check {
     background: var(--blue-bright);
@@ -56,25 +59,16 @@
 }
 .plan-check svg { display: none; }
 .plan-card.selected .plan-check svg { display: block; }
-.plan-icon { display:flex; align-items:center; margin-bottom: 8px; color: var(--blue-bright); }
-.plan-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px;
-}
-.plan-desc {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 10px;
-    line-height: 1.45;
-}
+.plan-icon { display: flex; align-items: center; margin-bottom: 8px; color: var(--blue-bright); }
+.plan-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.plan-desc { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.45; }
 .plan-price { font-size: 13px; color: var(--text); }
 .plan-price strong { font-size: 20px; font-weight: 800; color: var(--blue-bright); }
 .plan-price span { color: var(--muted); font-size: 12px; }
 .plan-badge {
     position: absolute;
-    top: -10px; right: 12px;
+    top: -10px;
+    right: 12px;
     background: var(--blue-bright);
     color: #fff;
     font-size: 10px;
@@ -99,9 +93,9 @@
         </div>
 
         <div class="auth-copy">
-            <p class="auth-kicker">Acesso mediante análise · Gratuito por 14 dias</p>
+            <p class="auth-kicker">Acesso mediante analise</p>
             <h1 id="register-title">Solicite seu acesso</h1>
-            <p>Preencha o formulário e nossa equipe entrará em contato em breve.</p>
+            <p>Preencha o formulario e nossa equipe entrara em contato em breve.</p>
         </div>
 
         <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" novalidate id="reg-form">
@@ -109,38 +103,35 @@
 
             <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
 
-            <!-- Plano -->
             <div class="plan-step">
                 <span class="plan-step-label">Escolha seu plano</span>
                 <div class="plan-cards" id="plan-cards">
-
                     <label class="plan-card" id="card-professor">
                         <input type="radio" name="PlanCode" value="professor" id="plan-professor" />
                         <div class="plan-check">
                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </div>
-                        <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                        <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg></div>
                         <div class="plan-name">Professor</div>
-                        <div class="plan-desc">Ideal para professores independentes. Ate 30 alunos.</div>
+                        <div class="plan-desc">Para professores independentes. Ate 30 alunos.</div>
                         <div class="plan-price"><strong>R$149</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes (informativo)</span></div>
                     </label>
 
                     <label class="plan-card" id="card-escola">
-                        <div class="plan-badge">Popular</div>
+                        <div class="plan-badge">Escola</div>
                         <input type="radio" name="PlanCode" value="escola" id="plan-escola" />
                         <div class="plan-check">
                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </div>
-                        <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V15h6v6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                        <div class="plan-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21V15h6v6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div>
                         <div class="plan-name">Escola</div>
                         <div class="plan-desc">Para escolas e studios. Multiplos professores, alunos ilimitados.</div>
                         <div class="plan-price"><strong>R$249</strong><sup style="font-size:13px;font-weight:700">,90</sup><span>/mes (informativo)</span></div>
                     </label>
-
                 </div>
                 @if (!ViewData.ModelState.IsValid && ViewData.ModelState["PlanCode"]?.Errors.Count > 0)
                 {
@@ -148,8 +139,7 @@
                 }
             </div>
 
-            <!-- Dados pessoais -->
-            <label asp-for="DisplayName">Nome completo do responsável</label>
+            <label asp-for="DisplayName">Nome completo do responsavel</label>
             <input asp-for="DisplayName" autocomplete="name" placeholder="Ex.: Ana Silva" />
             <span asp-validation-for="DisplayName" class="field-error"></span>
 
@@ -157,9 +147,11 @@
             <input asp-for="Email" autocomplete="email" placeholder="seu@email.com" />
             <span asp-validation-for="Email" class="field-error"></span>
 
-            <label asp-for="SchoolName">Nome da escola / studio</label>
-            <input asp-for="SchoolName" autocomplete="organization" placeholder="Ex.: Studio Musica Viva" />
-            <span asp-validation-for="SchoolName" class="field-error"></span>
+            <div id="school-name-field" hidden>
+                <label asp-for="SchoolName">Nome da escola / studio</label>
+                <input asp-for="SchoolName" autocomplete="organization" placeholder="Ex.: Studio Musica Viva" />
+                <span asp-validation-for="SchoolName" class="field-error"></span>
+            </div>
 
             <label asp-for="Phone">Telefone / WhatsApp (opcional)</label>
             <input asp-for="Phone" autocomplete="tel" placeholder="(11) 99999-9999" />
@@ -167,7 +159,7 @@
             <button type="submit" class="btn-full" id="submit-btn">Solicitar acesso</button>
 
             <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
-                Preços informativos · Sem cobrança nesta etapa
+                Solicitacoes sao revisadas antes da liberacao da conta
             </p>
         </form>
 
@@ -181,37 +173,50 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
     (function () {
-        var cards = document.querySelectorAll('.plan-card');
+        var cards = document.querySelectorAll(".plan-card");
         var radios = document.querySelectorAll('input[name="PlanCode"]');
-        var submitBtn = document.getElementById('submit-btn');
+        var submitBtn = document.getElementById("submit-btn");
+        var schoolField = document.getElementById("school-name-field");
+        var schoolInput = document.getElementById("SchoolName");
 
         function updateCards() {
             var anyChecked = false;
-            radios.forEach(function (r) {
-                var card = r.closest('.plan-card');
-                if (r.checked) {
-                    card.classList.add('selected');
+            radios.forEach(function (radio) {
+                var card = radio.closest(".plan-card");
+                if (radio.checked) {
+                    card.classList.add("selected");
                     anyChecked = true;
                 } else {
-                    card.classList.remove('selected');
+                    card.classList.remove("selected");
                 }
             });
+
+            var selected = document.querySelector('input[name="PlanCode"]:checked');
+            var isSchool = selected && selected.value === "escola";
+            if (schoolField) schoolField.hidden = !isSchool;
+            if (schoolInput) {
+                schoolInput.toggleAttribute("required", !!isSchool);
+                if (!isSchool) schoolInput.value = "";
+            }
             if (submitBtn) {
-                submitBtn.textContent = anyChecked ? 'Solicitar acesso' : 'Selecione um plano';
+                submitBtn.textContent = anyChecked ? "Solicitar acesso" : "Selecione um plano";
             }
         }
 
-        var preSelected = '@Html.Raw(Model.PlanCode)';
+        var preSelected = "@Html.Raw(Model.PlanCode)";
         if (preSelected) {
             var pre = document.querySelector('input[name="PlanCode"][value="' + preSelected + '"]');
-            if (pre) { pre.checked = true; }
+            if (pre) pre.checked = true;
         }
 
-        radios.forEach(function (r) { r.addEventListener('change', updateCards); });
-        cards.forEach(function (c) {
-            c.addEventListener('click', function () {
-                var r = c.querySelector('input[type=radio]');
-                if (r) { r.checked = true; updateCards(); }
+        radios.forEach(function (radio) { radio.addEventListener("change", updateCards); });
+        cards.forEach(function (card) {
+            card.addEventListener("click", function () {
+                var radio = card.querySelector("input[type=radio]");
+                if (radio) {
+                    radio.checked = true;
+                    updateCards();
+                }
             });
         });
 

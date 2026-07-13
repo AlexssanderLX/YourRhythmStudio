@@ -78,7 +78,7 @@ Em `Infrastructure/Foundation`:
   - cria admin demo.
   - cria contas demo para escola, professor e aluno.
 
-- `DemoPersonas`
+- contas demo removidas; cleanup legado em `FoundationDemoSeeder`
   - resolve papel de dominio a partir do email demo.
 
 ### Controllers existentes
@@ -348,7 +348,7 @@ Regra simples para MVP:
 
 ### Ajustes em `AuthController`
 
-- Resolver `YourRhythmRole` a partir de `SchoolUser.Role`, nao apenas `DemoPersonas`.
+- Resolver `YourRhythmRole` a partir de `SchoolUser.Role`; fallback demo foi removido.
 - Adicionar claims persistidas:
   - `SchoolUserId`
   - `TeacherProfileId` quando professor
@@ -508,7 +508,7 @@ Para MVC Razor, esses controllers podem retornar views/partials. Para um backend
 - `Controllers/AuthController.cs`
 - `Controllers/DashboardController.cs`
 - `Infrastructure/Foundation/FoundationDemoSeeder.cs`
-- `Infrastructure/Foundation/DemoPersonas.cs`
+- `Infrastructure/Foundation/FoundationDemoSeeder.cs` apenas para limpeza de demos legados
 - `Infrastructure/Data/YourRhythmDbContext.cs`
 - `Infrastructure/Data/DatabaseServiceCollectionExtensions.cs`
 - `Application/Users/UserDirectoryService.cs`

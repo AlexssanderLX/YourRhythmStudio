@@ -54,7 +54,9 @@ public sealed class AccessRequestService
             PlanCode = model.PlanCode,
             ResponsibleName = model.DisplayName.Trim(),
             Email = emailNorm,
-            SchoolName = model.SchoolName.Trim(),
+            SchoolName = model.PlanCode == "escola"
+                ? model.SchoolName.Trim()
+                : model.DisplayName.Trim(),
             Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim()
         };
 

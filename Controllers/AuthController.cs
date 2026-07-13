@@ -27,7 +27,6 @@ public class AuthController : Controller
 
     private readonly SaasAccessService _saasAccessService;
     private readonly IUserProfileResolver _userProfileResolver;
-    private readonly IWebHostEnvironment _environment;
     private readonly IAccountStore _accountStore;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IClock _clock;
@@ -39,7 +38,6 @@ public class AuthController : Controller
     public AuthController(
         SaasAccessService saasAccessService,
         IUserProfileResolver userProfileResolver,
-        IWebHostEnvironment environment,
         IAccountStore accountStore,
         IPasswordHasher passwordHasher,
         IClock clock,
@@ -50,7 +48,6 @@ public class AuthController : Controller
     {
         _saasAccessService = saasAccessService;
         _userProfileResolver = userProfileResolver;
-        _environment = environment;
         _accountStore = accountStore;
         _passwordHasher = passwordHasher;
         _clock = clock;
@@ -259,15 +256,6 @@ public class AuthController : Controller
 
     private string? ResolveFallbackRole(IssuedSaasSession session)
     {
-        if (_environment.IsDevelopment())
-        {
-            var demoRole = DemoPersonas.ResolveRole(session.Email);
-            if (demoRole is not null)
-            {
-                return demoRole;
-            }
-        }
-
         return session.PlatformRole == PlatformAccessRole.PlatformAdmin
             ? YourRhythmRoles.RootAdmin
             : null;

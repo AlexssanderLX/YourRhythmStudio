@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace YourRhythmStudio.ViewModels.Auth;
 
-public class RegisterViewModel
+public class RegisterViewModel : IValidatableObject
 {
     [Required(ErrorMessage = "Escolha um plano.")]
     [RegularExpression("professor|escola", ErrorMessage = "Plano invalido.")]
@@ -18,7 +19,6 @@ public class RegisterViewModel
     [Display(Name = "E-mail")]
     public string Email { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Informe o nome da escola ou studio.")]
     [MaxLength(160)]
     [Display(Name = "Nome da escola / studio")]
     public string SchoolName { get; set; } = string.Empty;
@@ -26,6 +26,16 @@ public class RegisterViewModel
     [MaxLength(40)]
     [Display(Name = "Telefone / WhatsApp (opcional)")]
     public string? Phone { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (PlanCode == "escola" && string.IsNullOrWhiteSpace(SchoolName))
+        {
+            yield return new ValidationResult(
+                "Informe o nome da escola ou studio.",
+                new[] { nameof(SchoolName) });
+        }
+    }
 }
 
 public class SetPasswordViewModel

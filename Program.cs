@@ -35,7 +35,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    await app.Services.SeedFoundationDemoAccountAsync();
+    await app.Services.RemoveFoundationDemoAccountsAsync();
 }
 
 await RootBootstrap.EnsureRootAccountAsync(app.Services);

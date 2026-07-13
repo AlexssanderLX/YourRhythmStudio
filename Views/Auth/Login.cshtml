@@ -25,16 +25,12 @@
             <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
 
             <label asp-for="Email"></label>
-            <input asp-for="Email" autocomplete="email" placeholder="admin@yourrhythm.local" />
+            <input asp-for="Email" autocomplete="email" placeholder="root@yourrhythm.local" />
             <span asp-validation-for="Email"></span>
 
             <label asp-for="Password"></label>
             <input asp-for="Password" autocomplete="current-password" placeholder="Sua senha" />
             <span asp-validation-for="Password"></span>
-
-            <label asp-for="TenantKey"></label>
-            <input asp-for="TenantKey" autocomplete="off" placeholder="Opcional no MVP" />
-            <span asp-validation-for="TenantKey"></span>
 
             <label class="auth-check">
                 <input asp-for="RememberMe" />
@@ -43,32 +39,9 @@
 
             <button type="submit">Entrar</button>
         </form>
-
-        <p class="auth-switch">
-            Novo aqui? <a asp-controller="Auth" asp-action="Register">Criar conta gratis</a>
-        </p>
-
-        <div class="auth-demo">
-            <span>Contas demo (senha <strong>YourRhythm@123</strong>):</span>
-            <button type="button" class="auth-demo-pick" data-email="escola@yourrhythm.local">escola@yourrhythm.local</button>
-            <button type="button" class="auth-demo-pick" data-email="professor@yourrhythm.local">professor@yourrhythm.local</button>
-            <button type="button" class="auth-demo-pick" data-email="aluno@yourrhythm.local">aluno@yourrhythm.local</button>
-        </div>
     </section>
 </main>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        // Conveniência demo: clicar numa conta preenche e-mail + senha.
-        document.querySelectorAll(".auth-demo-pick").forEach(function (b) {
-            b.addEventListener("click", function () {
-                var email = document.getElementById("Email");
-                var pwd = document.getElementById("Password");
-                if (email) email.value = b.getAttribute("data-email");
-                if (pwd) pwd.value = "YourRhythm@123";
-                if (pwd) pwd.focus();
-            });
-        });
-    </script>
 }

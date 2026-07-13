@@ -53,16 +53,6 @@ dotnet ef database update
 
 O projeto inclui uma factory design-time para permitir gerar migrations sem conectar no banco placeholder do `appsettings.json`.
 
-## Contas demo
-
-As contas demo existem apenas para ambiente `Development`.
-
-- Professor: `professor@yourrhythm.local`
-- Aluno: `aluno@yourrhythm.local`
-- Escola: `escola@yourrhythm.local`
-
-A senha demo fica no seed de desenvolvimento e nao deve ser usada como senha de producao.
-
 ## Conta Root
 
 O app cria automaticamente uma conta Root administrativa:
