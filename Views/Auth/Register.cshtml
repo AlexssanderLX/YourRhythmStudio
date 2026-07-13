@@ -85,19 +85,6 @@
 .password-field input {
     padding-right: 54px;
 }
-.password-toggle {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 0;
-    background: transparent;
-    color: var(--blue-bright);
-    font-size: 12px;
-    font-weight: 800;
-    cursor: pointer;
-    padding: 8px;
-}
 
 @@media (max-width: 480px) {
     .plan-cards { grid-template-columns: 1fr; }
@@ -106,6 +93,10 @@
 
 <main class="auth-shell">
     <section class="auth-card" aria-labelledby="register-title" style="max-width:500px">
+        <a href="/" class="auth-back">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Voltar ao início
+        </a>
         <div class="auth-brand">
             <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
             <span>YourRhythm<span>.</span></span>
