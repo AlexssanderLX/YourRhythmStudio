@@ -157,10 +157,43 @@ jobs:
           sudo chown -h yourrhythm:yourrhythm "$REMOTE_ROOT/current"
 
           sudo systemctl restart "$SERVICE_NAME"
-          sudo systemctl is-active --quiet "$SERVICE_NAME"
+          for attempt in $(seq 1 30); do
+            if sudo systemctl is-active --quiet "$SERVICE_NAME" && curl --fail --silent --show-error --max-time 5 http://127.0.0.1:5000/ >/dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "Application did not become healthy on 127.0.0.1:5000. Rolling back." >&2
+              if [ -n "$previous" ] && [ -d "$previous" ]; then
+                sudo ln -sfn "$previous" "$REMOTE_ROOT/current"
+                sudo chown -h yourrhythm:yourrhythm "$REMOTE_ROOT/current"
+                sudo systemctl restart "$SERVICE_NAME"
+              fi
+              sudo journalctl -u "$SERVICE_NAME" -n 120 --no-pager >&2 || true
+              exit 1
+            fi
+
+            sleep 3
+          done
 
           if [ -n "$HEALTH_CHECK_URL" ]; then
-            curl --fail --silent --show-error --location --max-time 30 "$HEALTH_CHECK_URL" >/dev/null
+            for attempt in $(seq 1 20); do
+              if curl --fail --silent --show-error --location --max-time 10 "$HEALTH_CHECK_URL" >/dev/null; then
+                break
+              fi
+
+              if [ "$attempt" -eq 20 ]; then
+                echo "Public health check failed. Rolling back." >&2
+                if [ -n "$previous" ] && [ -d "$previous" ]; then
+                  sudo ln -sfn "$previous" "$REMOTE_ROOT/current"
+                  sudo chown -h yourrhythm:yourrhythm "$REMOTE_ROOT/current"
+                  sudo systemctl restart "$SERVICE_NAME"
+                fi
+                exit 1
+              fi
+
+              sleep 3
+            done
           fi
 
           sudo rm -f "$archive_path"

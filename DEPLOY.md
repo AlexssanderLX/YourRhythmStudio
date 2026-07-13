@@ -294,8 +294,10 @@ O workflow:
 9. recria symlinks para uploads persistentes;
 10. troca `/var/www/yourrhythm/current`;
 11. reinicia `yourrhythm.service`;
-12. executa health check;
-13. mantem releases recentes para rollback.
+12. aguarda o Kestrel responder em `127.0.0.1:5000`;
+13. executa health check publico com retry;
+14. faz rollback automatico para a release anterior se o app nao ficar saudavel;
+15. mantem releases recentes para rollback.
 
 O deploy nao executa migrations automaticamente. Quando houver migration nova, aplicar de forma consciente antes ou depois da publicacao, conforme o risco da mudanca.
 
