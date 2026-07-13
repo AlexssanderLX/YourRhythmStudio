@@ -3,10 +3,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace YourRhythmStudio.ViewModels.Auth;
 
-public class RegisterViewModel
+public class RegisterViewModel : IValidatableObject
 {
     [Required(ErrorMessage = "Escolha um plano.")]
-    [RegularExpression("professor", ErrorMessage = "Este plano ainda esta em desenvolvimento.")]
+    [RegularExpression("professor|escola", ErrorMessage = "Plano invalido.")]
     public string PlanCode { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Informe seu nome.")]
@@ -41,6 +41,15 @@ public class RegisterViewModel
 
     public IReadOnlyCollection<RegisterPlanOptionViewModel> PlanOptions { get; set; } = [];
 
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (PlanCode == "escola" && string.IsNullOrWhiteSpace(SchoolName))
+        {
+            yield return new ValidationResult(
+                "Informe o nome da escola ou studio.",
+                new[] { nameof(SchoolName) });
+        }
+    }
 }
 
 public sealed class RegisterPlanOptionViewModel
