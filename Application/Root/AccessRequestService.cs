@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Foundation.Access.Abstractions;
 using YourRhythmStudio.Domain.Root;
 using YourRhythmStudio.Infrastructure.Data;
 using YourRhythmStudio.Infrastructure.Email;
@@ -12,17 +13,20 @@ public sealed class AccessRequestService
 
     private readonly YourRhythmDbContext _db;
     private readonly IEmailService _email;
+    private readonly IPasswordHasher _passwordHasher;
     private readonly IConfiguration _config;
     private readonly ILogger<AccessRequestService> _logger;
 
     public AccessRequestService(
         YourRhythmDbContext db,
         IEmailService email,
+        IPasswordHasher passwordHasher,
         IConfiguration config,
         ILogger<AccessRequestService> logger)
     {
         _db = db;
         _email = email;
+        _passwordHasher = passwordHasher;
         _config = config;
         _logger = logger;
     }
@@ -77,6 +81,16 @@ public sealed class AccessRequestService
         if (existingActiveUser)
             return SubmitAccessRequestResult.Duplicate();
 
+        Foundation.Access.Security.PasswordCredential passwordCredential;
+        try
+        {
+            passwordCredential = _passwordHasher.HashPassword(model.Password);
+        }
+        catch (ArgumentException ex)
+        {
+            return SubmitAccessRequestResult.Failed(ex.Message, nameof(RegisterViewModel.Password));
+        }
+
         var request = new AccessRequest
         {
             PlanCode = plan.Code,
@@ -85,7 +99,12 @@ public sealed class AccessRequestService
             SchoolName = plan.Code == "escola"
                 ? model.SchoolName!.Trim()
                 : model.DisplayName.Trim(),
-            Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim()
+            Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim(),
+            PasswordAlgorithm = passwordCredential.Algorithm,
+            PasswordIterations = passwordCredential.Iterations,
+            PasswordSaltBase64 = passwordCredential.SaltBase64,
+            PasswordHashBase64 = passwordCredential.HashBase64,
+            PasswordUpdatedAtUtc = passwordCredential.UpdatedAtUtc
         };
 
         _db.AccessRequests.Add(request);

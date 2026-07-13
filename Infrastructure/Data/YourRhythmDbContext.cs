@@ -413,6 +413,9 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(r => r.Email).HasMaxLength(256).IsRequired();
             entity.Property(r => r.SchoolName).HasMaxLength(160).IsRequired();
             entity.Property(r => r.Phone).HasMaxLength(40);
+            entity.Property(r => r.PasswordAlgorithm).HasMaxLength(40);
+            entity.Property(r => r.PasswordSaltBase64).HasMaxLength(256);
+            entity.Property(r => r.PasswordHashBase64).HasMaxLength(512);
             entity.Property(r => r.Status).HasConversion<int>();
             entity.Property(r => r.ReviewNote).HasMaxLength(500);
             entity.Property(r => r.SetPasswordToken).HasMaxLength(128);

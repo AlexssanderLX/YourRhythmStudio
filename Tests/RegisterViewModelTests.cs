@@ -50,6 +50,29 @@ public sealed class RegisterViewModelTests
         Assert.DoesNotContain(errors, error => error.MemberNames.Contains(nameof(RegisterViewModel.PlanCode)));
     }
 
+    [Fact]
+    public void Password_IsRequired()
+    {
+        var model = ValidModel(planCode: "professor", schoolName: null);
+        model.Password = string.Empty;
+        model.ConfirmPassword = string.Empty;
+
+        var errors = Validate(model);
+
+        Assert.Contains(errors, error => error.MemberNames.Contains(nameof(RegisterViewModel.Password)));
+    }
+
+    [Fact]
+    public void ConfirmPassword_MustMatchPassword()
+    {
+        var model = ValidModel(planCode: "professor", schoolName: null);
+        model.ConfirmPassword = "OutraSenha123!";
+
+        var errors = Validate(model);
+
+        Assert.Contains(errors, error => error.MemberNames.Contains(nameof(RegisterViewModel.ConfirmPassword)));
+    }
+
     private static RegisterViewModel ValidModel(string planCode, string? schoolName)
     {
         return new RegisterViewModel
@@ -58,7 +81,9 @@ public sealed class RegisterViewModelTests
             DisplayName = "Alexssander Almeida",
             Email = "alexssander@example.com",
             SchoolName = schoolName,
-            Phone = "(11) 99999-9999"
+            Phone = "(11) 99999-9999",
+            Password = "SenhaTeste123!",
+            ConfirmPassword = "SenhaTeste123!"
         };
     }
 

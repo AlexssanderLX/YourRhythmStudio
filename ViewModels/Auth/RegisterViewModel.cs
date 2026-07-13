@@ -27,6 +27,18 @@ public class RegisterViewModel : IValidatableObject
     [Display(Name = "Telefone / WhatsApp (opcional)")]
     public string? Phone { get; set; }
 
+    [Required(ErrorMessage = "Crie uma senha.")]
+    [MinLength(8, ErrorMessage = "A senha deve ter pelo menos 8 caracteres.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Senha")]
+    public string Password { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Confirme sua senha.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Confirmar senha")]
+    [Compare(nameof(Password), ErrorMessage = "As senhas nao coincidem.")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+
     public IReadOnlyCollection<RegisterPlanOptionViewModel> PlanOptions { get; set; } = [];
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -79,6 +79,25 @@
     text-transform: uppercase;
 }
 .plan-error { color: #e53e3e; font-size: 12.5px; margin-top: 6px; }
+.password-field {
+    position: relative;
+}
+.password-field input {
+    padding-right: 54px;
+}
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: var(--blue-bright);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 8px;
+}
 
 @@media (max-width: 480px) {
     .plan-cards { grid-template-columns: 1fr; }
@@ -166,6 +185,20 @@
             <label asp-for="Phone">Telefone / WhatsApp (opcional)</label>
             <input asp-for="Phone" autocomplete="tel" placeholder="(11) 99999-9999" />
 
+            <label asp-for="Password">Senha</label>
+            <div class="password-field">
+                <input asp-for="Password" autocomplete="new-password" placeholder="Crie uma senha segura" />
+                <button type="button" class="password-toggle" data-password-toggle="Password" aria-label="Mostrar senha">Ver</button>
+            </div>
+            <span asp-validation-for="Password" class="field-error"></span>
+
+            <label asp-for="ConfirmPassword">Confirmar senha</label>
+            <div class="password-field">
+                <input asp-for="ConfirmPassword" autocomplete="new-password" placeholder="Repita a senha" />
+                <button type="button" class="password-toggle" data-password-toggle="ConfirmPassword" aria-label="Mostrar confirmacao da senha">Ver</button>
+            </div>
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+
             <button type="submit" class="btn-full" id="submit-btn">Solicitar acesso</button>
 
             <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">
@@ -229,6 +262,18 @@
                     radio.checked = true;
                     updateCards();
                 }
+            });
+        });
+
+        document.querySelectorAll("[data-password-toggle]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var input = document.getElementById(button.getAttribute("data-password-toggle"));
+                if (!input) return;
+
+                var show = input.type === "password";
+                input.type = show ? "text" : "password";
+                button.textContent = show ? "Ocultar" : "Ver";
+                button.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
             });
         });
 

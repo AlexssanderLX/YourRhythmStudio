@@ -132,14 +132,18 @@ public sealed class RootAdminService
             var plan = await FindActivePlanAsync(request.PlanCode, ct);
             if (plan is null) return (false, "Plano da solicitacao nao esta ativo ou nao existe.");
 
-            // Create account (PendingApproval until user sets password)
+            var passwordCredential = BuildPasswordCredential(request);
+            var hasPassword = passwordCredential is not null;
+
             var account = new Account
             {
                 DisplayName = request.ResponsibleName,
                 Email = emailNorm,
-                Status = AccountStatus.PendingApproval,
+                Status = hasPassword ? AccountStatus.Active : AccountStatus.PendingApproval,
                 PlatformRole = PlatformAccessRole.None,
+                PasswordCredential = passwordCredential,
                 CreatedAtUtc = now,
+                ActivatedAtUtc = hasPassword ? now : null,
                 SecurityStamp = Guid.NewGuid().ToString("N")
             };
             await _accountStore.SaveAsync(account, ct);
@@ -181,13 +185,14 @@ public sealed class RootAdminService
             };
             _db.TeacherProfiles.Add(teacher);
 
-            // Generate set-password token
-            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            var token = hasPassword
+                ? null
+                : Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
             request.Status = AccessRequestStatus.Approved;
             request.ReviewedAtUtc = now;
             request.ReviewedByAccountId = actorId;
             request.SetPasswordToken = token;
-            request.SetPasswordTokenExpiresAtUtc = now.AddHours(72);
+            request.SetPasswordTokenExpiresAtUtc = hasPassword ? null : now.AddHours(72);
             request.CreatedAccountId = account.Id;
 
             _db.AdminAuditLogs.Add(new AdminAuditLog
@@ -204,7 +209,10 @@ public sealed class RootAdminService
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
-            await SendApprovalEmailAsync(request, token, ct);
+            if (hasPassword)
+                await SendActiveAccountApprovalEmailAsync(request, ct);
+            else
+                await SendApprovalEmailAsync(request, token!, ct);
 
             return (true, null);
         }
@@ -270,6 +278,53 @@ public sealed class RootAdminService
         {
             _logger.LogError("Falha ao enviar e-mail de aprovacao para {Email}: {Type}", request.Email, ex.GetType().Name);
         }
+    }
+
+    private async Task SendActiveAccountApprovalEmailAsync(AccessRequest request, CancellationToken ct)
+    {
+        var baseUrl = _config["Application:BaseUrl"]?.TrimEnd('/') ?? string.Empty;
+        var link = string.IsNullOrWhiteSpace(baseUrl) ? "/Auth/Login" : $"{baseUrl}/Auth/Login";
+        var html = $"""
+            <h2>Sua conta YourRhythm foi aprovada!</h2>
+            <p>Ola, <strong>{System.Net.WebUtility.HtmlEncode(request.ResponsibleName)}</strong>!</p>
+            <p>Sua solicitacao de acesso foi aprovada. Use o e-mail e a senha criados no cadastro para entrar.</p>
+            <p><a href="{link}" style="background:#2563EB;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Entrar no YourRhythm</a></p>
+            <p style="color:#64748b;font-size:12px">Nenhuma senha foi incluida neste e-mail.</p>
+            """;
+
+        try
+        {
+            await _email.SendAsync(new EmailMessage
+            {
+                ToAddress = request.Email,
+                ToName = request.ResponsibleName,
+                Subject = "[YourRhythm] Sua conta foi aprovada",
+                HtmlBody = html
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Falha ao enviar e-mail de aprovacao para {Email}: {Type}", request.Email, ex.GetType().Name);
+        }
+    }
+
+    private static PasswordCredential? BuildPasswordCredential(AccessRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.PasswordHashBase64) ||
+            string.IsNullOrWhiteSpace(request.PasswordSaltBase64) ||
+            request.PasswordIterations <= 0)
+        {
+            return null;
+        }
+
+        return new PasswordCredential
+        {
+            Algorithm = string.IsNullOrWhiteSpace(request.PasswordAlgorithm) ? "PBKDF2-SHA256" : request.PasswordAlgorithm,
+            Iterations = request.PasswordIterations,
+            SaltBase64 = request.PasswordSaltBase64,
+            HashBase64 = request.PasswordHashBase64,
+            UpdatedAtUtc = request.PasswordUpdatedAtUtc ?? DateTime.UtcNow
+        };
     }
 
     // ──── SetPassword ──────────────────────────────────────────────────────────

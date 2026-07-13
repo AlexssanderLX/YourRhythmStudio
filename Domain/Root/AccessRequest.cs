@@ -8,6 +8,11 @@ public sealed class AccessRequest
     public string Email { get; set; } = string.Empty;
     public string SchoolName { get; set; } = string.Empty;
     public string? Phone { get; set; }
+    public string? PasswordAlgorithm { get; set; }
+    public int PasswordIterations { get; set; }
+    public string? PasswordSaltBase64 { get; set; }
+    public string? PasswordHashBase64 { get; set; }
+    public DateTime? PasswordUpdatedAtUtc { get; set; }
     public AccessRequestStatus Status { get; set; } = AccessRequestStatus.Pending;
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;
     public DateTime? ReviewedAtUtc { get; set; }
