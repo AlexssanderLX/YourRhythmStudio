@@ -8,7 +8,7 @@ public sealed class RegisterViewModelTests
     [Fact]
     public void ProfessorPlan_AllowsEmptySchoolName()
     {
-        var model = ValidModel(planCode: "professor", schoolName: string.Empty);
+        var model = ValidModel(planCode: "professor", schoolName: null);
 
         var errors = Validate(model);
 
@@ -50,7 +50,7 @@ public sealed class RegisterViewModelTests
         Assert.DoesNotContain(errors, error => error.MemberNames.Contains(nameof(RegisterViewModel.PlanCode)));
     }
 
-    private static RegisterViewModel ValidModel(string planCode, string schoolName)
+    private static RegisterViewModel ValidModel(string planCode, string? schoolName)
     {
         return new RegisterViewModel
         {

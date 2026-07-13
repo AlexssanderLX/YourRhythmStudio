@@ -21,7 +21,7 @@ public class RegisterViewModel : IValidatableObject
 
     [MaxLength(160)]
     [Display(Name = "Nome da escola / studio")]
-    public string SchoolName { get; set; } = string.Empty;
+    public string? SchoolName { get; set; }
 
     [MaxLength(40)]
     [Display(Name = "Telefone / WhatsApp (opcional)")]

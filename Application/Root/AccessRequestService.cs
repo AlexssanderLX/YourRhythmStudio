@@ -83,7 +83,7 @@ public sealed class AccessRequestService
             ResponsibleName = model.DisplayName.Trim(),
             Email = emailNorm,
             SchoolName = plan.Code == "escola"
-                ? model.SchoolName.Trim()
+                ? model.SchoolName!.Trim()
                 : model.DisplayName.Trim(),
             Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim()
         };
