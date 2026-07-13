@@ -1,11 +1,29 @@
 /* YourRhythm Studio — landing motion
    Subtle, premium reveals. Heavy lifting via GSAP + ScrollTrigger.
-   Everything degrades gracefully without JS and honors reduced-motion. */
+   Everything degrades gracefully without JS and honors reduced-motion.
+
+   Capability tiers (simple, no benchmark):
+   - reduce  : prefers-reduced-motion → skip all decorative animation
+   - lowCap  : slow connection / low memory / small viewport → skip heavy bg
+   - default : full experience */
 (function () {
     "use strict";
 
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var hasGSAP = typeof window.gsap !== "undefined";
+
+    var lowCap = (function () {
+        try {
+            var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn) {
+                if (conn.saveData) return true;
+                if (conn.effectiveType === "slow-2g" || conn.effectiveType === "2g") return true;
+            }
+            if (navigator.deviceMemory && navigator.deviceMemory < 2) return true;
+            if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return true;
+        } catch (e) {}
+        return window.innerWidth < 640;
+    })();
 
     // --- Nav: subtle border once you scroll ---
     var nav = document.getElementById("nav");
@@ -15,10 +33,25 @@
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
+    // --- Mobile nav hamburger ---
+    var hamburger = document.getElementById("navHamburger");
+    var mobileNav = document.getElementById("navMobile");
+    if (hamburger && mobileNav) {
+        hamburger.addEventListener("click", function () {
+            var open = mobileNav.classList.toggle("open");
+            hamburger.setAttribute("aria-expanded", open ? "true" : "false");
+            hamburger.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
+        });
+        mobileNav.querySelectorAll("a").forEach(function (a) {
+            a.addEventListener("click", function () {
+                mobileNav.classList.remove("open");
+                hamburger.setAttribute("aria-expanded", "false");
+                hamburger.setAttribute("aria-label", "Abrir menu");
+            });
+        });
+    }
+
     // --- Playable mini digital piano ---
-    // The hero keyboard is interactive: each key plays ITS OWN real pitch when
-    // the user presses it. NO ambient/automatic sound — audio only happens on
-    // a genuine key press (which also satisfies the browser autoplay policy).
     (function () {
         var ctx = null, master = null;
 
@@ -33,7 +66,6 @@
             return ctx;
         }
 
-        // Note name ("C3", "C#4", "A4") -> frequency in Hz (equal temperament).
         var SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
         function noteToFreq(name) {
             var m = /^([A-G])(#?)(\d)$/.exec(name || "");
@@ -42,8 +74,6 @@
             return 440 * Math.pow(2, (midi - 69) / 12);
         }
 
-        // A soft "digital piano" voice: triangle + sine octave through a lowpass,
-        // with a quick attack and natural exponential decay.
         function playFreq(f) {
             var c = audioCtx();
             if (!c) return;
@@ -73,7 +103,6 @@
         if (kb) {
             kb.classList.add("playable");
             kb.addEventListener("pointerdown", function (e) {
-                // Black keys sit on top — prefer them when the press lands there.
                 var key = e.target.closest(".bkey") || e.target.closest(".wkey");
                 if (!key || !kb.contains(key)) return;
                 e.preventDefault();
@@ -87,9 +116,6 @@
         var pct = el.getAttribute("data-fill") || "0";
         el.style.width = pct + "%";
     }
-    // Bars grow to a PIXEL height computed from the chart's real height.
-    // (A percentage height collapses here: the flex column has no resolved
-    // height to resolve the percentage against.)
     function colTrackPx() {
         var c = document.getElementById("chart");
         return c ? Math.max(0, c.clientHeight - 26) : 130;
@@ -102,7 +128,7 @@
         el.style.height = colPx(el) + "px";
     }
 
-    // If GSAP is unavailable or reduced motion: show everything, fill bars, done.
+    // No GSAP or reduced motion: show everything, fill bars, done.
     if (!hasGSAP || reduce) {
         document.querySelectorAll(".reveal").forEach(function (el) {
             el.style.opacity = 1; el.style.transform = "none";
@@ -117,20 +143,20 @@
     gsap.registerPlugin(ScrollTrigger);
 
     // NOTE: scroll reveals are handled by AOS (see _LandingLayout.cshtml).
-    // GSAP here only drives the continuous / data-driven motion that AOS
-    // cannot do: nav entrance, floating card, drifting notes, and the
-    // progress bars / ring / chart that fill to a value.
+    // GSAP here only drives continuous / data-driven motion: nav entrance,
+    // particles, MIDI playhead, progress bars/chart that fill to a value.
 
     // --- Hero entrance: gentle stagger ---
     gsap.from("#nav .nav-inner > *", { opacity: 0, y: -12, duration: 0.7, stagger: 0.08, ease: "power2.out", delay: 0.1 });
 
-    // --- Hero piano stage: particles, MIDI playhead, pointer parallax ---
+    // --- Hero piano stage ---
     var stage = document.getElementById("pianoStage");
     if (stage) {
-        // sprinkle drifting particles
+        // Fewer particles on limited devices
+        var particleCount = lowCap ? 5 : 14;
         var pc = document.getElementById("particles");
         if (pc) {
-            for (var pi = 0; pi < 14; pi++) {
+            for (var pi = 0; pi < particleCount; pi++) {
                 var p = document.createElement("span");
                 p.className = "particle";
                 var s = (2 + Math.random() * 3).toFixed(1);
@@ -167,91 +193,103 @@
             });
         }
 
-        // subtle pointer parallax (depth between glow, device, keys)
-        var device = document.getElementById("pianoDevice");
-        var glow = stage.querySelector(".stage-glow");
-        stage.addEventListener("pointermove", function (e) {
-            var r = stage.getBoundingClientRect();
-            var dx = (e.clientX - r.left) / r.width - 0.5;
-            var dy = (e.clientY - r.top) / r.height - 0.5;
-            if (device) gsap.to(device, { x: dx * 10, y: dy * 8, rotateY: dx * 3, rotateX: -dy * 2, duration: 0.6, ease: "power2.out", overwrite: "auto" });
-            if (glow) gsap.to(glow, { x: dx * -26, y: dy * -18, duration: 0.9, ease: "power2.out", overwrite: "auto" });
-        });
-        stage.addEventListener("pointerleave", function () {
-            if (device) gsap.to(device, { x: 0, y: 0, rotateY: 0, rotateX: 0, duration: 0.9, ease: "power2.out" });
-            if (glow) gsap.to(glow, { x: 0, y: 0, duration: 1.1, ease: "power2.out" });
-        });
+        // Pointer parallax — desktop only (costly on touch/low-cap devices)
+        if (!lowCap && window.matchMedia("(pointer: fine)").matches) {
+            var device = document.getElementById("pianoDevice");
+            var glow = stage.querySelector(".stage-glow");
+            stage.addEventListener("pointermove", function (e) {
+                var r = stage.getBoundingClientRect();
+                var dx = (e.clientX - r.left) / r.width - 0.5;
+                var dy = (e.clientY - r.top) / r.height - 0.5;
+                if (device) gsap.to(device, { x: dx * 10, y: dy * 8, rotateY: dx * 3, rotateX: -dy * 2, duration: 0.6, ease: "power2.out", overwrite: "auto" });
+                if (glow) gsap.to(glow, { x: dx * -26, y: dy * -18, duration: 0.9, ease: "power2.out", overwrite: "auto" });
+            });
+            stage.addEventListener("pointerleave", function () {
+                if (device) gsap.to(device, { x: 0, y: 0, rotateY: 0, rotateX: 0, duration: 0.9, ease: "power2.out" });
+                if (glow) gsap.to(glow, { x: 0, y: 0, duration: 1.1, ease: "power2.out" });
+            });
+        }
     }
 
-    // --- Hero animated BACKGROUND: the ambient piano plays itself ---
-    (function () {
-        var kb = document.getElementById("bgKeyboard");
-        if (!kb) return;
+    // --- Hero animated BACKGROUND — skipped entirely on low-cap devices ---
+    var bgTimeline = null;
+    if (!lowCap) {
+        (function () {
+            var kb = document.getElementById("bgKeyboard");
+            if (!kb) return;
 
-        // a few drifting background particles
-        var bgp = document.getElementById("bgParticles");
-        if (bgp) {
-            for (var i = 0; i < 12; i++) {
-                var d = document.createElement("span");
-                d.className = "bgp";
-                var s = (2 + Math.random() * 3).toFixed(1);
-                d.style.left = (Math.random() * 100).toFixed(2) + "%";
-                d.style.top = (40 + Math.random() * 60).toFixed(2) + "%";
-                d.style.width = s + "px"; d.style.height = s + "px";
-                d.style.opacity = (0.15 + Math.random() * 0.4).toFixed(2);
-                bgp.appendChild(d);
-                gsap.to(d, {
-                    y: -(40 + Math.random() * 70), x: -14 + Math.random() * 28, opacity: 0,
-                    duration: 6 + Math.random() * 5, ease: "sine.inOut", repeat: -1, yoyo: true, delay: Math.random() * 5
-                });
+            var bgp = document.getElementById("bgParticles");
+            if (bgp) {
+                for (var i = 0; i < 8; i++) {
+                    var d = document.createElement("span");
+                    d.className = "bgp";
+                    var s = (2 + Math.random() * 3).toFixed(1);
+                    d.style.left = (Math.random() * 100).toFixed(2) + "%";
+                    d.style.top = (40 + Math.random() * 60).toFixed(2) + "%";
+                    d.style.width = s + "px"; d.style.height = s + "px";
+                    d.style.opacity = (0.15 + Math.random() * 0.4).toFixed(2);
+                    bgp.appendChild(d);
+                    gsap.to(d, {
+                        y: -(40 + Math.random() * 70), x: -14 + Math.random() * 28, opacity: 0,
+                        duration: 6 + Math.random() * 5, ease: "sine.inOut", repeat: -1, yoyo: true, delay: Math.random() * 5
+                    });
+                }
             }
-        }
 
-        var host = document.getElementById("risingNotes");
-        var glyphs = ["♪", "♫", "♩", "♬"];
+            var host = document.getElementById("risingNotes");
+            var glyphs = ["♪", "♫", "♩", "♬"];
 
-        // a small note floats up from a played key (or a random x on mobile)
-        function spawnNote(k) {
-            if (!host) return;
-            var el = document.createElement("span");
-            el.className = "rnote";
-            el.textContent = glyphs[(Math.random() * glyphs.length) | 0];
-            var hr = host.getBoundingClientRect();
-            var kr = k.getBoundingClientRect();
-            var x = kr.width > 2 ? (kr.left - hr.left + kr.width / 2) : Math.random() * hr.width;
-            el.style.left = x + "px";
-            el.style.top = (hr.height * 0.6) + "px";
-            el.style.fontSize = (15 + Math.random() * 11) + "px";
-            host.appendChild(el);
-            gsap.fromTo(el,
-                { opacity: 0, y: 0, scale: 0.8 },
-                {
-                    opacity: 0.7, y: -(110 + Math.random() * 80), x: "+=" + (-22 + Math.random() * 44),
-                    scale: 1, rotation: -12 + Math.random() * 24, duration: 2.6 + Math.random() * 1.1,
-                    ease: "power1.out", onComplete: function () { el.remove(); }
-                });
-            gsap.to(el, { opacity: 0, duration: 0.9, delay: 1.7, ease: "power1.in" });
-        }
+            function spawnNote(k) {
+                if (!host) return;
+                var el = document.createElement("span");
+                el.className = "rnote";
+                el.textContent = glyphs[(Math.random() * glyphs.length) | 0];
+                var hr = host.getBoundingClientRect();
+                var kr = k.getBoundingClientRect();
+                var x = kr.width > 2 ? (kr.left - hr.left + kr.width / 2) : Math.random() * hr.width;
+                el.style.left = x + "px";
+                el.style.top = (hr.height * 0.6) + "px";
+                el.style.fontSize = (15 + Math.random() * 11) + "px";
+                host.appendChild(el);
+                gsap.fromTo(el,
+                    { opacity: 0, y: 0, scale: 0.8 },
+                    {
+                        opacity: 0.7, y: -(110 + Math.random() * 80), x: "+=" + (-22 + Math.random() * 44),
+                        scale: 1, rotation: -12 + Math.random() * 24, duration: 2.6 + Math.random() * 1.1,
+                        ease: "power1.out", onComplete: function () { el.remove(); }
+                    });
+                gsap.to(el, { opacity: 0, duration: 0.9, delay: 1.7, ease: "power1.in" });
+            }
 
-        // sound waves pulse on every "beat"
-        function pulseWaves() {
-            gsap.fromTo(".hero-bg-waves", { opacity: 0.5 }, { opacity: 0.85, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.out" });
-        }
+            function pulseWaves() {
+                gsap.fromTo(".hero-bg-waves", { opacity: 0.5 }, { opacity: 0.85, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.out" });
+            }
 
-        // The melody: C - E - G - B - A - G - E - D (Dó Mi Sol Si Lá Sol Mi Ré),
-        // played in a mid octave so the lit keys sit in the visible zone.
-        var melody = ["C", "E", "G", "B", "A", "G", "E", "D"];
-        var oct = 2; // 0..4 ; middle octave
-        var tl = gsap.timeline({ repeat: -1, repeatDelay: 0.7 });
-        melody.forEach(function (note, idx) {
-            var key = kb.querySelector('.bgk-wkey[data-note="' + note + '"][data-oct="' + oct + '"]');
-            if (!key) return;
-            var light = key.querySelector(".klight");
-            var at = idx * 0.46;
-            tl.to(light, { opacity: 0.95, duration: 0.16, ease: "power2.out", onStart: function () { spawnNote(key); pulseWaves(); } }, at)
-              .to(light, { opacity: 0, duration: 0.52, ease: "power2.in" }, at + 0.16);
+            var melody = ["C", "E", "G", "B", "A", "G", "E", "D"];
+            var oct = 2;
+            var tl = gsap.timeline({ repeat: -1, repeatDelay: 0.7 });
+            bgTimeline = tl;
+            melody.forEach(function (note, idx) {
+                var key = kb.querySelector('.bgk-wkey[data-note="' + note + '"][data-oct="' + oct + '"]');
+                if (!key) return;
+                var light = key.querySelector(".klight");
+                var at = idx * 0.46;
+                tl.to(light, { opacity: 0.95, duration: 0.16, ease: "power2.out", onStart: function () { spawnNote(key); pulseWaves(); } }, at)
+                  .to(light, { opacity: 0, duration: 0.52, ease: "power2.in" }, at + 0.16);
+            });
+        })();
+    }
+
+    // --- Pause heavy animations when tab is hidden ---
+    if (typeof document.hidden !== "undefined") {
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                if (bgTimeline) bgTimeline.pause();
+            } else {
+                if (bgTimeline) bgTimeline.resume();
+            }
         });
-    })();
+    }
 
     // --- Progress bars fill when scrolled into view ---
     gsap.utils.toArray(".bar > i").forEach(function (el) {
@@ -262,7 +300,7 @@
         });
     });
 
-    // --- Evolution chart columns grow (to a pixel height, see colPx) ---
+    // --- Evolution chart columns grow ---
     gsap.utils.toArray(".chart .col i").forEach(function (el, i) {
         ScrollTrigger.create({
             trigger: "#chart", start: "top 85%", once: true,
