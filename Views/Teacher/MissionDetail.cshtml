@@ -137,20 +137,20 @@
                   asp-route-studentId="@m.StudentProfileId"
                   asp-route-missionId="@m.Id">
                 @Html.AntiForgeryToken()
-                <input type="hidden" asp-for="Review.MissionId" value="@m.Id" />
+                <input type="hidden" name="MissionId" value="@m.Id" />
 
                 <div class="form-group">
                     <label>Feedback para o aluno (opcional)</label>
-                    <textarea asp-for="Review.Feedback" class="form-control" rows="4"
+                    <textarea name="Feedback" class="form-control" rows="4"
                               placeholder="Descreva o que está bom e o que pode melhorar..."></textarea>
                 </div>
 
                 <div class="review-actions">
-                    <button type="submit" name="Review.Decision" value="@((int)MissionReviewDecision.Approved)"
+                    <button type="submit" name="Decision" value="@((int)MissionReviewDecision.Approved)"
                             class="btn btn-success">
                         ✓ Aprovar — Conceder @m.XpReward XP
                     </button>
-                    <button type="submit" name="Review.Decision" value="@((int)MissionReviewDecision.AdjustmentsRequested)"
+                    <button type="submit" name="Decision" value="@((int)MissionReviewDecision.AdjustmentsRequested)"
                             class="btn btn-warn">
                         ↩ Solicitar Ajustes
                     </button>

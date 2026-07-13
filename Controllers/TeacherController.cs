@@ -842,6 +842,17 @@ public sealed class TeacherController : Controller
         ReviewMissionViewModel model,
         CancellationToken cancellationToken)
     {
+        if (model.MissionId == Guid.Empty)
+        {
+            model.MissionId = missionId;
+        }
+
+        if (!Enum.IsDefined(model.Decision)
+            || model.Decision is not (MissionReviewDecision.Approved or MissionReviewDecision.AdjustmentsRequested))
+        {
+            ModelState.AddModelError(nameof(model.Decision), "Escolha aprovar ou solicitar ajustes.");
+        }
+
         if (!ModelState.IsValid || model.MissionId != missionId)
         {
             TempData["Error"] = "Dados invalidos.";
