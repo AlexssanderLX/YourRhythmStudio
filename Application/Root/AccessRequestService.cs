@@ -9,7 +9,8 @@ namespace YourRhythmStudio.Application.Root;
 
 public sealed class AccessRequestService
 {
-    private static readonly string[] RequestablePlanCodes = ["professor", "escola"];
+    private static readonly string[] VisiblePlanCodes = ["professor", "escola"];
+    private static readonly string[] RequestablePlanCodes = ["professor"];
 
     private readonly YourRhythmDbContext _db;
     private readonly IEmailService _email;
@@ -46,7 +47,7 @@ public sealed class AccessRequestService
     {
         return await _db.Plans
             .AsNoTracking()
-            .Where(plan => plan.IsActive && (plan.Code == "professor" || plan.Code == "escola"))
+            .Where(plan => plan.IsActive && VisiblePlanCodes.Contains(plan.Code))
             .OrderBy(plan => plan.Code == "professor" ? 0 : 1)
             .ThenBy(plan => plan.Name)
             .Select(plan => new RegisterPlanOptionViewModel
@@ -55,7 +56,8 @@ public sealed class AccessRequestService
                 Name = plan.Name,
                 Description = plan.Description ?? string.Empty,
                 MonthlyPriceBrl = plan.MonthlyPriceBrl,
-                MaxStudents = plan.MaxStudents
+                MaxStudents = plan.MaxStudents,
+                IsAvailableForRequest = RequestablePlanCodes.Contains(plan.Code)
             })
             .ToListAsync(ct);
     }
@@ -63,6 +65,9 @@ public sealed class AccessRequestService
     public async Task<SubmitAccessRequestResult> SubmitAsync(RegisterViewModel model, CancellationToken ct = default)
     {
         var planCode = NormalizePlanCode(model.PlanCode);
+        if (!RequestablePlanCodes.Contains(planCode))
+            return SubmitAccessRequestResult.Failed("Este plano ainda esta em desenvolvimento.", nameof(RegisterViewModel.PlanCode));
+
         var plan = await FindRequestablePlanAsync(planCode, ct);
         if (plan is null)
             return SubmitAccessRequestResult.Failed("Escolha um plano valido para continuar.", nameof(RegisterViewModel.PlanCode));

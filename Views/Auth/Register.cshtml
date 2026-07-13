@@ -32,6 +32,23 @@
     user-select: none;
 }
 .plan-card:hover { border-color: var(--blue-bright); }
+.plan-card.unavailable {
+    cursor: not-allowed;
+    opacity: .72;
+    border-style: dashed;
+    background: color-mix(in srgb, var(--surface) 86%, #111827);
+}
+.plan-card.unavailable:hover {
+    border-color: var(--border-soft);
+    box-shadow: none;
+}
+.plan-card.unavailable .plan-icon,
+.plan-card.unavailable .plan-price strong {
+    color: var(--muted);
+}
+.plan-card.unavailable .plan-check {
+    border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
 .plan-card input[type=radio] {
     position: absolute;
     opacity: 0;
@@ -78,6 +95,23 @@
     border-radius: 20px;
     text-transform: uppercase;
 }
+.plan-badge.disabled {
+    background: #334155;
+    color: #dbeafe;
+}
+.plan-unavailable {
+    display: inline-flex;
+    margin-top: 10px;
+    border: 1px solid rgba(96, 165, 250, .28);
+    border-radius: 999px;
+    padding: 4px 9px;
+    color: #bfdbfe;
+    background: rgba(37, 99, 235, .12);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
 .plan-error { color: #e53e3e; font-size: 12.5px; margin-top: 6px; }
 .password-field {
     position: relative;
@@ -118,13 +152,14 @@
                 <div class="plan-cards" id="plan-cards">
                     @foreach (var plan in Model.PlanOptions)
                     {
-                        var checkedAttr = string.Equals(Model.PlanCode, plan.Code, StringComparison.OrdinalIgnoreCase) ? "checked" : null;
-                        <label class="plan-card" id="card-@plan.Code" role="radio" aria-checked="false">
+                        var unavailable = !plan.IsAvailableForRequest;
+                        var checkedAttr = !unavailable && string.Equals(Model.PlanCode, plan.Code, StringComparison.OrdinalIgnoreCase) ? "checked" : null;
+                        <label class="plan-card@(unavailable ? " unavailable" : "")" id="card-@plan.Code" role="radio" aria-checked="false" aria-disabled="@(unavailable ? "true" : "false")">
                             @if (plan.IsSchoolPlan)
                             {
-                                <div class="plan-badge">Escola</div>
+                                <div class="plan-badge@(unavailable ? " disabled" : "")">Escola</div>
                             }
-                            <input type="radio" name="PlanCode" value="@plan.Code" id="plan-@plan.Code" checked="@checkedAttr" />
+                            <input type="radio" name="PlanCode" value="@plan.Code" id="plan-@plan.Code" checked="@checkedAttr" disabled="@unavailable" />
                             <div class="plan-check">
                                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                                     <path d="M1 4l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -146,6 +181,10 @@
                                 <strong>@plan.MonthlyPriceBrl.ToString("C0", new System.Globalization.CultureInfo("pt-BR"))</strong>
                                 <span>/mes (informativo)</span>
                             </div>
+                            @if (unavailable)
+                            {
+                                <span class="plan-unavailable">Indisponivel · em desenvolvimento</span>
+                            }
                         </label>
                     }
                 </div>
@@ -217,7 +256,7 @@
             var anyChecked = false;
             radios.forEach(function (radio) {
                 var card = radio.closest(".plan-card");
-                if (radio.checked) {
+                if (!radio.disabled && radio.checked) {
                     card.classList.add("selected");
                     card.setAttribute("aria-checked", "true");
                     anyChecked = true;
@@ -242,14 +281,14 @@
         var preSelected = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PlanCode ?? string.Empty));
         if (preSelected) {
             var pre = document.querySelector('input[name="PlanCode"][value="' + preSelected + '"]');
-            if (pre) pre.checked = true;
+            if (pre && !pre.disabled) pre.checked = true;
         }
 
         radios.forEach(function (radio) { radio.addEventListener("change", updateCards); });
         cards.forEach(function (card) {
             card.addEventListener("click", function () {
                 var radio = card.querySelector("input[type=radio]");
-                if (radio) {
+                if (radio && !radio.disabled) {
                     radio.checked = true;
                     updateCards();
                 }
