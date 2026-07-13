@@ -688,13 +688,86 @@ public sealed class RootAdminService
     public async Task<RootSettingsViewModel> GetSettingsViewModelAsync(Guid rootAccountId, CancellationToken ct = default)
     {
         var account = await _accountStore.FindByIdAsync(rootAccountId, ct);
-        var recipient = await GetSettingAsync(AdminSettingKeys.NotificationRecipient, ct);
+        var storedRecipient = await GetSettingAsync(AdminSettingKeys.NotificationRecipient, ct);
+        var configRecipient = _config["Email:AdminNotificationRecipient"];
+        var recipient = !string.IsNullOrWhiteSpace(storedRecipient)
+            ? storedRecipient
+            : configRecipient;
+
+        var smtpHost = _config["Email:Smtp:Host"]?.Trim() ?? string.Empty;
+        var smtpPort = _config["Email:Smtp:Port"]?.Trim() ?? string.Empty;
+        var smtpSender = _config["Email:Smtp:SenderEmail"]?.Trim() ?? string.Empty;
+        var smtpUsername = _config["Email:Smtp:Username"]?.Trim() ?? string.Empty;
+        var hasPassword = !string.IsNullOrWhiteSpace(_config["Email:Smtp:Password"]);
+        var smtpReady = !string.IsNullOrWhiteSpace(smtpHost)
+            && !string.IsNullOrWhiteSpace(smtpSender);
+        var notificationReady = smtpReady && !string.IsNullOrWhiteSpace(recipient);
 
         return new RootSettingsViewModel
         {
             CurrentEmail = account?.Email.ToLowerInvariant() ?? string.Empty,
-            NotificationRecipient = recipient ?? string.Empty
+            NotificationRecipient = recipient ?? string.Empty,
+            NotificationRecipientSource = !string.IsNullOrWhiteSpace(storedRecipient)
+                ? "Banco de dados"
+                : !string.IsNullOrWhiteSpace(configRecipient)
+                    ? "Configuracao local"
+                    : "Nao configurado",
+            SmtpHost = smtpHost,
+            SmtpPort = string.IsNullOrWhiteSpace(smtpPort) ? "587" : smtpPort,
+            SmtpSenderEmail = smtpSender,
+            SmtpUsername = smtpUsername,
+            HasSmtpPassword = hasPassword,
+            IsSmtpReady = smtpReady,
+            IsNotificationReady = notificationReady,
+            EmailStatusMessage = notificationReady
+                ? "SMTP e destinatario configurados para envio de notificacoes."
+                : "Configure SMTP e destinatario para enviar notificacoes reais."
         };
+    }
+
+    public async Task<(bool Success, string? Error)> SendTestNotificationEmailAsync(
+        Guid rootAccountId,
+        CancellationToken ct = default)
+    {
+        var settings = await GetSettingsViewModelAsync(rootAccountId, ct);
+        if (!settings.IsNotificationReady)
+        {
+            return (false, "SMTP ou destinatario ainda nao estao configurados.");
+        }
+
+        try
+        {
+            await _email.SendAsync(new EmailMessage
+            {
+                ToAddress = settings.NotificationRecipient,
+                ToName = "Admin YourRhythm",
+                Subject = "[YourRhythm] Teste de e-mail",
+                HtmlBody = """
+                    <h2>Teste de e-mail do YourRhythm Studio</h2>
+                    <p>Se voce recebeu esta mensagem, as notificacoes administrativas estao configuradas.</p>
+                    <p>Nenhuma senha ou dado sensivel foi incluido neste teste.</p>
+                    """
+            }, ct);
+
+            _db.AdminAuditLogs.Add(new AdminAuditLog
+            {
+                ActorAccountId = rootAccountId,
+                ActorEmail = settings.CurrentEmail,
+                Action = "SendTestNotificationEmail",
+                TargetType = "Email",
+                TargetId = settings.NotificationRecipient,
+                Notes = "Enviou e-mail de teste de configuracao",
+                CreatedAtUtc = _clock.UtcNow
+            });
+            await _db.SaveChangesAsync(ct);
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Falha ao enviar e-mail de teste para {Recipient}: {Type}", settings.NotificationRecipient, ex.GetType().Name);
+            return (false, "Nao foi possivel enviar o e-mail de teste. Confira SMTP, senha de app e permissao do provedor.");
+        }
     }
 
     public async Task<(bool Success, string? Error)> UpdateRootCredentialsAsync(
@@ -702,6 +775,7 @@ public sealed class RootAdminService
     {
         var account = await _accountStore.FindByIdAsync(rootAccountId, ct);
         if (account is null) return (false, "Conta Root nao encontrada.");
+        if (account.PasswordCredential is null) return (false, "Conta Root sem credencial de senha configurada.");
 
         // Verifica senha atual
         if (!_passwordHasher.Verify(currentPassword, account.PasswordCredential).IsSuccess)

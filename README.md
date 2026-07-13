@@ -57,11 +57,52 @@ O projeto inclui uma factory design-time para permitir gerar migrations sem cone
 
 As contas demo existem apenas para ambiente `Development`.
 
-- `professor@yourrhythm.local`
-- `aluno@yourrhythm.local`
-- `escola@yourrhythm.local`
+- Professor: `professor@yourrhythm.local`
+- Aluno: `aluno@yourrhythm.local`
+- Escola: `escola@yourrhythm.local`
 
 A senha demo fica no seed de desenvolvimento e nao deve ser usada como senha de producao.
+
+## Conta Root
+
+O app cria automaticamente uma conta Root administrativa:
+
+- Login inicial: `root@yourrhythm.local`
+- Acesso: `/Auth/Login`, depois painel `/Root`
+- Senha inicial: gerada automaticamente na primeira inicializacao e salva em `root-credentials.txt` dentro da pasta de saida do app.
+
+O arquivo `root-credentials.txt` e local, ignorado pelo Git e deve ser apagado depois de salvar a senha em local seguro. A senha e o e-mail do Root podem ser alterados em `/Root/Settings`.
+
+## E-mail e notificacoes
+
+O envio real usa SMTP via MailKit para notificacoes administrativas, como solicitacoes de acesso e aprovacoes pelo painel Root.
+
+Configure em `appsettings.Development.json`, User Secrets ou variaveis de ambiente:
+
+```json
+{
+  "Email": {
+    "Smtp": {
+      "Host": "smtp.seuprovedor.com",
+      "Port": 587,
+      "UseSsl": false,
+      "Username": "usuario@dominio.com",
+      "Password": "senha-de-app",
+      "SenderEmail": "usuario@dominio.com",
+      "SenderName": "YourRhythm Studio"
+    },
+    "AdminNotificationRecipient": "destino@dominio.com"
+  }
+}
+```
+
+Nao versione senhas SMTP, tokens, connection strings reais ou arquivos `appsettings.Development.json`.
+
+No painel `/Root/Settings` e possivel:
+
+- ver se SMTP, remetente, usuario e destinatario estao configurados;
+- alterar o destinatario de notificacoes;
+- enviar um e-mail de teste para validar a configuracao.
 
 ## Rotas principais
 

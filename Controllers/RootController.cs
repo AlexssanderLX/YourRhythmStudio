@@ -200,6 +200,17 @@ public sealed class RootController : Controller
         return RedirectToAction(nameof(Settings));
     }
 
+    [HttpPost("Settings/TestEmail")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendTestEmail()
+    {
+        var (ok, err) = await _svc.SendTestNotificationEmailAsync(ActorId);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok
+            ? "E-mail de teste enviado para o destinatario configurado."
+            : err;
+        return RedirectToAction(nameof(Settings));
+    }
+
     // ──── Plans ────────────────────────────────────────────────────────────────
 
     [HttpGet("Plans")]

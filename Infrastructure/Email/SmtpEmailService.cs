@@ -46,7 +46,15 @@ public sealed class SmtpEmailService : IEmailService
             await client.ConnectAsync(host, port, socketOptions, ct);
 
             if (!string.IsNullOrWhiteSpace(username))
+            {
+                if (string.IsNullOrWhiteSpace(password))
+                {
+                    _logger.LogWarning("SMTP username configurado sem senha. Mensagem para {To} nao enviada.", message.ToAddress);
+                    return;
+                }
+
                 await client.AuthenticateAsync(username, password, ct);
+            }
 
             await client.SendAsync(mime, ct);
         }
@@ -57,7 +65,10 @@ public sealed class SmtpEmailService : IEmailService
         }
         finally
         {
-            await client.DisconnectAsync(true, ct);
+            if (client.IsConnected)
+            {
+                await client.DisconnectAsync(true, ct);
+            }
         }
     }
 }

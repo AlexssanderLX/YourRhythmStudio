@@ -233,6 +233,15 @@ public sealed class RootSettingsViewModel
 {
     public string CurrentEmail { get; set; } = string.Empty;
     public string NotificationRecipient { get; set; } = string.Empty;
+    public string NotificationRecipientSource { get; set; } = string.Empty;
+    public string SmtpHost { get; set; } = string.Empty;
+    public string SmtpPort { get; set; } = string.Empty;
+    public string SmtpSenderEmail { get; set; } = string.Empty;
+    public string SmtpUsername { get; set; } = string.Empty;
+    public bool HasSmtpPassword { get; set; }
+    public bool IsSmtpReady { get; set; }
+    public bool IsNotificationReady { get; set; }
+    public string EmailStatusMessage { get; set; } = string.Empty;
 }
 
 public sealed class UpdateRootCredentialsViewModel

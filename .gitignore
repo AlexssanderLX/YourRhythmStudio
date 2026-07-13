@@ -29,6 +29,7 @@ secrets.json
 # User secrets and sensitive material
 **/secrets/
 **/Secrets/
+root-credentials*.txt
 *.pfx
 *.p12
 *.pem
