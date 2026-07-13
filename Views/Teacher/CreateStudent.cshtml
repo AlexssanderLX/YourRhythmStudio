@@ -21,9 +21,24 @@
         </div>
         <p class="create-student-intro">Informe o essencial para acompanhar aulas, missoes, repertorio e progresso.</p>
 
-        <form asp-controller="Teacher" asp-action="CreateStudent" method="post" class="auth-form create-student-form" data-create-student-form novalidate>
+        <form asp-controller="Teacher" asp-action="CreateStudent" method="post" enctype="multipart/form-data" class="auth-form create-student-form" data-create-student-form novalidate>
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="auth-validation" role="alert"></div>
+
+            <div class="cs-photo-row">
+                <div class="cs-photo-preview" data-cs-photo-preview>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="opacity:.35">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div class="cs-photo-info">
+                    <label class="cs-photo-btn">
+                        <input name="Photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-cs-photo-input />
+                        Adicionar foto
+                    </label>
+                    <small>JPG, PNG ou WebP. Maximo 5 MB. Opcional.</small>
+                </div>
+            </div>
 
             <div>
                 <label asp-for="DisplayName">Nome completo <span class="required-mark">*</span></label>
@@ -69,9 +84,75 @@
     </div>
 </section>
 
+<style>
+.cs-photo-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px dashed var(--border-soft, rgba(255,255,255,.12));
+    background: rgba(255,255,255,.025);
+}
+.cs-photo-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--border-soft, rgba(255,255,255,.1));
+    flex-shrink: 0;
+}
+.cs-photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.cs-photo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.cs-photo-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--blue-bright, #2e9bff), var(--blue-deep, #0c1e6e));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: fit-content;
+}
+.cs-photo-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.cs-photo-info small { font-size: 12px; color: var(--muted, #8899bb); }
+@@media (max-width: 480px) {
+    .cs-photo-btn { width: 100%; justify-content: center; }
+}
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+    (function(){
+        var photoInput = document.querySelector('[data-cs-photo-input]');
+        if (photoInput) {
+            photoInput.addEventListener('change', function () {
+                var file = photoInput.files && photoInput.files[0];
+                if (!file) return;
+                var preview = document.querySelector('[data-cs-photo-preview]');
+                if (!preview) return;
+                var img = document.createElement('img');
+                img.alt = 'Previa da foto';
+                img.src = URL.createObjectURL(file);
+                preview.replaceChildren(img);
+            });
+        }
+    }());
     (function(){
         var form = document.querySelector('[data-create-student-form]');
         if (!form) return;

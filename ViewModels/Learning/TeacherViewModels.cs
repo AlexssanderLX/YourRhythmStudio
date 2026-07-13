@@ -38,6 +38,8 @@ public sealed class CreateStudentViewModel : IValidatableObject
     [StringLength(1000)]
     public string? Notes { get; set; }
 
+    public IFormFile? Photo { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var contact = Contact?.Trim();

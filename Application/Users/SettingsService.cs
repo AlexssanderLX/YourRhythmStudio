@@ -206,6 +206,27 @@ public sealed class SettingsService
         return new CredentialUpdateResult(user.DisplayName, user.Email);
     }
 
+    public async Task UpdateStudentPhotoByTeacherAsync(
+        AuthenticatedUserProfile teacherProfile,
+        Guid studentSchoolUserId,
+        IFormFile photo,
+        CancellationToken ct = default)
+    {
+        RequireTeacher(teacherProfile);
+
+        var user = await _db.SchoolUsers
+            .FirstOrDefaultAsync(
+                u => u.Id == studentSchoolUserId
+                    && u.SchoolId == teacherProfile.SchoolId
+                    && u.Role == YourRhythmRoles.Student
+                    && u.IsActive,
+                ct)
+            ?? throw new InvalidOperationException("Aluno nao encontrado.");
+
+        await UpdatePhotoAsync(user, photo, removePhoto: false, ct);
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task<CredentialUpdateResult> ChangeTeacherEmailAsync(
         AuthenticatedUserProfile profile,
         ChangeTeacherEmailRequest request,

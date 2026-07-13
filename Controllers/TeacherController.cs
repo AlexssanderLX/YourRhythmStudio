@@ -29,6 +29,7 @@ public sealed class TeacherController : Controller
     private readonly ProgressService _progressService;
     private readonly LevelConfigService _levelConfigService;
     private readonly MissionService _missionService;
+    private readonly SettingsService _settingsService;
 
     public TeacherController(
         ILogger<TeacherController> logger,
@@ -43,7 +44,8 @@ public sealed class TeacherController : Controller
         SkillService skillService,
         ProgressService progressService,
         LevelConfigService levelConfigService,
-        MissionService missionService)
+        MissionService missionService,
+        SettingsService settingsService)
     {
         _logger = logger;
         _profileResolver = profileResolver;
@@ -58,6 +60,7 @@ public sealed class TeacherController : Controller
         _progressService = progressService;
         _levelConfigService = levelConfigService;
         _missionService = missionService;
+        _settingsService = settingsService;
     }
 
     [HttpGet("")]
@@ -119,6 +122,18 @@ public sealed class TeacherController : Controller
             _logger.LogError(ex, "Unexpected error while creating a student for the current teacher.");
             ModelState.AddModelError(string.Empty, "Nao foi possivel cadastrar o aluno agora. Tente novamente em alguns instantes.");
             return View(model);
+        }
+
+        if (model.Photo is { Length: > 0 } photo)
+        {
+            try
+            {
+                await _settingsService.UpdateStudentPhotoByTeacherAsync(profile, student.SchoolUserId, photo, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not save student photo after creation.");
+            }
         }
 
         TempData["Success"] = $"Aluno {student.DisplayName} criado com sucesso.";

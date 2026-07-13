@@ -55,6 +55,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseStaticFiles(); // serves wwwroot/uploads/ and other runtime-written files
 app.MapStaticAssets();
 
 app.MapControllers();
