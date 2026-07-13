@@ -1,44 +1,17 @@
 @{
     ViewData["Title"] = "Transforme prática em evolução musical";
     Layout = "_LandingLayout";
-
-    var inv = System.Globalization.CultureInfo.InvariantCulture;
-
-    // One octave of white notes (Dó Ré Mi Fá Sol Lá Si) and, for each,
-    // whether a black key (sharp) follows it. This is what guarantees the
-    // real piano pattern: sharps after C, D, F, G, A  ->  groups of 2 and 3.
-    //   C# D#  (group of 2) | no black after E | F# G# A# (group of 3) | no black after B
-    var whiteNotes = new[] { "C", "D", "E", "F", "G", "A", "B" };
-    var hasSharp   = new[] { true, true, false, true, true, true, false };
-    var octaves = 3;
-    var firstOctave = 3; // labels start at C3
-
-    // MIDI piano-roll melody as (timeStep, pitchLane, durationSteps)
-    // on a 28-step x 10-lane grid — purely decorative but coherent.
-    var midi = new (int t, int p, int d)[]
-    {
-        (0,6,2),(2,5,2),(4,4,1),(5,5,1),(6,3,2),(9,2,2),(11,3,1),
-        (12,4,2),(14,3,1),(15,2,1),(16,1,3),(19,3,2),(21,4,1),(22,5,2),(24,4,1),(25,6,3)
-    };
-    double stepW = 100.0 / 28.0;
-    double laneH = 100.0 / 10.0;
 }
 
 <!-- ===================== NAV ===================== -->
 <header class="nav" id="nav">
     <div class="wrap nav-inner">
         <a class="brand" href="/">
-            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" width="38" height="38" />
             <span class="brand-text">YourRhythm<span>.</span>
                 <span class="brand-sub">Studio</span>
             </span>
         </a>
-        <nav class="nav-links">
-            <a href="#recursos">Recursos</a>
-            <a href="#jornada">Jornada</a>
-            <a href="#gamificacao">Gamificação</a>
-            <a href="#evolucao">Evolução</a>
-        </nav>
         <div class="nav-cta">
             @if (User.Identity?.IsAuthenticated == true)
             {
@@ -54,26 +27,22 @@
                 <a class="btn btn-primary" style="padding:11px 20px" asp-controller="Auth" asp-action="Register">Solicitar acesso</a>
             }
         </div>
-        <button class="nav-hamburger" id="navHamburger" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navMobile">
+        <button class="nav-hamburger" id="navHamburger" type="button"
+                aria-label="Abrir menu" aria-expanded="false" aria-controls="navMobile">
             <span></span><span></span><span></span>
         </button>
     </div>
 </header>
+
 <div class="nav-mobile-backdrop" id="navMobileBackdrop" aria-hidden="true"></div>
 <nav class="nav-mobile" id="navMobile" aria-label="Menu de navegação" aria-hidden="true">
     <div class="nav-mobile-top">
         <button class="nav-mobile-close" id="navMobileClose" type="button" aria-label="Fechar menu">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
                 <path d="M2 2l14 14M16 2L2 16"/>
             </svg>
         </button>
-    </div>
-    <div class="nav-mobile-links">
-        <a href="#recursos" class="nav-mobile-link">Recursos</a>
-        <a href="#jornada" class="nav-mobile-link">Jornada</a>
-        <a href="#gamificacao" class="nav-mobile-link">Gamificação</a>
-        <a href="#evolucao" class="nav-mobile-link">Evolução</a>
-        <a asp-controller="Home" asp-action="Privacy" class="nav-mobile-link nav-mobile-link--secondary">Privacidade</a>
     </div>
     <div class="nav-mobile-auth">
         @if (User.Identity?.IsAuthenticated == true)
@@ -89,6 +58,7 @@
             <a class="nav-mobile-link" asp-controller="Auth" asp-action="Login">Entrar</a>
             <a class="btn btn-primary nav-mobile-cta" asp-controller="Auth" asp-action="Register">Solicitar acesso →</a>
         }
+        <a asp-controller="Home" asp-action="Privacy" class="nav-mobile-link nav-mobile-link--secondary">Privacidade</a>
     </div>
 </nav>
 
@@ -96,137 +66,73 @@
 <section class="hero">
     <div class="wrap hero-grid">
         <div class="hero-copy">
-            <span class="eyebrow" data-aos="fade-down"><span class="dot"></span> Para professores e escolas de música</span>
+            <span class="eyebrow" data-aos="fade-down">
+                <span class="dot"></span> Para professores e escolas de música
+            </span>
             <h1 data-aos="fade-up">Seus alunos<br>praticam <span class="grad">mais.</span></h1>
-            <p class="lead" data-aos="fade-up" data-aos-delay="120">Transforme cada aula em uma jornada. Missões, repertório e progresso visível que mantêm o aluno tocando — toda semana, não só no dia da aula.</p>
-            <div class="hero-actions" data-aos="fade-up" data-aos-delay="220">
-                <a asp-controller="Auth" asp-action="Register" class="btn btn-primary">Solicitar acesso <span class="arrow">&rarr;</span></a>
-                <a href="#" class="btn btn-ghost">
-                    <span class="play">
-                        <svg width="9" height="11" viewBox="0 0 9 11" fill="#06070D"><path d="M0 0l9 5.5L0 11z"/></svg>
-                    </span>
-                    Ver demonstração
+            <p class="lead" data-aos="fade-up" data-aos-delay="80">
+                Organize alunos, aulas, repertório e missões em um só lugar.
+                Progresso visível que mantém o aluno tocando — toda semana, não só no dia da aula.
+            </p>
+            <div class="hero-actions" data-aos="fade-up" data-aos-delay="160">
+                <a asp-controller="Auth" asp-action="Register" class="btn btn-primary">
+                    Solicitar acesso <span class="arrow">&rarr;</span>
                 </a>
+                <a asp-controller="Auth" asp-action="Login" class="btn btn-ghost">Entrar</a>
             </div>
-            <div class="hero-trust" data-aos="fade-up" data-aos-delay="300">
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Acesso revisado</span>
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Sem criacao automatica</span>
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Liberacao pelo Root</span>
+            <div class="hero-trust" data-aos="fade-up" data-aos-delay="220">
+                <span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                    Acesso revisado
+                </span>
+                <span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Liberação pelo Root
+                </span>
             </div>
         </div>
 
-        <!-- ===== Musical hero illustration (piano + MIDI), built in code ===== -->
-        <div class="piano-stage" id="pianoStage" data-aos="zoom-in" data-aos-delay="250">
-            <span class="stage-glow"></span>
-
-            <!-- flowing sound waves -->
-            <svg class="stage-waves" viewBox="0 0 440 120" preserveAspectRatio="none" aria-hidden="true">
-                <defs>
-                    <linearGradient id="wv" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0" stop-color="#6BC0FF" stop-opacity="0"/>
-                        <stop offset=".5" stop-color="#6BC0FF"/>
-                        <stop offset="1" stop-color="#1E5BFF" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-                <path class="wv wv1" d="M0,60 C70,18 140,102 210,60 S350,18 440,60"/>
-                <path class="wv wv2" d="M0,72 C80,40 150,96 220,68 S370,30 440,70"/>
-                <path class="wv wv3" d="M0,48 C60,24 130,80 210,52 S360,16 440,52"/>
-            </svg>
-
-            <!-- floating notes + particle layer -->
-            <span class="fnote" style="top:6%; left:10%; font-size:24px; animation-delay:0s">&#9835;</span>
-            <span class="fnote" style="top:2%; left:54%; font-size:18px; animation-delay:1.2s">&#9834;</span>
-            <span class="fnote" style="top:14%; right:8%; font-size:22px; animation-delay:.6s">&#9833;</span>
-            <div class="particles" id="particles" aria-hidden="true"></div>
-
-            <!-- the "device": now playing + MIDI roll + real keyboard -->
-            <div class="piano-device" id="pianoDevice">
-                <div class="np">
-                    <span class="np-disc">&#9835;</span>
-                    <div class="np-meta">
-                        <div class="np-title">Clair de Lune</div>
-                        <div class="np-sub">C. Debussy · Andante très expressif</div>
+        <!-- Hero visual — purely decorative, no JS required -->
+        <div class="hero-visual" data-aos="fade-left" data-aos-delay="100" aria-hidden="true">
+            <div class="hv-main">
+                <div class="hv-header">
+                    <div class="hv-avatar">🎹</div>
+                    <div class="hv-info">
+                        <div class="hv-name">Ana Silva</div>
+                        <div class="hv-sub">Piano · Nível Aprendiz</div>
                     </div>
-                    <div class="np-xp">
-                        <span class="np-level">Aprendiz</span>
-                        <div class="np-bar"><i style="width:65%"></i></div>
+                    <div class="hv-xp">+50 XP</div>
+                </div>
+                <div class="hv-mission">
+                    <div class="hv-mission-label">Missão de hoje</div>
+                    <div class="hv-mission-title">
+                        Praticar Clair de Lune
+                        <span class="hv-tag">Em andamento</span>
+                    </div>
+                    <div class="hv-prog">
+                        <div class="bar"><i style="width:68%"></i></div>
+                        <span class="hv-pct">68%</span>
                     </div>
                 </div>
-
-                <div class="midi-roll" id="midiRoll">
-                    <div class="playhead" id="playhead"></div>
-                    @foreach (var n in midi)
-                    {
-                        var left = (n.t * stepW).ToString("0.##", inv);
-                        var top = (n.p * laneH + 4).ToString("0.##", inv);
-                        var w = (n.d * stepW - 1).ToString("0.##", inv);
-                        <i class="mnote" style="left:@(left)%; top:@(top)%; width:@(w)%"></i>
-                    }
-                </div>
-
-                <!-- Real piano keyboard. White keys = C D E F G A B; black keys
-                     rendered only after C, D, F, G, A -> groups of 2 and 3. -->
-                <div class="keyboard" id="keyboard">
-                    @for (var o = 0; o < octaves; o++)
-                    {
-                        for (var i = 0; i < whiteNotes.Length; i++)
-                        {
-                            <div class="wkey" data-note="@(whiteNotes[i])@(firstOctave + o)">
-                                @if (whiteNotes[i] == "C")
-                                {
-                                    <span class="wlabel">C@(firstOctave + o)</span>
-                                }
-                                @if (hasSharp[i])
-                                {
-                                    <i class="bkey" data-note="@(whiteNotes[i])#@(firstOctave + o)"></i>
-                                }
-                            </div>
-                        }
-                    }
-                    <span class="key-glow"></span>
-                    <span class="key-shine"></span>
+                <div class="hv-stats">
+                    <div class="hv-stat"><b>12</b><span>dias seguidos</span></div>
+                    <div class="hv-stat"><b>840</b><span>XP acumulado</span></div>
+                    <div class="hv-stat"><b>5</b><span>músicas</span></div>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- ===================== PROBLEM / TRANSFORMATION ===================== -->
-<section class="sec" id="recursos">
-    <div class="wrap">
-        <div class="sec-head" data-aos="fade-up">
-            <h2>O aluno some entre uma aula e outra.</h2>
-            <p>O talento existe. Falta o que mantém a prática viva durante a semana inteira.</p>
-        </div>
-        <div class="split">
-            <div class="panel before" data-aos="fade-right">
-                <div class="tag">Como costuma ser</div>
-                <h3>Esforço sem evolução visível</h3>
-                <ul class="plist">
-                    <li><span class="ic bad">&#10005;</span> O aluno só pratica na véspera da aula</li>
-                    <li><span class="ic bad">&#10005;</span> Progresso anotado em cadernos e planilhas soltas</li>
-                    <li><span class="ic bad">&#10005;</span> Sem motivação entre os encontros</li>
-                    <li><span class="ic bad">&#10005;</span> Pais e alunos não enxergam a evolução</li>
-                    <li><span class="ic bad">&#10005;</span> Desistências antes do resultado aparecer</li>
-                </ul>
-            </div>
-            <div class="panel after" data-aos="fade-left">
-                <div class="tag">Com o YourRhythm</div>
-                <h3>Prática constante e progresso vivo</h3>
-                <ul class="plist">
-                    <li><span class="ic good">&#10003;</span> Missões diárias que puxam o aluno de volta ao instrumento</li>
-                    <li><span class="ic good">&#10003;</span> Repertório, partituras e feedback em um só lugar</li>
-                    <li><span class="ic good">&#10003;</span> XP, níveis e conquistas que viciam na prática</li>
-                    <li><span class="ic good">&#10003;</span> Evolução visível para aluno, professor e família</li>
-                    <li><span class="ic good">&#10003;</span> Mais alunos chegando ao resultado — e ficando</li>
-                </ul>
+            <div class="hv-mini">
+                <span class="hv-mini-icon">💬</span>
+                <div class="hv-mini-body">
+                    <div class="hv-mini-title">Feedback enviado</div>
+                    <div class="hv-mini-sub">Presta atenção na dinâmica do compasso 8</div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- ===================== FEATURES ===================== -->
-<section class="sec" style="padding-top:0">
+<section class="sec" id="recursos">
     <div class="wrap">
         <div class="sec-head" data-aos="fade-up">
             <h2>Tudo que a música pede,<br><span class="grad">nada que ela não precisa.</span></h2>
@@ -234,146 +140,78 @@
         </div>
         <div class="feat-grid">
             <div class="feat" data-aos="fade-up" data-aos-delay="0">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-                <h3>Repertório</h3>
-                <p>Partituras, cifras e músicas favoritas organizadas por aluno e por nível.</p>
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h3>Alunos</h3>
+                <p>Perfis individuais com histórico de aulas, repertório e evolução ao longo do tempo.</p>
             </div>
-            <div class="feat" data-aos="fade-up" data-aos-delay="100">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></svg></div>
+            <div class="feat" data-aos="fade-up" data-aos-delay="60">
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></svg>
+                </div>
                 <h3>Aulas</h3>
                 <p>Planeje encontros, registre conteúdos e acompanhe cada lição sem papelada.</p>
             </div>
-            <div class="feat" data-aos="fade-up" data-aos-delay="200">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg></div>
+            <div class="feat" data-aos="fade-up" data-aos-delay="120">
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </div>
+                <h3>Repertório</h3>
+                <p>Partituras, cifras e músicas favoritas organizadas por aluno e por nível.</p>
+            </div>
+            <div class="feat" data-aos="fade-up" data-aos-delay="0">
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+                </div>
                 <h3>Missões</h3>
                 <p>Desafios diários que transformam praticar em hábito — e hábito em evolução.</p>
             </div>
-            <div class="feat" data-aos="fade-up" data-aos-delay="0">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
-                <h3>Progresso</h3>
-                <p>A evolução musical em gráficos claros, semana após semana.</p>
-            </div>
-            <div class="feat" data-aos="fade-up" data-aos-delay="100">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="feat" data-aos="fade-up" data-aos-delay="60">
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
                 <h3>Feedback</h3>
-                <p>Comentários e orientações registrados de forma simples, no contexto certo.</p>
+                <p>Comentários e orientações do professor registrados no contexto certo.</p>
             </div>
-            <div class="feat" data-aos="fade-up" data-aos-delay="200">
-                <div class="feat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6.5 7 .6-5.3 4.6L18.4 21 12 17.3 5.6 21l1.7-7.3L2 9.1l7-.6z"/></svg></div>
-                <h3>Gamificação</h3>
-                <p>XP, níveis e conquistas que mantêm a chama da prática sempre acesa.</p>
+            <div class="feat" data-aos="fade-up" data-aos-delay="120">
+                <div class="feat-ic">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+                </div>
+                <h3>Evolução</h3>
+                <p>XP, níveis e progresso que motivam a prática constante e mostram resultados reais.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ===================== JOURNEY ===================== -->
-<section class="sec" id="jornada">
+<!-- ===================== HOW IT WORKS ===================== -->
+<section class="sec sec-steps">
     <div class="wrap">
         <div class="sec-head" data-aos="fade-up">
-            <h2>A jornada do aluno,<br><span class="grad">do primeiro acorde ao palco.</span></h2>
-            <p>Cada etapa é uma conquista — e cada conquista, um motivo para voltar.</p>
+            <h2>Simples de começar,<br><span class="grad">poderoso na prática.</span></h2>
         </div>
-        <div class="journey">
-            <div class="jline"></div>
-            <div class="jstep" data-aos="fade-up" data-aos-delay="0">
-                <div class="jdot">01</div>
-                <h3>Começa</h3>
-                <p>O aluno recebe o primeiro repertório e a primeira missão.</p>
+        <div class="steps">
+            <div class="step" data-aos="fade-up" data-aos-delay="0">
+                <div class="step-num">01</div>
+                <h3>Crie perfis</h3>
+                <p>Cadastre seus alunos, adicione o repertório e defina o nível de cada um.</p>
             </div>
-            <div class="jstep" data-aos="fade-up" data-aos-delay="100">
-                <div class="jdot">02</div>
-                <h3>Pratica</h3>
-                <p>Missões diárias e sequências mantêm o instrumento nas mãos.</p>
+            <div class="step-arrow" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
-            <div class="jstep" data-aos="fade-up" data-aos-delay="200">
-                <div class="jdot">03</div>
-                <h3>Evolui</h3>
-                <p>Sobe de nível, ganha XP e desbloqueia novas músicas.</p>
+            <div class="step" data-aos="fade-up" data-aos-delay="80">
+                <div class="step-num">02</div>
+                <h3>Atribua missões</h3>
+                <p>O aluno recebe tarefas diárias, pratica no instrumento e registra o progresso.</p>
             </div>
-            <div class="jstep" data-aos="fade-up" data-aos-delay="300">
-                <div class="jdot">04</div>
-                <h3>Conquista</h3>
-                <p>Domina o repertório e vê a própria evolução em números.</p>
+            <div class="step-arrow" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- ===================== GAMIFICATION ===================== -->
-<section class="sec" id="gamificacao">
-    <div class="wrap game">
-        <div class="game-left">
-            <span class="eyebrow" data-aos="fade-right"><span class="dot"></span> Gamificação</span>
-            <h2 style="margin-top:22px" data-aos="fade-right" data-aos-delay="80">Praticar vira o jogo mais viciante da semana.</h2>
-            <p data-aos="fade-right" data-aos-delay="140">XP a cada minuto de estudo, sequências que ninguém quer quebrar e conquistas que celebram cada avanço. A motivação deixa de depender só do professor.</p>
-            <div class="xp-list">
-                <div class="xp" data-aos="zoom-in-up" data-aos-delay="0">
-                    <div class="badge">&#127941;</div>
-                    <div class="x-meta"><div class="t">Primeira Semana</div><div class="d">7 dias seguidos de prática</div></div>
-                    <div class="x-pts">+100 XP</div>
-                </div>
-                <div class="xp" data-aos="zoom-in-up" data-aos-delay="100">
-                    <div class="badge">&#127925;</div>
-                    <div class="x-meta"><div class="t">Leitura Fluente</div><div class="d">Partitura lida sem pausas</div></div>
-                    <div class="x-pts">+150 XP</div>
-                </div>
-                <div class="xp" data-aos="zoom-in-up" data-aos-delay="200">
-                    <div class="badge">&#9889;</div>
-                    <div class="x-meta"><div class="t">Dedicação</div><div class="d">30 dias de constância</div></div>
-                    <div class="x-pts">+200 XP</div>
-                </div>
-            </div>
-        </div>
-        <div class="level-card" data-aos="fade-left" data-aos-delay="120">
-            <div class="level-top">
-                <div class="level-num"><small>Nível atual</small>Aprendiz</div>
-                <div class="trophy">&#127942;</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px">
-                <span>2.450 XP</span><span>2.500 XP</span>
-            </div>
-            <div class="bar" style="height:10px"><i data-fill="82"></i></div>
-            <div style="margin-top:8px;font-size:13px;color:var(--blue-bright)">Faltam 50 XP para Intermediário</div>
-            <div class="achv-grid">
-                <div class="achv">&#127925;</div>
-                <div class="achv">&#127932;</div>
-                <div class="achv">&#128293;</div>
-                <div class="achv">&#11088;</div>
-                <div class="achv">&#127941;</div>
-                <div class="achv locked">&#128274;</div>
-                <div class="achv locked">&#128274;</div>
-                <div class="achv locked">&#128274;</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ===================== EVOLUTION ===================== -->
-<section class="sec" id="evolucao">
-    <div class="wrap evo">
-        <div class="evo-card" data-aos="fade-right">
-            <div class="label">Minutos de prática · últimas 8 semanas</div>
-            <div class="big">+212% <span>de evolução</span></div>
-            <div class="chart" id="chart">
-                <div class="col"><i data-h="22"></i><span>S1</span></div>
-                <div class="col"><i data-h="34"></i><span>S2</span></div>
-                <div class="col"><i data-h="30"></i><span>S3</span></div>
-                <div class="col"><i data-h="48"></i><span>S4</span></div>
-                <div class="col"><i data-h="58"></i><span>S5</span></div>
-                <div class="col"><i data-h="70"></i><span>S6</span></div>
-                <div class="col"><i data-h="84"></i><span>S7</span></div>
-                <div class="col"><i data-h="100"></i><span>S8</span></div>
-            </div>
-        </div>
-        <div class="evo-right" data-aos="fade-left" data-aos-delay="120">
-            <span class="eyebrow"><span class="dot"></span> Evolução musical</span>
-            <h2 style="margin-top:22px">Progresso que dá pra ver, ouvir e sentir.</h2>
-            <p>Cada música dominada, cada minuto praticado e cada nível alcançado vira um gráfico que o aluno acompanha com orgulho — e que o professor usa para guiar a próxima etapa.</p>
-            <div class="evo-stats">
-                <div class="s"><b>3×</b><span>mais prática semanal</span></div>
-                <div class="s"><b>92%</b><span>de retenção de alunos</span></div>
-                <div class="s"><b>+40</b><span>músicas dominadas</span></div>
+            <div class="step" data-aos="fade-up" data-aos-delay="160">
+                <div class="step-num">03</div>
+                <h3>Acompanhe a evolução</h3>
+                <p>XP, níveis e gráficos mostram o avanço para o aluno, o professor e a família.</p>
             </div>
         </div>
     </div>
@@ -382,14 +220,21 @@
 <!-- ===================== FINAL CTA ===================== -->
 <section class="cta">
     <div class="wrap">
-        <div data-aos="zoom-in">
-            <h2 data-aos="fade-up">Seu ritmo. Suas aulas.<br><span class="grad">Seus alunos evoluindo.</span></h2>
+        <div data-aos="fade-up">
+            <h2>Seu ritmo. Suas aulas.<br><span class="grad">Seus alunos evoluindo.</span></h2>
             <p>Comece hoje e veja a prática acontecer — todos os dias, não só na aula.</p>
-            <a asp-controller="Auth" asp-action="Login" class="btn btn-primary" style="padding:17px 34px;font-size:16.5px" data-aos="fade-up" data-aos-delay="150">Solicitar acesso <span class="arrow">&rarr;</span></a>
-            <div class="hero-trust">
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Acesso revisado</span>
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Sem criacao automatica</span>
-                <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Liberacao pelo Root</span>
+            <a asp-controller="Auth" asp-action="Register" class="btn btn-primary" style="padding:17px 34px;font-size:16px">
+                Solicitar acesso <span class="arrow">&rarr;</span>
+            </a>
+            <div class="hero-trust cta-trust">
+                <span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                    Acesso revisado
+                </span>
+                <span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Liberação pelo Root
+                </span>
             </div>
         </div>
     </div>
@@ -399,15 +244,10 @@
 <footer class="foot">
     <div class="wrap foot-inner">
         <a class="brand" href="/">
-            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
-            <span class="brand-text">YourRhythm<span>.</span>
-                <span class="brand-sub">Studio</span>
-            </span>
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" width="32" height="32" />
+            <span class="brand-text">YourRhythm<span>.</span></span>
         </a>
         <div class="foot-links">
-            <a href="#recursos">Recursos</a>
-            <a href="#jornada">Jornada</a>
-            <a href="#gamificacao">Gamificação</a>
             <a asp-controller="Home" asp-action="Privacy">Privacidade</a>
         </div>
         <p>&copy; 2026 YourRhythm Studio</p>
