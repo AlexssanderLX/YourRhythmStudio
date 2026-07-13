@@ -38,9 +38,7 @@
         },
         _ => new[]
         {
-            ("Index",         "Visão geral",  "home"),
-            ("Teachers",      "Professores",  "users"),
-            ("SchoolStudents","Alunos",        "graduation"),
+            ("Index",         "Voltar ao site",  "home"),
         }
     };
 
@@ -48,7 +46,7 @@
     {
         "student" => "Student",
         "teacher" => "Teacher",
-        _ => "Dashboard"
+        _ => "Home"
     };
 
     var nav = navDef.Select(n => (

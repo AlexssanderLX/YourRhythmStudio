@@ -30,8 +30,24 @@ public class DashboardController : Controller
         {
             YourRhythmRoles.Student => RedirectToAction("Dashboard", "Student"),
             YourRhythmRoles.Teacher => RedirectToAction("Dashboard", "Teacher"),
-            _ => View("School"),
+            _ => RedirectToAction("Index", "Home"),
         };
+    }
+
+    [HttpGet]
+    public IActionResult Teacher()
+    {
+        return RequireRole(YourRhythmRoles.Teacher)
+            ? RedirectToAction("Dashboard", "Teacher")
+            : RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet]
+    public IActionResult Student()
+    {
+        return RequireRole(YourRhythmRoles.Student)
+            ? RedirectToAction("Dashboard", "Student")
+            : RedirectToAction("Index", "Home");
     }
 
     [HttpGet]
@@ -93,17 +109,13 @@ public class DashboardController : Controller
     [HttpGet]
     public IActionResult Teachers()
     {
-        return RequireSchoolRole()
-            ? View("SchoolTeachers")
-            : Forbid();
+        return RedirectToAction("Index", "Home");
     }
 
     [HttpGet]
     public IActionResult SchoolStudents()
     {
-        return RequireSchoolRole()
-            ? View("SchoolStudents")
-            : Forbid();
+        return RedirectToAction("Index", "Home");
     }
 
     [HttpGet]
