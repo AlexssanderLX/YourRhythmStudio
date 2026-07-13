@@ -189,6 +189,12 @@ public sealed class AssignmentService
             throw new KeyNotFoundException("Assignment was not found.");
         }
 
+        if (assignment.IsMission)
+        {
+            throw new InvalidOperationException(
+                "Missoes devem ser enviadas para revisao do professor. Use a pagina da missao.");
+        }
+
         var student = await _dbContext.StudentProfiles.FirstAsync(
             item => item.Id == studentProfileId && item.SchoolId == schoolId,
             cancellationToken);

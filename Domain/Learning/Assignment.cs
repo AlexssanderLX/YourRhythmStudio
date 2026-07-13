@@ -20,7 +20,8 @@ public sealed class Assignment
         Guid? lessonId = null,
         Guid? repertoireItemId = null,
         AssignmentRarity rarity = AssignmentRarity.Comum,
-        Guid? skillRewardId = null)
+        Guid? skillRewardId = null,
+        bool isMission = false)
     {
         if (schoolId == Guid.Empty)
             throw new ArgumentException("SchoolId is required.", nameof(schoolId));
@@ -53,6 +54,8 @@ public sealed class Assignment
         Rarity = rarity;
         SkillRewardId = skillRewardId;
         Status = AssignmentStatus.Pending;
+        IsMission = isMission;
+        CurrentRound = 1;
         CreatedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
     }
@@ -86,6 +89,12 @@ public sealed class Assignment
     public AssignmentRarity Rarity { get; private set; }
 
     public Guid? SkillRewardId { get; private set; }
+
+    public bool IsMission { get; private set; }
+
+    public int CurrentRound { get; private set; }
+
+    public DateTime? SubmittedForReviewAtUtc { get; private set; }
 
     public DateTime CreatedAtUtc { get; private set; }
 
@@ -175,6 +184,51 @@ public sealed class Assignment
             return;
 
         Status = AssignmentStatus.Skipped;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void SubmitForReview(DateTime utcNow)
+    {
+        if (!IsMission)
+            throw new InvalidOperationException("Apenas missoes podem ser enviadas para revisao.");
+
+        if (Status == AssignmentStatus.Completed)
+            throw new InvalidOperationException("Missao ja concluida.");
+
+        if (Status == AssignmentStatus.AwaitingReview)
+            return;
+
+        Status = AssignmentStatus.AwaitingReview;
+        SubmittedForReviewAtUtc = utcNow;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void RequestAdjustments(DateTime utcNow)
+    {
+        if (!IsMission)
+            throw new InvalidOperationException("Apenas missoes passam por revisao.");
+
+        if (Status != AssignmentStatus.AwaitingReview)
+            throw new InvalidOperationException("Missao nao esta aguardando revisao.");
+
+        Status = AssignmentStatus.AdjustmentsRequested;
+        CurrentRound += 1;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void Approve(DateTime utcNow)
+    {
+        if (!IsMission)
+            throw new InvalidOperationException("Apenas missoes passam por aprovacao.");
+
+        if (Status == AssignmentStatus.Completed)
+            return;
+
+        if (Status != AssignmentStatus.AwaitingReview)
+            throw new InvalidOperationException("Missao nao esta aguardando revisao.");
+
+        Status = AssignmentStatus.Completed;
+        CompletedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
     }
 }

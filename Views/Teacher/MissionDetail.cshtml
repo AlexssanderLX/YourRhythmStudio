@@ -1,0 +1,222 @@
+@model YourRhythmStudio.ViewModels.Learning.TeacherMissionDetailViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@using YourRhythmStudio.Application.Learning
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model.Detail.Mission.Title;
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Missão";
+    var m = Model.Detail.Mission;
+    var canReview = m.Status == AssignmentStatus.AwaitingReview;
+
+    string StatusLabel(AssignmentStatus s) => s switch {
+        AssignmentStatus.Pending => "Pendente",
+        AssignmentStatus.InProgress => "Em progresso",
+        AssignmentStatus.AwaitingReview => "Aguardando revisão",
+        AssignmentStatus.AdjustmentsRequested => "Ajustes solicitados",
+        AssignmentStatus.Completed => "Concluída",
+        AssignmentStatus.Skipped => "Cancelada",
+        _ => s.ToString()
+    };
+    string StatusClass(AssignmentStatus s) => s switch {
+        AssignmentStatus.AwaitingReview => "status--awaiting",
+        AssignmentStatus.Completed => "status--done",
+        AssignmentStatus.AdjustmentsRequested => "status--adjust",
+        _ => "status--default"
+    };
+}
+
+<div class="dash-section">
+    <div class="dash-back">
+        <a asp-controller="Teacher" asp-action="StudentAssignments"
+           asp-route-studentId="@m.StudentProfileId">
+            ← @m.StudentName
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-error">@TempData["Error"]</div>
+    }
+
+    <div class="mission-header">
+        <div>
+            <span class="mission-student-label">@m.StudentName</span>
+            <h2>@m.Title</h2>
+        </div>
+        <div class="mission-badges">
+            <span class="status-badge @StatusClass(m.Status)">@StatusLabel(m.Status)</span>
+            <span class="rarity-badge">@m.Rarity</span>
+            <span class="xp-badge">@m.XpReward XP</span>
+            @if (m.CurrentRound > 1) { <span class="round-badge">Rodada @m.CurrentRound</span> }
+        </div>
+    </div>
+
+    <!-- Perguntas e respostas -->
+    <div class="form-card">
+        <h3>Perguntas e Respostas</h3>
+
+        @if (!Model.Detail.Questions.Any())
+        {
+            <p class="empty-state-sm">Nenhuma pergunta cadastrada.</p>
+        }
+        else
+        {
+            @foreach (var q in Model.Detail.Questions)
+            {
+                var answer = Model.Detail.LatestAnswers.FirstOrDefault(a => a.QuestionId == q.Id);
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-type-badge">
+                            @(q.QuestionType switch {
+                                MissionQuestionType.Audio => "🎵 Áudio",
+                                MissionQuestionType.File => "📎 Arquivo",
+                                _ => "📝 Texto"
+                            })
+                        </span>
+                        @if (q.IsRequired) { <span class="req-badge">Obrigatória</span> }
+                        <p>@q.QuestionText</p>
+                    </div>
+                    <div class="qa-answer">
+                        @if (answer is null)
+                        {
+                            <span class="no-answer">Sem resposta</span>
+                        }
+                        else if (!string.IsNullOrEmpty(answer.AnswerText))
+                        {
+                            <div class="answer-text">@answer.AnswerText</div>
+                        }
+                        else if (answer.FileDownloadUrl is not null)
+                        {
+                            <a href="@answer.FileDownloadUrl" class="btn btn-ghost btn-sm" target="_blank">
+                                📥 @(answer.OriginalFileName ?? "Baixar arquivo")
+                                @if (answer.SizeBytes.HasValue)
+                                {
+                                    <span class="file-size">(@(answer.SizeBytes.Value / 1024)KB)</span>
+                                }
+                            </a>
+                            @if (q.QuestionType == MissionQuestionType.Audio && answer.ContentType?.StartsWith("audio/") == true)
+                            {
+                                <audio controls class="audio-player">
+                                    <source src="@answer.FileDownloadUrl" type="@answer.ContentType" />
+                                </audio>
+                            }
+                        }
+                        else
+                        {
+                            <span class="no-answer">Sem resposta</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Revisão (se aguardando) -->
+    @if (canReview)
+    {
+        <div class="form-card form-card--review">
+            <h3>Revisar esta Missão</h3>
+            <form method="post"
+                  asp-controller="Teacher"
+                  asp-action="ReviewMission"
+                  asp-route-studentId="@m.StudentProfileId"
+                  asp-route-missionId="@m.Id">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Review.MissionId" value="@m.Id" />
+
+                <div class="form-group">
+                    <label>Feedback para o aluno (opcional)</label>
+                    <textarea asp-for="Review.Feedback" class="form-control" rows="4"
+                              placeholder="Descreva o que está bom e o que pode melhorar..."></textarea>
+                </div>
+
+                <div class="review-actions">
+                    <button type="submit" name="Review.Decision" value="@((int)MissionReviewDecision.Approved)"
+                            class="btn btn-success">
+                        ✓ Aprovar — Conceder @m.XpReward XP
+                    </button>
+                    <button type="submit" name="Review.Decision" value="@((int)MissionReviewDecision.AdjustmentsRequested)"
+                            class="btn btn-warn">
+                        ↩ Solicitar Ajustes
+                    </button>
+                </div>
+            </form>
+        </div>
+    }
+
+    <!-- Histórico de revisões -->
+    @if (Model.Detail.Reviews.Any())
+    {
+        <div class="form-card">
+            <h3>Histórico de Revisões</h3>
+            @foreach (var r in Model.Detail.Reviews)
+            {
+                <div class="review-history-item @(r.Decision == MissionReviewDecision.Approved ? "review-approved" : "review-adjust")">
+                    <div class="review-meta">
+                        <strong>@(r.Decision == MissionReviewDecision.Approved ? "✓ Aprovada" : "↩ Ajustes solicitados")</strong>
+                        <span>Rodada @r.RoundNumber · @r.ReviewedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(r.Feedback))
+                    {
+                        <p class="review-feedback">@r.Feedback</p>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .dash-back { margin-bottom: 1rem; }
+    .dash-back a { color: var(--text-muted, #6b7280); text-decoration: none; font-size: .9rem; }
+    .mission-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+    .mission-header h2 { margin: .2rem 0 0; font-size: 1.3rem; }
+    .mission-student-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #6b7280); }
+    .mission-badges { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; flex-shrink: 0; }
+    .status-badge { padding: .2rem .7rem; border-radius: 99px; font-size: .78rem; font-weight: 600; }
+    .status--awaiting { background: #fef3c7; color: #92400e; }
+    .status--done { background: #d1fae5; color: #065f46; }
+    .status--adjust { background: #fee2e2; color: #991b1b; }
+    .status--default { background: #f3f4f6; color: #374151; }
+    .rarity-badge { font-size: .75rem; padding: .15rem .6rem; border-radius: 99px; background: #e0e7ff; color: #4338ca; font-weight: 600; }
+    .xp-badge { font-size: .75rem; font-weight: 600; color: #059669; }
+    .round-badge { background: #fef3c7; color: #92400e; padding: .1rem .5rem; border-radius: 99px; font-size: .75rem; font-weight: 600; }
+    .form-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .form-card h3 { margin: 0 0 1.25rem; font-size: 1rem; font-weight: 700; }
+    .form-card--review { border-color: #f59e0b; }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .form-control { border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; background: var(--input-bg, #fff); color: inherit; width: 100%; box-sizing: border-box; }
+    .qa-item { border-bottom: 1px solid var(--border, #f3f4f6); padding: 1rem 0; }
+    .qa-item:last-child { border-bottom: none; }
+    .qa-question { margin-bottom: .5rem; }
+    .qa-question p { margin: .5rem 0 0; font-weight: 500; }
+    .qa-type-badge, .req-badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 99px; margin-right: .3rem; }
+    .qa-type-badge { background: #ede9fe; color: #5b21b6; }
+    .req-badge { background: #fee2e2; color: #991b1b; }
+    .no-answer { color: var(--text-muted, #9ca3af); font-style: italic; font-size: .9rem; }
+    .answer-text { background: var(--input-bg, #f9fafb); border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; white-space: pre-wrap; }
+    .audio-player { width: 100%; margin-top: .5rem; }
+    .file-size { color: var(--text-muted, #9ca3af); font-size: .8rem; margin-left: .25rem; }
+    .empty-state-sm { color: var(--text-muted, #9ca3af); font-style: italic; }
+    .review-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .btn-success { background: #059669; color: #fff; border: none; padding: .6rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .9rem; }
+    .btn-success:hover { background: #047857; }
+    .btn-warn { background: #d97706; color: #fff; border: none; padding: .6rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .9rem; }
+    .btn-warn:hover { background: #b45309; }
+    .review-history-item { padding: .75rem 1rem; border-radius: 8px; margin-bottom: .75rem; }
+    .review-approved { background: #d1fae522; border-left: 3px solid #10b981; }
+    .review-adjust { background: #fee2e222; border-left: 3px solid #ef4444; }
+    .review-meta { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .25rem; }
+    .review-feedback { margin: .5rem 0 0; font-size: .9rem; color: var(--text-muted, #374151); }
+    @@media (prefers-color-scheme: dark) {
+        .form-card { background: #1e2130; border-color: #2d3148; }
+        .form-control { background: #252840; border-color: #3d4166; }
+        .answer-text { background: #252840; }
+        .status--default { background: #374151; color: #d1d5db; }
+    }
+</style>

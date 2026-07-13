@@ -9,6 +9,7 @@ using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.ViewModels.Learning;
+using YourRhythmStudio.ViewModels.Learning;
 
 namespace YourRhythmStudio.Controllers;
 
@@ -28,6 +29,7 @@ public sealed class TeacherController : Controller
     private readonly SkillService _skillService;
     private readonly ProgressService _progressService;
     private readonly LevelConfigService _levelConfigService;
+    private readonly MissionService _missionService;
 
     public TeacherController(
         ILogger<TeacherController> logger,
@@ -41,7 +43,8 @@ public sealed class TeacherController : Controller
         IQrArtifactGenerator qrArtifactGenerator,
         SkillService skillService,
         ProgressService progressService,
-        LevelConfigService levelConfigService)
+        LevelConfigService levelConfigService,
+        MissionService missionService)
     {
         _logger = logger;
         _profileResolver = profileResolver;
@@ -55,6 +58,7 @@ public sealed class TeacherController : Controller
         _skillService = skillService;
         _progressService = progressService;
         _levelConfigService = levelConfigService;
+        _missionService = missionService;
     }
 
     [HttpGet("")]
@@ -730,6 +734,181 @@ public sealed class TeacherController : Controller
             TempData["Error"] = ex.Message;
         }
         return RedirectToAction(nameof(LevelDetail), new { level });
+    }
+
+    // ── Devolutivas ───────────────────────────────────────────────────────────
+
+    [HttpGet("Devolutivas")]
+    public async Task<IActionResult> Devolutivas(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var pending = await _missionService.ListAwaitingReviewAsync(profile, cancellationToken);
+        return View(new DevolutivasViewModel { Pending = pending });
+    }
+
+    // ── Mission create ────────────────────────────────────────────────────────
+
+    [HttpGet("Students/{studentId:guid}/Missions/Create")]
+    public async Task<IActionResult> CreateMission(Guid studentId, CancellationToken cancellationToken)
+    {
+        var detail = await LoadStudentDetail(studentId, cancellationToken);
+        if (detail is null) return Forbid();
+
+        var profile = await CurrentProfile(cancellationToken);
+        var skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
+
+        ViewBag.Skills = skills;
+        return View(new CreateMissionViewModel
+        {
+            StudentProfileId = studentId,
+            StudentName = detail.Detail.Student.DisplayName
+        });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Missions/Create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateMission(
+        Guid studentId,
+        CreateMissionViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.StudentProfileId != studentId)
+        {
+            var detail2 = await LoadStudentDetail(studentId, cancellationToken);
+            var profile2 = await CurrentProfile(cancellationToken);
+            ViewBag.Skills = await _skillService.ListSkillsAsync(profile2, cancellationToken);
+            model.StudentName = detail2?.Detail.Student.DisplayName ?? string.Empty;
+            return View(model);
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+
+        List<CreateMissionQuestionRequest> questions;
+        try
+        {
+            questions = System.Text.Json.JsonSerializer.Deserialize<List<CreateMissionQuestionRequest>>(
+                model.QuestionsJson,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? new List<CreateMissionQuestionRequest>();
+        }
+        catch
+        {
+            ModelState.AddModelError(string.Empty, "Perguntas invalidas. Tente novamente.");
+            return View(model);
+        }
+
+        if (questions.Count == 0)
+        {
+            ModelState.AddModelError(string.Empty, "Adicione ao menos uma pergunta a missao.");
+            return View(model);
+        }
+
+        try
+        {
+            var dueAtUtc = model.DueAtLocal.HasValue
+                ? model.DueAtLocal.Value.Kind == DateTimeKind.Utc
+                    ? model.DueAtLocal.Value
+                    : model.DueAtLocal.Value.ToUniversalTime()
+                : (DateTime?)null;
+
+            var missionId = await _missionService.CreateMissionAsync(
+                profile,
+                new CreateMissionRequest(
+                    studentId,
+                    model.Title,
+                    model.Description,
+                    dueAtUtc,
+                    model.XpReward,
+                    model.Rarity,
+                    model.SkillRewardId,
+                    questions),
+                cancellationToken);
+
+            TempData["Success"] = "Missao criada com sucesso.";
+            return RedirectToAction(nameof(MissionDetail),
+                new { studentId, missionId });
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(model);
+        }
+    }
+
+    // ── Mission detail (teacher view) ─────────────────────────────────────────
+
+    [HttpGet("Students/{studentId:guid}/Missions/{missionId:guid}")]
+    public async Task<IActionResult> MissionDetail(
+        Guid studentId,
+        Guid missionId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var detail = await _missionService.GetMissionDetailForTeacherAsync(profile, missionId, cancellationToken);
+        if (detail is null || detail.Mission.StudentProfileId != studentId)
+            return NotFound();
+
+        return View(new TeacherMissionDetailViewModel { Detail = detail });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Missions/{missionId:guid}/Review")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReviewMission(
+        Guid studentId,
+        Guid missionId,
+        ReviewMissionViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || model.MissionId != missionId)
+        {
+            TempData["Error"] = "Dados invalidos.";
+            return RedirectToAction(nameof(MissionDetail), new { studentId, missionId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _missionService.ReviewMissionAsync(
+                profile, missionId, model.Decision, model.Feedback, cancellationToken);
+
+            TempData["Success"] = model.Decision == MissionReviewDecision.Approved
+                ? "Missao aprovada! XP concedido ao aluno."
+                : "Ajustes solicitados com sucesso.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(MissionDetail), new { studentId, missionId });
+    }
+
+    [HttpGet("Missions/{missionId:guid}/Answers/{questionId:guid}/File")]
+    public async Task<IActionResult> MissionAnswerFile(
+        Guid missionId,
+        Guid questionId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var file = await _missionService.GetAnswerFileAsync(profile, missionId, questionId, cancellationToken);
+        if (file is null) return NotFound();
+        return PhysicalFile(file.Value.PhysicalPath, file.Value.ContentType, file.Value.FileName, enableRangeProcessing: true);
+    }
+
+    // ── Quick student search ──────────────────────────────────────────────────
+
+    [HttpGet("Students/Search")]
+    public async Task<IActionResult> SearchStudents(string? q, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+        var term = q?.Trim() ?? string.Empty;
+        var matches = students
+            .Where(s => string.IsNullOrEmpty(term)
+                     || s.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .Take(10)
+            .Select(s => new { id = s.StudentProfileId, name = s.DisplayName, instrument = s.Instrument });
+        return Ok(matches);
     }
 
     [HttpGet("QuickLesson")]

@@ -1,0 +1,96 @@
+@model YourRhythmStudio.ViewModels.Learning.DevolutivasViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Devolutivas";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Devolutivas";
+}
+
+<div class="dash-section">
+    <div class="dash-section-header">
+        <h2>Missões Aguardando Revisão</h2>
+        <span class="badge @(Model.Pending.Count > 0 ? "badge-warn" : "badge-ok")">
+            @Model.Pending.Count pendente(s)
+        </span>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-error">@TempData["Error"]</div>
+    }
+
+    @if (!Model.Pending.Any())
+    {
+        <div class="empty-state">
+            <p>Nenhuma missão aguardando revisão no momento. 🎉</p>
+        </div>
+    }
+    else
+    {
+        <div class="mission-review-list">
+            @foreach (var m in Model.Pending)
+            {
+                <div class="mission-card mission-card--awaiting">
+                    <div class="mission-card-header">
+                        <div>
+                            <span class="mission-student-label">@m.StudentName</span>
+                            <h3 class="mission-title">@m.Title</h3>
+                        </div>
+                        <div class="mission-meta">
+                            <span class="rarity-badge rarity-@m.Rarity.ToString().ToLower()">@m.Rarity</span>
+                            <span class="xp-badge">@m.XpReward XP</span>
+                        </div>
+                    </div>
+                    <div class="mission-card-body">
+                        <span class="mission-info">
+                            Enviada: @(m.SubmittedForReviewAtUtc.HasValue ? m.SubmittedForReviewAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")
+                        </span>
+                        @if (m.CurrentRound > 1)
+                        {
+                            <span class="round-badge">Rodada @m.CurrentRound</span>
+                        }
+                    </div>
+                    <div class="mission-card-actions">
+                        <a class="btn btn-primary btn-sm"
+                           asp-controller="Teacher"
+                           asp-action="MissionDetail"
+                           asp-route-studentId="@m.StudentProfileId"
+                           asp-route-missionId="@m.Id">
+                            Revisar missão
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .dash-section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .badge { padding: .2rem .7rem; border-radius: 99px; font-size: .8rem; font-weight: 600; }
+    .badge-warn { background: #f59e0b22; color: #d97706; }
+    .badge-ok   { background: #10b98122; color: #059669; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted, #999); font-size: 1.1rem; }
+    .mission-review-list { display: flex; flex-direction: column; gap: 1rem; }
+    .mission-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.25rem 1.5rem; }
+    .mission-card--awaiting { border-left: 4px solid #f59e0b; }
+    .mission-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .75rem; }
+    .mission-student-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #6b7280); }
+    .mission-title { margin: .2rem 0 0; font-size: 1.1rem; font-weight: 700; }
+    .mission-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; flex-shrink: 0; }
+    .rarity-badge { font-size: .75rem; font-weight: 600; padding: .15rem .6rem; border-radius: 99px; background: #e0e7ff; color: #4338ca; }
+    .xp-badge { font-size: .75rem; font-weight: 600; color: #059669; }
+    .mission-card-body { font-size: .85rem; color: var(--text-muted, #6b7280); display: flex; gap: 1rem; align-items: center; margin-bottom: .75rem; }
+    .round-badge { background: #fef3c7; color: #92400e; padding: .1rem .5rem; border-radius: 99px; font-size: .75rem; font-weight: 600; }
+    .mission-card-actions { display: flex; gap: .5rem; }
+    @@media (prefers-color-scheme: dark) {
+        .mission-card { background: #1e2130; border-color: #2d3148; }
+        .badge-warn { background: #78350f22; color: #fbbf24; }
+        .badge-ok { background: #06473222; color: #34d399; }
+    }
+</style>

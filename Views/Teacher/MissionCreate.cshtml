@@ -1,0 +1,219 @@
+@model YourRhythmStudio.ViewModels.Learning.CreateMissionViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@using YourRhythmStudio.Application.Learning
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Criar Missão";
+    ViewData["Role"] = "teacher";
+    ViewData["DashTitle"] = "Nova Missão";
+    var skills = ViewBag.Skills as IReadOnlyCollection<SkillSummary> ?? Array.Empty<SkillSummary>();
+}
+
+<div class="dash-section">
+    <div class="dash-back">
+        <a asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@Model.StudentProfileId">
+            ← @Model.StudentName
+        </a>
+    </div>
+    <h2>Criar Missão para @Model.StudentName</h2>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-error">
+            <asp-validation-summary asp-validation-group="" />
+        </div>
+    }
+
+    <form method="post" id="missionForm">
+        <input type="hidden" asp-for="StudentProfileId" />
+        <input type="hidden" id="questionsJsonInput" asp-for="QuestionsJson" />
+        @Html.AntiForgeryToken()
+
+        <div class="form-card">
+            <h3>Informações da Missão</h3>
+
+            <div class="form-group">
+                <label asp-for="Title">Título</label>
+                <input asp-for="Title" class="form-control" placeholder="Ex: Toque a escala de Dó maior..." />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description">Descrição / instruções</label>
+                <textarea asp-for="Description" class="form-control" rows="4"
+                          placeholder="Descreva o que o aluno deve fazer..."></textarea>
+                <span asp-validation-for="Description" class="field-error"></span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="DueAtLocal">Prazo (opcional)</label>
+                    <input asp-for="DueAtLocal" type="datetime-local" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="Rarity">Raridade</label>
+                    <select asp-for="Rarity" class="form-control" id="raritySelect">
+                        @foreach (var r in Enum.GetValues<AssignmentRarity>())
+                        {
+                            <option value="@r">@r</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label asp-for="XpReward">XP de Recompensa</label>
+                    <input asp-for="XpReward" type="number" class="form-control" min="0" max="10000" />
+                </div>
+            </div>
+
+            @if (skills.Any())
+            {
+                <div class="form-group">
+                    <label asp-for="SkillRewardId">Skill de Recompensa (opcional, Épica/Lendária)</label>
+                    <select asp-for="SkillRewardId" class="form-control">
+                        <option value="">— Nenhuma —</option>
+                        @foreach (var s in skills)
+                        {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+        </div>
+
+        <div class="form-card" id="questionsCard">
+            <div class="questions-header">
+                <h3>Perguntas da Missão</h3>
+                <button type="button" class="btn btn-ghost btn-sm" id="addQuestionBtn">+ Adicionar pergunta</button>
+            </div>
+
+            <div id="questionsList" class="questions-list">
+                <p class="empty-questions-msg" id="emptyQuestionsMsg">
+                    Nenhuma pergunta adicionada. Clique em "Adicionar pergunta".
+                </p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submitBtn">Criar Missão</button>
+            <a class="btn btn-ghost" asp-controller="Teacher" asp-action="StudentDetail"
+               asp-route-studentId="@Model.StudentProfileId">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<template id="questionTemplate">
+    <div class="question-item" data-index="__IDX__">
+        <div class="question-item-header">
+            <span class="question-number">Pergunta <strong class="q-num"></strong></span>
+            <button type="button" class="btn-icon remove-question" title="Remover">✕</button>
+        </div>
+        <div class="form-group">
+            <label>Texto da Pergunta</label>
+            <input type="text" class="form-control q-text" placeholder="Ex: Grave um áudio tocando o arpejo..." maxlength="1000" required />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tipo de Resposta</label>
+                <select class="form-control q-type">
+                    <option value="1">Texto</option>
+                    <option value="2">Áudio (≤5 min)</option>
+                    <option value="3">Arquivo</option>
+                </select>
+            </div>
+            <div class="form-group" style="align-self:center;padding-top:1.4rem;">
+                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+                    <input type="checkbox" class="q-required" checked />
+                    Obrigatória
+                </label>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style>
+    .dash-back { margin-bottom: 1rem; }
+    .dash-back a { color: var(--text-muted, #6b7280); text-decoration: none; font-size: .9rem; }
+    .dash-back a:hover { text-decoration: underline; }
+    .form-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .form-card h3 { margin: 0 0 1.25rem; font-size: 1rem; font-weight: 700; }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .form-control { border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; background: var(--input-bg, #fff); color: inherit; width: 100%; box-sizing: border-box; }
+    .form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
+    .field-error { color: #dc2626; font-size: .8rem; }
+    .questions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .questions-header h3 { margin: 0; }
+    .questions-list { display: flex; flex-direction: column; gap: 1rem; }
+    .empty-questions-msg { color: var(--text-muted, #9ca3af); font-size: .9rem; }
+    .question-item { border: 1px dashed var(--border, #d1d5db); border-radius: 8px; padding: 1rem; }
+    .question-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+    .question-number { font-size: .85rem; font-weight: 600; color: var(--text-muted, #6b7280); }
+    .btn-icon { background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem; padding: .2rem .4rem; border-radius: 4px; }
+    .btn-icon:hover { background: #fee2e2; }
+    @@media (prefers-color-scheme: dark) {
+        .form-card { background: #1e2130; border-color: #2d3148; }
+        .form-control { background: #252840; border-color: #3d4166; }
+    }
+</style>
+
+<script>
+(function () {
+    var questions = [];
+    var nextId = 0;
+
+    var list = document.getElementById('questionsList');
+    var emptyMsg = document.getElementById('emptyQuestionsMsg');
+    var template = document.getElementById('questionTemplate').innerHTML;
+    var jsonInput = document.getElementById('questionsJsonInput');
+    var form = document.getElementById('missionForm');
+
+    document.getElementById('addQuestionBtn').addEventListener('click', function () {
+        var id = nextId++;
+        var html = template.replace(/__IDX__/g, id);
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        var el = wrapper.firstElementChild;
+        list.appendChild(el);
+        el.querySelector('.remove-question').addEventListener('click', function () {
+            el.remove();
+            renumber();
+        });
+        renumber();
+    });
+
+    function renumber() {
+        var items = list.querySelectorAll('.question-item');
+        emptyMsg.style.display = items.length === 0 ? '' : 'none';
+        items.forEach(function (item, i) {
+            item.querySelector('.q-num').textContent = i + 1;
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+        var items = list.querySelectorAll('.question-item');
+        var qs = [];
+        var valid = true;
+        items.forEach(function (item, i) {
+            var text = item.querySelector('.q-text').value.trim();
+            if (!text) { valid = false; }
+            qs.push({
+                questionText: text,
+                questionType: parseInt(item.querySelector('.q-type').value, 10),
+                order: i,
+                isRequired: item.querySelector('.q-required').checked
+            });
+        });
+        if (!valid) {
+            e.preventDefault();
+            alert('Preencha o texto de todas as perguntas.');
+            return;
+        }
+        if (qs.length === 0) {
+            e.preventDefault();
+            alert('Adicione ao menos uma pergunta à missão.');
+            return;
+        }
+        jsonInput.value = JSON.stringify(qs);
+    });
+})();
+</script>

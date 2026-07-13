@@ -54,6 +54,10 @@ public sealed class RepertoireItem
 
     public string? Notes { get; private set; }
 
+    public string? ComposerName { get; private set; }
+
+    public string? InstrumentName { get; private set; }
+
     public string? ReferenceUrl { get; private set; }
 
     public string? AudioStoredFileName { get; private set; }
@@ -72,7 +76,9 @@ public sealed class RepertoireItem
         string title,
         string? notes,
         string? referenceUrl,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? composerName = null,
+        string? instrumentName = null)
     {
         if (Status == RepertoireStatus.Archived)
             throw new InvalidOperationException("Archived repertoire items cannot be edited.");
@@ -83,6 +89,8 @@ public sealed class RepertoireItem
         Title = title.Trim();
         Notes = NormalizeOptionalText(notes);
         ReferenceUrl = NormalizeOptionalText(referenceUrl);
+        ComposerName = NormalizeOptionalText(composerName);
+        InstrumentName = NormalizeOptionalText(instrumentName);
         UpdatedAtUtc = utcNow;
     }
 

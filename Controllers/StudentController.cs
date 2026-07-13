@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using YourRhythmStudio.Application.Learning;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
+using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.ViewModels.Learning;
 
 namespace YourRhythmStudio.Controllers;
@@ -18,6 +19,7 @@ public sealed class StudentController : Controller
     private readonly ProgressService _progressService;
     private readonly SkillService _skillService;
     private readonly LevelConfigService _levelConfigService;
+    private readonly MissionService _missionService;
 
     public StudentController(
         IUserProfileResolver profileResolver,
@@ -26,7 +28,8 @@ public sealed class StudentController : Controller
         FeedbackService feedbackService,
         ProgressService progressService,
         SkillService skillService,
-        LevelConfigService levelConfigService)
+        LevelConfigService levelConfigService,
+        MissionService missionService)
     {
         _profileResolver = profileResolver;
         _assignmentService = assignmentService;
@@ -35,6 +38,7 @@ public sealed class StudentController : Controller
         _progressService = progressService;
         _skillService = skillService;
         _levelConfigService = levelConfigService;
+        _missionService = missionService;
     }
 
     [HttpGet("")]
@@ -131,6 +135,105 @@ public sealed class StudentController : Controller
         var completed = await _repertoireService.CompleteForCurrentStudentAsync(profile, id, cancellationToken);
         if (!completed) return NotFound();
         return RedirectToAction(nameof(RepertoireDetail), new { id });
+    }
+
+    // ── Missions ──────────────────────────────────────────────────────────────
+
+    [HttpGet("Missions")]
+    public async Task<IActionResult> Missions(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var missions = await _missionService.ListForCurrentStudentAsync(profile, cancellationToken);
+        return View(new StudentMissionsViewModel { Missions = missions });
+    }
+
+    [HttpGet("Missions/{missionId:guid}")]
+    public async Task<IActionResult> MissionDetail(Guid missionId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var detail = await _missionService.GetMissionDetailForStudentAsync(profile, missionId, cancellationToken);
+        if (detail is null) return NotFound();
+
+        return View(new StudentMissionDetailViewModel { Detail = detail });
+    }
+
+    [HttpPost("Missions/{missionId:guid}/Save")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(25 * 1024 * 1024)]
+    public async Task<IActionResult> SaveMissionDraft(Guid missionId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var answers = ParseAnswersFromForm(missionId);
+
+        try
+        {
+            await _missionService.SaveAnswersAsync(profile, missionId, answers, submit: false, cancellationToken);
+            TempData["Success"] = "Rascunho salvo.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(MissionDetail), new { missionId });
+    }
+
+    [HttpPost("Missions/{missionId:guid}/Submit")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(25 * 1024 * 1024)]
+    public async Task<IActionResult> SubmitMission(Guid missionId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var answers = ParseAnswersFromForm(missionId);
+
+        try
+        {
+            await _missionService.SaveAnswersAsync(profile, missionId, answers, submit: true, cancellationToken);
+            TempData["Success"] = "Missao enviada para revisao do professor!";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(MissionDetail), new { missionId });
+        }
+
+        return RedirectToAction(nameof(Missions));
+    }
+
+    [HttpGet("Missions/{missionId:guid}/Answers/{questionId:guid}/File")]
+    public async Task<IActionResult> MissionAnswerFile(
+        Guid missionId,
+        Guid questionId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var file = await _missionService.GetStudentAnswerFileAsync(profile, missionId, questionId, cancellationToken);
+        if (file is null) return NotFound();
+        return PhysicalFile(file.Value.PhysicalPath, file.Value.ContentType, file.Value.FileName, enableRangeProcessing: true);
+    }
+
+    private List<(Guid QuestionId, string? Text, Microsoft.AspNetCore.Http.IFormFile? File)> ParseAnswersFromForm(Guid missionId)
+    {
+        var result = new List<(Guid, string?, Microsoft.AspNetCore.Http.IFormFile?)>();
+
+        foreach (var key in Request.Form.Keys)
+        {
+            if (!key.StartsWith("text_", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!Guid.TryParse(key["text_".Length..], out var qId)) continue;
+            var text = Request.Form[key].ToString();
+            var file = Request.Form.Files.GetFile($"file_{qId}");
+            result.Add((qId, string.IsNullOrWhiteSpace(text) ? null : text, file));
+        }
+
+        foreach (var formFile in Request.Form.Files)
+        {
+            if (!formFile.Name.StartsWith("file_", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!Guid.TryParse(formFile.Name["file_".Length..], out var qId)) continue;
+            if (result.Any(r => r.Item1 == qId)) continue;
+            result.Add((qId, null, formFile));
+        }
+
+        return result;
     }
 
     [HttpGet("Levels")]

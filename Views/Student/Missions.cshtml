@@ -1,0 +1,83 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentMissionsViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Minhas Missões";
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Missões";
+
+    string StatusLabel(AssignmentStatus s) => s switch {
+        AssignmentStatus.Pending => "Pendente",
+        AssignmentStatus.InProgress => "Em progresso",
+        AssignmentStatus.AwaitingReview => "Aguardando revisão",
+        AssignmentStatus.AdjustmentsRequested => "Ajustes solicitados",
+        AssignmentStatus.Completed => "Concluída",
+        _ => s.ToString()
+    };
+    string StatusClass(AssignmentStatus s) => s switch {
+        AssignmentStatus.AwaitingReview => "status--awaiting",
+        AssignmentStatus.Completed => "status--done",
+        AssignmentStatus.AdjustmentsRequested => "status--adjust",
+        _ => "status--default"
+    };
+}
+
+<div class="dash-section">
+    <h2>Minhas Missões</h2>
+
+    @if (!Model.Missions.Any())
+    {
+        <div class="empty-state">
+            <p>Nenhuma missão criada ainda. Aguarde o seu professor adicionar missões.</p>
+        </div>
+    }
+    else
+    {
+        <div class="mission-list">
+            @foreach (var m in Model.Missions)
+            {
+                <a class="mission-card mission-card--link @(m.Status == AssignmentStatus.AdjustmentsRequested ? "mission-card--adjust" : "")"
+                   asp-controller="Student" asp-action="MissionDetail" asp-route-missionId="@m.Id">
+                    <div class="mission-card-header">
+                        <div>
+                            <span class="status-badge @StatusClass(m.Status)">@StatusLabel(m.Status)</span>
+                            <h3 class="mission-title">@m.Title</h3>
+                        </div>
+                        <div class="mission-meta">
+                            <span class="xp-badge">@m.XpReward XP</span>
+                            <span class="rarity-badge">@m.Rarity</span>
+                        </div>
+                    </div>
+                    <div class="mission-footer">
+                        <span class="mission-date">@m.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                        @if (m.CurrentRound > 1) { <span class="round-badge">Rodada @m.CurrentRound</span> }
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-muted, #9ca3af); }
+    .mission-list { display: flex; flex-direction: column; gap: 1rem; }
+    .mission-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; color: inherit; display: block; transition: box-shadow .15s; }
+    .mission-card--link:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); border-color: var(--accent, #3b82f6); }
+    .mission-card--adjust { border-left: 4px solid #ef4444; }
+    .mission-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .75rem; }
+    .mission-title { margin: .25rem 0 0; font-size: 1.05rem; font-weight: 600; }
+    .mission-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; flex-shrink: 0; }
+    .status-badge { display: inline-block; padding: .15rem .6rem; border-radius: 99px; font-size: .72rem; font-weight: 600; margin-bottom: .25rem; }
+    .status--awaiting { background: #fef3c7; color: #92400e; }
+    .status--done { background: #d1fae5; color: #065f46; }
+    .status--adjust { background: #fee2e2; color: #991b1b; }
+    .status--default { background: #f3f4f6; color: #374151; }
+    .xp-badge { font-size: .75rem; font-weight: 600; color: #059669; }
+    .rarity-badge { font-size: .72rem; padding: .1rem .5rem; border-radius: 99px; background: #e0e7ff; color: #4338ca; font-weight: 600; }
+    .mission-footer { display: flex; align-items: center; gap: .75rem; font-size: .8rem; color: var(--text-muted, #6b7280); }
+    .round-badge { background: #fef3c7; color: #92400e; padding: .1rem .5rem; border-radius: 99px; font-size: .72rem; font-weight: 600; }
+    @@media (prefers-color-scheme: dark) {
+        .mission-card { background: #1e2130; border-color: #2d3148; }
+        .status--default { background: #374151; color: #d1d5db; }
+    }
+</style>

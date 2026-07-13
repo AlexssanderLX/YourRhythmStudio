@@ -30,6 +30,7 @@ public static class DatabaseServiceCollectionExtensions
         services.AddScoped<ProgressService>();
         services.AddScoped<SkillService>();
         services.AddScoped<LevelConfigService>();
+        services.AddScoped<MissionService>();
         services.AddScoped<SettingsService>();
         services.AddScoped<AccessRequestService>();
         services.AddScoped<RootAdminService>();

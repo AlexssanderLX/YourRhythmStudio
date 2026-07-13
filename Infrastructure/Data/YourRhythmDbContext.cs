@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Domain.Learning;
+using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.Domain.Root;
 using YourRhythmStudio.Domain.Users;
 
@@ -51,6 +52,14 @@ public sealed class YourRhythmDbContext : DbContext
     public DbSet<AdminSetting> AdminSettings => Set<AdminSetting>();
 
     public DbSet<LandingTrack> LandingTracks => Set<LandingTrack>();
+
+    public DbSet<MissionQuestion> MissionQuestions => Set<MissionQuestion>();
+
+    public DbSet<MissionAnswer> MissionAnswers => Set<MissionAnswer>();
+
+    public DbSet<MissionReview> MissionReviews => Set<MissionReview>();
+
+    public DbSet<RepertoireItemMaterial> RepertoireItemMaterials => Set<RepertoireItemMaterial>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -450,6 +459,89 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(t => t.Title).HasMaxLength(120).IsRequired();
             entity.Property(t => t.FileName).HasMaxLength(180).IsRequired();
             entity.HasIndex(t => t.SortOrder);
+        });
+
+        modelBuilder.Entity<Assignment>(entity =>
+        {
+            entity.Property(a => a.IsMission).HasDefaultValue(false);
+            entity.Property(a => a.CurrentRound).HasDefaultValue(1);
+        });
+
+        modelBuilder.Entity<RepertoireItem>(entity =>
+        {
+            entity.Property(item => item.ComposerName).HasMaxLength(180);
+            entity.Property(item => item.InstrumentName).HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<MissionQuestion>(entity =>
+        {
+            entity.ToTable("mission_questions");
+            entity.HasKey(q => q.Id);
+            entity.Property(q => q.QuestionText).HasMaxLength(1000).IsRequired();
+            entity.Property(q => q.QuestionType).HasConversion<int>();
+            entity.HasIndex(q => q.AssignmentId);
+            entity.HasOne<Assignment>()
+                .WithMany()
+                .HasForeignKey(q => q.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MissionAnswer>(entity =>
+        {
+            entity.ToTable("mission_answers");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.AnswerText).HasMaxLength(5000);
+            entity.Property(a => a.StoredFileName).HasMaxLength(180);
+            entity.Property(a => a.OriginalFileName).HasMaxLength(260);
+            entity.Property(a => a.ContentType).HasMaxLength(120);
+            entity.HasIndex(a => new { a.AssignmentId, a.QuestionId, a.RoundNumber }).IsUnique();
+            entity.HasOne<Assignment>()
+                .WithMany()
+                .HasForeignKey(a => a.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MissionQuestion>()
+                .WithMany()
+                .HasForeignKey(a => a.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MissionReview>(entity =>
+        {
+            entity.ToTable("mission_reviews");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Feedback).HasMaxLength(3000);
+            entity.Property(r => r.Decision).HasConversion<int>();
+            entity.HasIndex(r => r.AssignmentId);
+            entity.HasOne<Assignment>()
+                .WithMany()
+                .HasForeignKey(r => r.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<TeacherProfile>()
+                .WithMany()
+                .HasForeignKey(r => r.TeacherProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RepertoireItemMaterial>(entity =>
+        {
+            entity.ToTable("repertoire_item_materials");
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Title).HasMaxLength(180).IsRequired();
+            entity.Property(m => m.MaterialType).HasConversion<int>();
+            entity.Property(m => m.StoredFileName).HasMaxLength(180);
+            entity.Property(m => m.OriginalFileName).HasMaxLength(260);
+            entity.Property(m => m.ContentType).HasMaxLength(120);
+            entity.Property(m => m.Url).HasMaxLength(500);
+            entity.HasIndex(m => m.RepertoireItemId);
+            entity.HasIndex(m => m.SchoolId);
+            entity.HasOne<RepertoireItem>()
+                .WithMany()
+                .HasForeignKey(m => m.RepertoireItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<School>()
+                .WithMany()
+                .HasForeignKey(m => m.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -1,0 +1,258 @@
+@model YourRhythmStudio.ViewModels.Learning.StudentMissionDetailViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
+@using YourRhythmStudio.Application.Learning
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model.Detail.Title;
+    ViewData["Role"] = "student";
+    ViewData["DashTitle"] = "Missão";
+    var d = Model.Detail;
+    bool canEdit = d.Status == AssignmentStatus.Pending
+                || d.Status == AssignmentStatus.InProgress
+                || d.Status == AssignmentStatus.AdjustmentsRequested;
+    bool canSubmit = canEdit;
+
+    string StatusLabel(AssignmentStatus s) => s switch {
+        AssignmentStatus.Pending => "Pendente",
+        AssignmentStatus.InProgress => "Em progresso",
+        AssignmentStatus.AwaitingReview => "Aguardando revisão do professor",
+        AssignmentStatus.AdjustmentsRequested => "Ajustes solicitados",
+        AssignmentStatus.Completed => "Concluída ✓",
+        _ => s.ToString()
+    };
+    string StatusClass(AssignmentStatus s) => s switch {
+        AssignmentStatus.AwaitingReview => "status--awaiting",
+        AssignmentStatus.Completed => "status--done",
+        AssignmentStatus.AdjustmentsRequested => "status--adjust",
+        _ => "status--default"
+    };
+}
+
+<div class="dash-section">
+    <div class="dash-back">
+        <a asp-controller="Student" asp-action="Missions">← Minhas Missões</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-error">@TempData["Error"]</div>
+    }
+
+    <div class="mission-header">
+        <div>
+            <h2>@d.Title</h2>
+            @if (d.DueAtUtc.HasValue)
+            {
+                <span class="due-date">Prazo: @d.DueAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            }
+        </div>
+        <div class="mission-badges">
+            <span class="status-badge @StatusClass(d.Status)">@StatusLabel(d.Status)</span>
+            <span class="xp-badge">@d.XpReward XP</span>
+            @if (d.CurrentRound > 1) { <span class="round-badge">Rodada @d.CurrentRound</span> }
+        </div>
+    </div>
+
+    <div class="form-card">
+        <p class="mission-description">@d.Description</p>
+    </div>
+
+    <!-- Feedback do professor (ajustes) -->
+    @if (d.LastReview is not null && d.Status == AssignmentStatus.AdjustmentsRequested)
+    {
+        <div class="review-feedback-card">
+            <h3>Feedback do Professor</h3>
+            <p>@(string.IsNullOrEmpty(d.LastReview.Feedback) ? "Ajustes solicitados. Revise e reenvie sua missão." : d.LastReview.Feedback)</p>
+        </div>
+    }
+
+    @if (d.Status == AssignmentStatus.Completed && d.LastReview is not null)
+    {
+        <div class="review-feedback-card review-feedback-card--done">
+            <h3>✓ Missão Aprovada!</h3>
+            @if (!string.IsNullOrEmpty(d.LastReview.Feedback))
+            {
+                <p>@d.LastReview.Feedback</p>
+            }
+        </div>
+    }
+
+    @if (d.Status == AssignmentStatus.AwaitingReview)
+    {
+        <div class="info-card">
+            <p>Sua missão foi enviada e está aguardando revisão do professor. Você será notificado quando houver um retorno.</p>
+        </div>
+    }
+
+    <!-- Formulário de respostas -->
+    @if (canEdit && d.Questions.Any())
+    {
+        <form method="post" enctype="multipart/form-data" id="missionAnswerForm">
+            @Html.AntiForgeryToken()
+
+            <div class="form-card">
+                <h3>Suas Respostas</h3>
+
+                @foreach (var q in d.Questions)
+                {
+                    var existing = d.CurrentAnswers.FirstOrDefault(a => a.QuestionId == q.Id);
+                    <div class="qa-item">
+                        <div class="qa-label">
+                            @if (q.IsRequired) { <span class="req-badge">Obrigatória</span> }
+                            <span class="qa-type-badge">
+                                @(q.QuestionType switch {
+                                    MissionQuestionType.Audio => "🎵 Áudio",
+                                    MissionQuestionType.File => "📎 Arquivo",
+                                    _ => "📝 Texto"
+                                })
+                            </span>
+                        </div>
+                        <p class="qa-question-text">@q.QuestionText</p>
+
+                        @if (q.QuestionType == MissionQuestionType.Text)
+                        {
+                            <textarea name="text_@q.Id" class="form-control" rows="4"
+                                      placeholder="Digite sua resposta aqui...">@(existing?.AnswerText ?? "")</textarea>
+                        }
+                        else
+                        {
+                            if (existing?.FileDownloadUrl is not null)
+                            {
+                                <div class="existing-file">
+                                    <span>Arquivo atual: <strong>@existing.OriginalFileName</strong></span>
+                                    @if (q.QuestionType == MissionQuestionType.Audio)
+                                    {
+                                        <audio controls class="audio-player">
+                                            <source src="@existing.FileDownloadUrl" type="@existing.ContentType" />
+                                        </audio>
+                                    }
+                                    <label class="change-file-label">Substituir arquivo:</label>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="file-upload-label">
+                                    @(q.QuestionType == MissionQuestionType.Audio
+                                        ? "Enviar áudio (MP3, WAV, OGG — máx. 10MB)"
+                                        : "Enviar arquivo (máx. 20MB)")
+                                </label>
+                            }
+                            <input type="file" name="file_@q.Id" class="form-control-file"
+                                   accept="@(q.QuestionType == MissionQuestionType.Audio ? "audio/*" : "*/*")" />
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" formaction="@Url.Action("SaveMissionDraft", "Student", new { missionId = d.Id })"
+                        class="btn btn-ghost">
+                    Salvar Rascunho
+                </button>
+                <button type="submit" formaction="@Url.Action("SubmitMission", "Student", new { missionId = d.Id })"
+                        class="btn btn-primary" id="submitBtn">
+                    Enviar para Revisão
+                </button>
+            </div>
+        </form>
+    }
+    else if (!d.Questions.Any())
+    {
+        <div class="info-card">
+            <p>Esta missão não possui perguntas para responder.</p>
+        </div>
+    }
+    else if (d.Status == AssignmentStatus.AwaitingReview || d.Status == AssignmentStatus.Completed)
+    {
+        <!-- Read-only view of submitted answers -->
+        <div class="form-card">
+            <h3>Suas Respostas Enviadas</h3>
+            @foreach (var q in d.Questions)
+            {
+                var answer = d.CurrentAnswers.FirstOrDefault(a => a.QuestionId == q.Id);
+                <div class="qa-item">
+                    <p class="qa-question-text"><strong>@q.QuestionText</strong></p>
+                    @if (answer is null)
+                    {
+                        <span class="no-answer">Sem resposta</span>
+                    }
+                    else if (!string.IsNullOrEmpty(answer.AnswerText))
+                    {
+                        <div class="answer-text">@answer.AnswerText</div>
+                    }
+                    else if (answer.FileDownloadUrl is not null)
+                    {
+                        <a href="@answer.FileDownloadUrl" class="btn btn-ghost btn-sm">📥 @(answer.OriginalFileName ?? "Baixar")</a>
+                        @if (q.QuestionType == MissionQuestionType.Audio)
+                        {
+                            <audio controls class="audio-player">
+                                <source src="@answer.FileDownloadUrl" type="@answer.ContentType" />
+                            </audio>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .dash-back { margin-bottom: 1rem; }
+    .dash-back a { color: var(--text-muted, #6b7280); text-decoration: none; font-size: .9rem; }
+    .dash-back a:hover { text-decoration: underline; }
+    .mission-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .mission-header h2 { margin: 0 0 .25rem; font-size: 1.3rem; }
+    .due-date { font-size: .83rem; color: var(--text-muted, #6b7280); }
+    .mission-badges { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+    .status-badge { padding: .2rem .7rem; border-radius: 99px; font-size: .78rem; font-weight: 600; }
+    .status--awaiting { background: #fef3c7; color: #92400e; }
+    .status--done { background: #d1fae5; color: #065f46; }
+    .status--adjust { background: #fee2e2; color: #991b1b; }
+    .status--default { background: #f3f4f6; color: #374151; }
+    .xp-badge { font-size: .75rem; font-weight: 600; color: #059669; }
+    .round-badge { background: #fef3c7; color: #92400e; padding: .1rem .5rem; border-radius: 99px; font-size: .75rem; font-weight: 600; }
+    .form-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .form-card h3 { margin: 0 0 1.25rem; font-size: 1rem; font-weight: 700; }
+    .mission-description { white-space: pre-wrap; margin: 0; }
+    .review-feedback-card { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    .review-feedback-card h3 { margin: 0 0 .5rem; font-size: 1rem; }
+    .review-feedback-card--done { background: #d1fae5; border-color: #10b981; }
+    .info-card { background: var(--card-bg, #f0f9ff); border: 1px solid #bae6fd; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; color: #0369a1; }
+    .qa-item { border-bottom: 1px solid var(--border, #f3f4f6); padding: 1rem 0; }
+    .qa-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .qa-label { display: flex; gap: .4rem; margin-bottom: .4rem; }
+    .qa-type-badge, .req-badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 99px; }
+    .qa-type-badge { background: #ede9fe; color: #5b21b6; }
+    .req-badge { background: #fee2e2; color: #991b1b; }
+    .qa-question-text { margin: 0 0 .75rem; font-weight: 500; }
+    .form-control { border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; background: var(--input-bg, #fff); color: inherit; width: 100%; box-sizing: border-box; resize: vertical; }
+    .form-control-file { margin-top: .25rem; }
+    .form-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .5rem; }
+    .file-upload-label, .change-file-label { font-size: .83rem; color: var(--text-muted, #6b7280); display: block; margin-bottom: .25rem; }
+    .existing-file { margin-bottom: .5rem; font-size: .85rem; }
+    .audio-player { width: 100%; margin-top: .5rem; }
+    .no-answer { color: var(--text-muted, #9ca3af); font-style: italic; font-size: .9rem; }
+    .answer-text { background: var(--input-bg, #f9fafb); border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; white-space: pre-wrap; }
+    @@media (prefers-color-scheme: dark) {
+        .form-card { background: #1e2130; border-color: #2d3148; }
+        .form-control { background: #252840; border-color: #3d4166; }
+        .status--default { background: #374151; color: #d1d5db; }
+        .answer-text { background: #252840; }
+    }
+</style>
+
+<script>
+(function() {
+    var submitBtn = document.getElementById('submitBtn');
+    if (!submitBtn) return;
+    submitBtn.addEventListener('click', function(e) {
+        if (!confirm('Confirmar envio da missão para revisão do professor?')) {
+            e.preventDefault();
+        }
+    });
+})();
+</script>
