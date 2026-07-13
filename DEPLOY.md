@@ -1,8 +1,8 @@
 # Deploy YourRhythm Studio
 
-Este documento registra a preparacao inicial da VPS de producao do YourRhythm Studio.
+Este documento registra o deploy de producao do YourRhythm Studio na VPS `yourrhythm`.
 
-Estado atual: VPS preparada para receber a aplicacao ASP.NET Core, mas sem deploy da aplicacao, sem migration de producao, sem DNS/Cloudflare e sem certificado SSL emitido.
+Estado atual: aplicacao publicada, systemd ativo, Nginx ativo, HTTPS emitido com Certbot e migrations aplicadas. Nao registrar senhas, tokens, e-mail de Certbot, connection strings reais ou chaves privadas neste arquivo.
 
 ## Servidor
 
@@ -10,12 +10,22 @@ Estado atual: VPS preparada para receber a aplicacao ASP.NET Core, mas sem deplo
 - IP: `140.82.26.53`
 - Hostname: `yourrhythm`
 - SO: Ubuntu 24.04 LTS
-- Dominio futuro: `yourrhythmstudio.com.br`
-- Stack alvo: ASP.NET Core MVC, EF Core, MySQL, Nginx, Kestrel e systemd
+- Dominios:
+  - `yourrhythmstudio.com.br`
+  - `www.yourrhythmstudio.com.br`
+- Stack: ASP.NET Core MVC, EF Core, MySQL, Nginx, Kestrel e systemd
 
-## Acesso SSH
+## Versoes
 
-Atalhos locais criados em `~/.ssh/config`:
+- Projeto: `net10.0`
+- Runtime na VPS: ASP.NET Core Runtime `10.0.9`
+- MySQL: `8.0.46`
+- Nginx: `1.24.0`
+- Certbot: `2.9.0`
+
+## SSH
+
+Atalhos locais:
 
 ```sshconfig
 Host yourrhythm-vps
@@ -39,278 +49,409 @@ Uso normal:
 ssh yourrhythm-vps
 ```
 
-Acesso de recuperacao, preservado por enquanto:
+Recuperacao:
 
 ```bash
 ssh yourrhythm-vps-root
 ```
 
-SSH foi configurado para chave publica:
+SSH efetivo:
 
 - `PasswordAuthentication no`
 - `PubkeyAuthentication yes`
 - `PermitRootLogin prohibit-password`
 
-Nao remover o acesso root por chave ate confirmar alguns ciclos reais de manutencao usando `alexssander`.
-
 ## Usuarios
 
 - `alexssander`: usuario administrativo com sudo.
-- `yourrhythm`: usuario de servico sem login interativo, usado pelo systemd.
-- `root`: preservado somente para recuperacao por chave.
+- `yourrhythm`: usuario de servico sem login interativo.
+- `root`: preservado apenas para recuperacao por chave.
 
-## Pacotes instalados
+## Firewall e portas
 
-```bash
-sudo apt-get update
-sudo apt-get upgrade
-sudo apt-get install ca-certificates curl gnupg lsb-release apt-transport-https ufw fail2ban mysql-server nginx certbot python3-certbot-nginx
-```
+UFW:
 
-Runtime .NET instalado:
+- entrada negada por padrao;
+- saida permitida;
+- liberado: SSH, HTTP e HTTPS.
 
-```bash
-curl -fsSL -o packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
-sudo dpkg -i packages-microsoft-prod.deb
-sudo apt-get update
-sudo apt-get install aspnetcore-runtime-10.0
-```
+Portas esperadas:
 
-O projeto usa `net10.0`; por isso o runtime instalado foi ASP.NET Core Runtime 10.
-
-## Firewall
-
-UFW esta ativo com entrada negada por padrao e as portas abaixo liberadas:
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
+- publico: `22`, `80`, `443`
+- local apenas: `127.0.0.1:5000` para Kestrel
+- local apenas: `127.0.0.1:3306` para MySQL
 
 Verificacao:
 
 ```bash
 sudo ufw status verbose
+sudo ss -tulpn
 ```
 
-## Fail2Ban
+## Banco
 
-Arquivo criado:
+Banco de producao:
 
 ```text
-/etc/fail2ban/jail.d/yourrhythm-sshd.local
+yourrhythm_prod
 ```
 
-Conteudo:
+Usuario da aplicacao:
 
-```ini
-[sshd]
-enabled = true
-port = ssh
-filter = sshd
-backend = systemd
-maxretry = 5
-findtime = 10m
-bantime = 1h
+```text
+yourrhythm_app@localhost
 ```
 
-Verificacao:
+A senha real foi gerada diretamente na VPS e fica apenas no arquivo protegido de ambiente. Nao registrar essa senha em Git, chat ou docs.
+
+Migrations aplicadas:
+
+- tabela `__EFMigrationsHistory`: `15` entradas
+- tabelas no banco `yourrhythm_prod`: `25`
+- ultima migration: `20260713033215_MissionsAndRepertoireEvolution_Auto`
+
+Comando de verificacao:
 
 ```bash
-sudo fail2ban-client status sshd
+sudo mysql --protocol=socket -N -e "SELECT COUNT(*) FROM yourrhythm_prod.__EFMigrationsHistory;"
 ```
 
-## MySQL
+## Estrutura
 
-MySQL foi instalado e mantido ouvindo localmente em `127.0.0.1`.
-
-Endurecimento basico executado:
-
-```sql
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
-```
-
-Ainda falta criar o banco e usuario da aplicacao quando o deploy for aprovado.
-
-Exemplo para etapa futura, sem usar senha real aqui:
-
-```sql
-CREATE DATABASE yourrhythm_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'yourrhythm_app'@'localhost' IDENTIFIED BY 'CHANGE_ME';
-GRANT ALL PRIVILEGES ON yourrhythm_prod.* TO 'yourrhythm_app'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-## Estrutura da aplicacao
-
-Diretorios criados:
+Releases:
 
 ```text
-/var/www/yourrhythm
-/var/www/yourrhythm/app
-/var/www/yourrhythm/releases
-/var/www/yourrhythm/shared
-/var/www/yourrhythm/config
-/var/www/yourrhythm/logs
-/var/www/yourrhythm/backups
-/var/www/yourrhythm/uploads
+/var/www/yourrhythm/releases/
 ```
 
-O dono e o grupo sao `yourrhythm`.
-
-Arquivo de exemplo criado:
+Release ativa:
 
 ```text
-/var/www/yourrhythm/config/yourrhythm.env.example
+/var/www/yourrhythm/releases/2026-07-13-0836
 ```
 
-Ele contem placeholders e deve ser copiado futuramente para:
+Symlink ativo:
 
 ```text
-/var/www/yourrhythm/config/yourrhythm.env
+/var/www/yourrhythm/current -> /var/www/yourrhythm/releases/2026-07-13-0836
 ```
 
-Nunca colar connection string real, senha SMTP, tokens ou segredos neste arquivo do repositorio.
+Persistencia fora da release:
+
+```text
+/var/www/yourrhythm/shared/uploads/wwwroot
+/var/www/yourrhythm/shared/uploads/storage
+/var/www/yourrhythm/shared/logs
+/var/www/yourrhythm/shared/backups
+```
+
+Symlinks por release:
+
+```text
+/var/www/yourrhythm/current/wwwroot/uploads -> /var/www/yourrhythm/shared/uploads/wwwroot
+/var/www/yourrhythm/current/storage/uploads -> /var/www/yourrhythm/shared/uploads/storage
+```
+
+## Ambiente
+
+Arquivo protegido:
+
+```text
+/etc/yourrhythm/yourrhythm.env
+```
+
+Permissoes:
+
+```text
+root:yourrhythm
+640
+```
+
+Variaveis esperadas:
+
+```text
+ASPNETCORE_ENVIRONMENT
+ASPNETCORE_URLS
+ASPNETCORE_FORWARDEDHEADERS_ENABLED
+ASPNETCORE_HTTPS_PORT
+ConnectionStrings__DefaultConnection
+Email__Smtp__Host
+Email__Smtp__Port
+Email__Smtp__UseSsl
+Email__Smtp__Username
+Email__Smtp__Password
+Email__Smtp__SenderEmail
+Email__Smtp__SenderName
+Email__AdminNotificationRecipient
+Logging__LogLevel__Microsoft
+```
+
+## Root
+
+A conta Root inicial e criada automaticamente na primeira subida. A credencial inicial foi rotacionada apos o bootstrap.
+
+Arquivo protegido com a credencial atual:
+
+```text
+/etc/yourrhythm/root-credentials.txt
+```
+
+Permissao:
+
+```text
+root:root
+600
+```
+
+Depois do primeiro login, alterar a senha em `/Root/Settings` e remover esse arquivo.
+
+## Publish
+
+Comandos usados localmente:
+
+```bash
+dotnet restore
+dotnet build -c Release
+dotnet test -c Release --no-build
+dotnet publish ./YourRhythmStudio.csproj -c Release -r linux-x64 --self-contained false -o ./artifacts/publish-yourrhythm
+```
+
+Antes do envio, foram removidos do publish:
+
+- `appsettings.Development.json`
+- pastas de teste/build copiadas acidentalmente
+- uploads locais
+
+Artefatos enviados:
+
+```text
+/tmp/yourrhythm-2026-07-13-0836.tar.gz
+/tmp/yourrhythm-migrations-2026-07-13-0836.sql
+```
 
 ## Systemd
 
-Arquivo criado:
+Arquivo:
 
 ```text
 /etc/systemd/system/yourrhythm.service
 ```
 
-Status atual esperado:
+Conteudo relevante:
 
-- `disabled`
-- `inactive`
+```ini
+[Unit]
+Description=YourRhythm Studio ASP.NET Core Application
+After=network.target mysql.service
+Wants=mysql.service
 
-Isso e intencional porque a aplicacao ainda nao foi publicada na VPS.
+[Service]
+Type=simple
+User=yourrhythm
+Group=yourrhythm
+WorkingDirectory=/var/www/yourrhythm/current
+EnvironmentFile=/etc/yourrhythm/yourrhythm.env
+ExecStart=/usr/bin/dotnet /var/www/yourrhythm/current/YourRhythmStudio.dll
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGINT
+SyslogIdentifier=yourrhythm
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/www/yourrhythm /etc/yourrhythm
 
-Comandos futuros:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable yourrhythm
-sudo systemctl start yourrhythm
-sudo systemctl status yourrhythm
-journalctl -u yourrhythm -f
+[Install]
+WantedBy=multi-user.target
 ```
 
-Rollback do servico:
+Comandos:
 
 ```bash
-sudo systemctl stop yourrhythm || true
-sudo systemctl disable yourrhythm || true
-sudo rm -f /etc/systemd/system/yourrhythm.service
+sudo systemd-analyze verify /etc/systemd/system/yourrhythm.service
 sudo systemctl daemon-reload
+sudo systemctl enable yourrhythm
+sudo systemctl restart yourrhythm
+sudo systemctl status yourrhythm
+sudo journalctl -u yourrhythm -n 100 --no-pager
+```
+
+Status esperado:
+
+```text
+active
+enabled
 ```
 
 ## Nginx
 
-Arquivo preparado:
+Arquivo:
 
 ```text
 /etc/nginx/sites-available/yourrhythm.conf
+/etc/nginx/sites-enabled/yourrhythm.conf
 ```
 
-Dominios configurados:
+O site `default` foi desabilitado em `sites-enabled`.
 
-```text
-yourrhythmstudio.com.br
-www.yourrhythmstudio.com.br
+Conteudo relevante:
+
+```nginx
+server {
+    server_name yourrhythmstudio.com.br www.yourrhythmstudio.com.br;
+
+    access_log /var/log/nginx/yourrhythm.access.log;
+    error_log /var/log/nginx/yourrhythm.error.log;
+
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_connect_timeout 60s;
+    }
+
+    listen [::]:443 ssl ipv6only=on;
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/yourrhythmstudio.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourrhythmstudio.com.br/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
 ```
 
-Proxy preparado para Kestrel:
+O bloco HTTP foi gerenciado pelo Certbot e redireciona para HTTPS.
 
-```text
-http://127.0.0.1:5000
-```
-
-Importante:
-
-- A configuracao foi criada em `sites-available`.
-- Ela ainda nao foi habilitada em `sites-enabled`.
-- Nenhum certificado SSL foi emitido.
-- DNS/Cloudflare ainda nao foram alterados.
-
-Quando for publicar:
+Verificacao:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/yourrhythm.conf /etc/nginx/sites-enabled/yourrhythm.conf
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Depois que DNS apontar corretamente:
+## SSL
 
-```bash
-sudo certbot --nginx -d yourrhythmstudio.com.br -d www.yourrhythmstudio.com.br
+Certificado emitido para:
+
+- `yourrhythmstudio.com.br`
+- `www.yourrhythmstudio.com.br`
+
+Arquivos:
+
+```text
+/etc/letsencrypt/live/yourrhythmstudio.com.br/fullchain.pem
+/etc/letsencrypt/live/yourrhythmstudio.com.br/privkey.pem
 ```
 
-Rollback do Nginx:
+Renovacao:
 
 ```bash
-sudo rm -f /etc/nginx/sites-enabled/yourrhythm.conf
+sudo certbot renew --dry-run
+systemctl list-timers --all | grep -i certbot
+```
+
+Resultado do dry-run:
+
+```text
+success
+```
+
+## Testes Pos-Deploy
+
+Comandos executados:
+
+```bash
+curl -I http://yourrhythmstudio.com.br/
+curl -I http://www.yourrhythmstudio.com.br/
+curl -I https://yourrhythmstudio.com.br/
+curl -I https://www.yourrhythmstudio.com.br/
+curl -L https://yourrhythmstudio.com.br/Auth/Login
+curl --resolve yourrhythmstudio.com.br:443:140.82.26.53 https://yourrhythmstudio.com.br/
+curl --resolve www.yourrhythmstudio.com.br:443:140.82.26.53 https://www.yourrhythmstudio.com.br/
+```
+
+Resultados:
+
+- HTTP raiz: `301` para HTTPS
+- HTTP www: `301` para HTTPS
+- HTTPS raiz: `200`
+- HTTPS www: `200`
+- `/Auth/Login`: carrega HTML de login via `GET`
+- CSS principal carregando
+- Origin direto com SNI: `200`
+- Kestrel escuta apenas em `127.0.0.1:5000`
+- MySQL escuta apenas em `127.0.0.1:3306`
+
+## Rollback
+
+1. Ver releases disponiveis:
+
+```bash
+ls -la /var/www/yourrhythm/releases
+readlink -f /var/www/yourrhythm/current
+```
+
+2. Apontar para a release anterior:
+
+```bash
+sudo ln -sfn /var/www/yourrhythm/releases/NOME_DA_RELEASE_ANTERIOR /var/www/yourrhythm/current
+sudo chown -h yourrhythm:yourrhythm /var/www/yourrhythm/current
+```
+
+3. Reiniciar e validar:
+
+```bash
+sudo systemctl restart yourrhythm
+sudo systemctl status yourrhythm
+curl -I http://127.0.0.1:5000/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## Verificacoes executadas
+Nao remover a release anterior ate validar o rollback e receber aprovacao.
+
+## Diagnostico Rapido
 
 ```bash
-ssh yourrhythm-vps 'whoami && sudo -n whoami && hostname'
-ssh yourrhythm-vps-root 'whoami && hostname'
+sudo systemctl status yourrhythm
+sudo journalctl -u yourrhythm -n 120 --no-pager
+sudo systemctl status nginx
+sudo nginx -t
+sudo tail -n 100 /var/log/nginx/yourrhythm.error.log
+sudo tail -n 100 /var/log/nginx/yourrhythm.access.log
+sudo systemctl status mysql
 sudo ufw status verbose
-sudo fail2ban-client status sshd
 sudo ss -tulpn
-dotnet --info
-mysql --version
-nginx -v
-certbot --version
-sudo nginx -t
-systemctl is-active ssh nginx mysql fail2ban
-systemctl is-enabled yourrhythm.service
-systemctl is-active yourrhythm.service
+df -hT /
+free -h
 ```
 
-Resultado esperado no estado preparado:
+## Cloudflare
 
-- `ssh`: ativo
-- `nginx`: ativo
-- `mysql`: ativo
-- `fail2ban`: ativo
-- `yourrhythm.service`: desabilitado e inativo
-- porta `22`: aberta
-- porta `80`: aberta
-- porta `443`: liberada no firewall, mas sem listener SSL ate emitir certificado
-- MySQL ouvindo localmente em `127.0.0.1:3306`
+Nao foram alteradas configuracoes de Cloudflare por este deploy.
 
-## Proxima etapa pendente de Alexssander
+Estado observado:
 
-Antes de publicar:
+- DNS publico resolve para IPs da Cloudflare.
+- HTTP/HTTPS via Cloudflare chega ao origin.
+- Origin possui certificado Let’s Encrypt valido.
 
-1. Apontar DNS/Cloudflare para `140.82.26.53`.
-2. Definir senha/usuario do banco da aplicacao.
-3. Criar `/var/www/yourrhythm/config/yourrhythm.env` com valores reais diretamente na VPS.
-4. Publicar o app em `/var/www/yourrhythm/app`.
-5. Aplicar migrations de producao conscientemente.
-6. Habilitar `yourrhythm.service`.
-7. Habilitar o site Nginx.
-8. Emitir SSL com Certbot.
+Pendencias para Alexssander na Cloudflare:
 
-## O que nao foi feito
+1. Conferir se SSL/TLS esta em modo adequado para origin com certificado valido, preferencialmente Full (Strict).
+2. Conferir se os registros `A`/`CNAME` continuam apontando para a VPS/origin esperado.
+3. Decidir politicas de cache; nao aplicar cache agressivo em paginas autenticadas.
 
-- Nao foi feito deploy da aplicacao.
-- Nao foram executadas migrations.
-- Nao foi criado banco de producao da aplicacao.
-- Nao foi emitido certificado SSL.
-- Nao foi alterado DNS/Cloudflare.
-- Nao foi removido acesso root por chave.
-- Nao foram gravados segredos no repositorio.
+## Observacoes
+
+- O pacote `fwupd` ficou retido pelo Ubuntu em atualizacao anterior; sem impacto conhecido no app.
+- O e-mail SMTP ainda precisa ser configurado no ambiente caso notificacoes reais sejam necessarias.
+- A credencial Root deve ser trocada no primeiro acesso e o arquivo protegido deve ser removido depois.
