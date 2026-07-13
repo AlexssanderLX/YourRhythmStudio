@@ -40,6 +40,7 @@ if (app.Environment.IsDevelopment())
 
 await RootBootstrap.EnsureRootAccountAsync(app.Services);
 await RootBootstrap.EnsureDefaultPlansAsync(app.Services);
+await RootBootstrap.EnsureDefaultLandingTracksAsync(app.Services);
 
 // Pipeline
 if (!app.Environment.IsDevelopment())

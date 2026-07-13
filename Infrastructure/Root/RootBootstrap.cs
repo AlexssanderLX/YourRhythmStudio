@@ -93,6 +93,40 @@ public static class RootBootstrap
                 IsActive = true
             });
 
+await db.SaveChangesAsync(ct);
+    }
+
+    public static async Task EnsureDefaultLandingTracksAsync(IServiceProvider services, CancellationToken ct = default)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<YourRhythmDbContext>();
+        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+        var soundtrackDir = Path.Combine(environment.WebRootPath, "audio", "landing-soundtrack");
+        var defaultTrackPath = Path.Combine(soundtrackDir, "track-1.mp3");
+        if (!File.Exists(defaultTrackPath))
+        {
+            return;
+        }
+
+        var exists = await db.LandingTracks.AnyAsync(track => track.FileName == "track-1.mp3", ct);
+        if (exists)
+        {
+            return;
+        }
+
+        var nextOrder = await db.LandingTracks.AnyAsync(ct)
+            ? await db.LandingTracks.MaxAsync(track => track.SortOrder, ct) + 1
+            : 0;
+
+        db.LandingTracks.Add(new LandingTrack
+        {
+            Title = "YourRhythm Studio",
+            FileName = "track-1.mp3",
+            SortOrder = nextOrder,
+            UploadedAtUtc = DateTime.UtcNow
+        });
+
         await db.SaveChangesAsync(ct);
     }
 
