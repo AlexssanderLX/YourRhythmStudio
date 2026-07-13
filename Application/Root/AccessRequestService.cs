@@ -8,6 +8,8 @@ namespace YourRhythmStudio.Application.Root;
 
 public sealed class AccessRequestService
 {
+    private static readonly string[] RequestablePlanCodes = ["professor", "escola"];
+
     private readonly YourRhythmDbContext _db;
     private readonly IEmailService _email;
     private readonly IConfiguration _config;
@@ -25,36 +27,62 @@ public sealed class AccessRequestService
         _logger = logger;
     }
 
-    private async Task<string?> GetNotificationRecipientAsync(CancellationToken ct)
+    public async Task<RegisterViewModel> BuildRegisterViewModelAsync(
+        string? selectedPlanCode = null,
+        CancellationToken ct = default)
     {
-        // Prioridade: 1. DB settings  2. Config/env var
-        var setting = await _db.AdminSettings.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Key == AdminSettingKeys.NotificationRecipient, ct);
-        if (!string.IsNullOrWhiteSpace(setting?.Value)) return setting.Value;
-        return _config["Email:AdminNotificationRecipient"];
+        return new RegisterViewModel
+        {
+            PlanCode = NormalizePlanCode(selectedPlanCode),
+            PlanOptions = await GetRequestablePlanOptionsAsync(ct)
+        };
     }
 
-    public async Task<bool> SubmitAsync(RegisterViewModel model, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<RegisterPlanOptionViewModel>> GetRequestablePlanOptionsAsync(CancellationToken ct = default)
     {
+        return await _db.Plans
+            .AsNoTracking()
+            .Where(plan => plan.IsActive && (plan.Code == "professor" || plan.Code == "escola"))
+            .OrderBy(plan => plan.Code == "professor" ? 0 : 1)
+            .ThenBy(plan => plan.Name)
+            .Select(plan => new RegisterPlanOptionViewModel
+            {
+                Code = plan.Code,
+                Name = plan.Name,
+                Description = plan.Description ?? string.Empty,
+                MonthlyPriceBrl = plan.MonthlyPriceBrl,
+                MaxStudents = plan.MaxStudents
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<SubmitAccessRequestResult> SubmitAsync(RegisterViewModel model, CancellationToken ct = default)
+    {
+        var planCode = NormalizePlanCode(model.PlanCode);
+        var plan = await FindRequestablePlanAsync(planCode, ct);
+        if (plan is null)
+            return SubmitAccessRequestResult.Failed("Escolha um plano valido para continuar.", nameof(RegisterViewModel.PlanCode));
+
         var emailNorm = model.Email.Trim().ToLowerInvariant();
 
-        // Silently accept if duplicate — don't reveal whether account/request exists
-        var duplicate = await _db.AccessRequests
+        var duplicatePendingRequest = await _db.AccessRequests
             .AsNoTracking()
-            .AnyAsync(r => r.Email == emailNorm && r.Status == AccessRequestStatus.Pending, ct);
-        if (duplicate) return true;
+            .AnyAsync(request => request.Email == emailNorm && request.Status == AccessRequestStatus.Pending, ct);
+        if (duplicatePendingRequest)
+            return SubmitAccessRequestResult.Duplicate();
 
-        var existingAccount = await _db.SchoolUsers
+        var existingActiveUser = await _db.SchoolUsers
             .AsNoTracking()
-            .AnyAsync(u => u.Email == emailNorm && u.IsActive, ct);
-        if (existingAccount) return true;
+            .AnyAsync(user => user.Email == emailNorm && user.IsActive, ct);
+        if (existingActiveUser)
+            return SubmitAccessRequestResult.Duplicate();
 
         var request = new AccessRequest
         {
-            PlanCode = model.PlanCode,
+            PlanCode = plan.Code,
             ResponsibleName = model.DisplayName.Trim(),
             Email = emailNorm,
-            SchoolName = model.PlanCode == "escola"
+            SchoolName = plan.Code == "escola"
                 ? model.SchoolName.Trim()
                 : model.DisplayName.Trim(),
             Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim()
@@ -63,29 +91,50 @@ public sealed class AccessRequestService
         _db.AccessRequests.Add(request);
         await _db.SaveChangesAsync(ct);
 
-        await SendNotificationAsync(request, ct);
+        var notificationSent = await SendNotificationAsync(request, plan, ct);
 
-        return true;
+        return SubmitAccessRequestResult.Created(request.Id, notificationSent);
     }
 
-    private async Task SendNotificationAsync(AccessRequest request, CancellationToken ct)
+    private async Task<Plan?> FindRequestablePlanAsync(string planCode, CancellationToken ct)
+    {
+        if (!RequestablePlanCodes.Contains(planCode))
+            return null;
+
+        return await _db.Plans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(plan => plan.Code == planCode && plan.IsActive, ct);
+    }
+
+    private async Task<string?> GetNotificationRecipientAsync(CancellationToken ct)
+    {
+        var setting = await _db.AdminSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Key == AdminSettingKeys.NotificationRecipient, ct);
+
+        if (!string.IsNullOrWhiteSpace(setting?.Value))
+            return setting.Value;
+
+        return _config["Email:AdminNotificationRecipient"];
+    }
+
+    private async Task<bool> SendNotificationAsync(AccessRequest request, Plan plan, CancellationToken ct)
     {
         var recipient = await GetNotificationRecipientAsync(ct);
         if (string.IsNullOrWhiteSpace(recipient))
         {
-            _logger.LogWarning("Destinatario de notificacao nao configurado. Configure em /Root/Settings ou Email:AdminNotificationRecipient.");
-            return;
+            _logger.LogWarning("Access request notification recipient is not configured.");
+            return false;
         }
 
-        var planLabel = request.PlanCode == "escola" ? "Escola" : "Professor";
         var html = $"""
-            <h2>Nova solicitacao de acesso — YourRhythm Studio</h2>
+            <h2>Nova solicitacao de acesso - YourRhythm Studio</h2>
             <table>
               <tr><td><strong>Nome:</strong></td><td>{System.Net.WebUtility.HtmlEncode(request.ResponsibleName)}</td></tr>
               <tr><td><strong>E-mail:</strong></td><td>{System.Net.WebUtility.HtmlEncode(request.Email)}</td></tr>
               <tr><td><strong>Escola/Studio:</strong></td><td>{System.Net.WebUtility.HtmlEncode(request.SchoolName)}</td></tr>
-              <tr><td><strong>Contato:</strong></td><td>{System.Net.WebUtility.HtmlEncode(request.Phone ?? "—")}</td></tr>
-              <tr><td><strong>Plano:</strong></td><td>{planLabel}</td></tr>
+              <tr><td><strong>Contato:</strong></td><td>{System.Net.WebUtility.HtmlEncode(request.Phone ?? "-")}</td></tr>
+              <tr><td><strong>Plano:</strong></td><td>{System.Net.WebUtility.HtmlEncode(plan.Name)} ({System.Net.WebUtility.HtmlEncode(plan.Code)})</td></tr>
               <tr><td><strong>Data:</strong></td><td>{request.CreatedAtUtc:dd/MM/yyyy HH:mm} UTC</td></tr>
             </table>
             <p>Acesse o painel Root para aprovar ou rejeitar.</p>
@@ -97,14 +146,37 @@ public sealed class AccessRequestService
             {
                 ToAddress = recipient,
                 ToName = "Admin YourRhythm",
-                Subject = $"[YourRhythm] Nova solicitacao de acesso — {request.ResponsibleName}",
+                Subject = $"[YourRhythm] Nova solicitacao de acesso - {request.ResponsibleName}",
                 HtmlBody = html
             }, ct);
+
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError("Falha ao enviar notificacao de solicitacao {Id}: {Type}", request.Id, ex.GetType().Name);
-            // Solicitacao ja foi salva — falha no e-mail nao a descarta
+            _logger.LogError("Access request notification failed for request {RequestId}: {Type}", request.Id, ex.GetType().Name);
+            return false;
         }
     }
+
+    private static string NormalizePlanCode(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant();
+}
+
+public sealed record SubmitAccessRequestResult(
+    bool Success,
+    bool IsDuplicate,
+    bool NotificationSent,
+    Guid? RequestId,
+    string? Error,
+    string? MemberName)
+{
+    public static SubmitAccessRequestResult Created(Guid requestId, bool notificationSent)
+        => new(true, false, notificationSent, requestId, null, null);
+
+    public static SubmitAccessRequestResult Duplicate()
+        => new(true, true, false, null, null, null);
+
+    public static SubmitAccessRequestResult Failed(string error, string? memberName = null)
+        => new(false, false, false, null, error, memberName);
 }

@@ -132,17 +132,35 @@ public class AuthController : Controller
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult Register() => View(new RegisterViewModel());
+    public async Task<IActionResult> Register(string? plan = null, CancellationToken cancellationToken = default)
+        => View(await _accessRequestService.BuildRegisterViewModelAsync(plan, cancellationToken));
 
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Register(RegisterViewModel model)
+    public async Task<IActionResult> Register(RegisterViewModel model, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
+        {
+            model.PlanOptions = await _accessRequestService.GetRequestablePlanOptionsAsync(cancellationToken);
             return View(model);
+        }
 
-        await _accessRequestService.SubmitAsync(model);
+        var result = await _accessRequestService.SubmitAsync(model, cancellationToken);
+        if (!result.Success)
+        {
+            if (!string.IsNullOrWhiteSpace(result.MemberName))
+                ModelState.AddModelError(result.MemberName, result.Error ?? "Verifique os dados informados.");
+            else
+                ModelState.AddModelError(string.Empty, result.Error ?? "Verifique os dados informados.");
+
+            model.PlanOptions = await _accessRequestService.GetRequestablePlanOptionsAsync(cancellationToken);
+            return View(model);
+        }
+
+        if (!result.NotificationSent && !result.IsDuplicate)
+            TempData["RequestWarning"] = "Solicitacao recebida, mas a notificacao ao administrador precisa ser verificada.";
+
         return RedirectToAction(nameof(RequestSent));
     }
 

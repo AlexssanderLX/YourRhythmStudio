@@ -27,6 +27,8 @@ public class RegisterViewModel : IValidatableObject
     [Display(Name = "Telefone / WhatsApp (opcional)")]
     public string? Phone { get; set; }
 
+    public IReadOnlyCollection<RegisterPlanOptionViewModel> PlanOptions { get; set; } = [];
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (PlanCode == "escola" && string.IsNullOrWhiteSpace(SchoolName))
@@ -36,6 +38,16 @@ public class RegisterViewModel : IValidatableObject
                 new[] { nameof(SchoolName) });
         }
     }
+}
+
+public sealed class RegisterPlanOptionViewModel
+{
+    public required string Code { get; init; }
+    public required string Name { get; init; }
+    public string Description { get; init; } = string.Empty;
+    public decimal MonthlyPriceBrl { get; init; }
+    public int? MaxStudents { get; init; }
+    public bool IsSchoolPlan => Code.Equals("escola", StringComparison.OrdinalIgnoreCase);
 }
 
 public class SetPasswordViewModel

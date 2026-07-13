@@ -129,6 +129,9 @@ public sealed class RootAdminService
             var existing = await _accountStore.FindByEmailAsync(emailNorm, ct);
             if (existing is not null) return (false, "Ja existe uma conta com este e-mail.");
 
+            var plan = await FindActivePlanAsync(request.PlanCode, ct);
+            if (plan is null) return (false, "Plano da solicitacao nao esta ativo ou nao existe.");
+
             // Create account (PendingApproval until user sets password)
             var account = new Account
             {
@@ -152,7 +155,8 @@ public sealed class RootAdminService
                 Slug = slug,
                 PrimaryEmail = request.Email,
                 OwnerAccountId = account.Id,
-                PlanCode = request.PlanCode,
+                PlanCode = plan.Code,
+                StorageQuotaBytes = plan.StorageQuotaBytes,
                 CreatedAtUtc = now
             };
             _db.Schools.Add(school);
@@ -394,6 +398,9 @@ public sealed class RootAdminService
         var existing = await _accountStore.FindByEmailAsync(emailNorm, ct);
         if (existing is not null) return (false, "E-mail ja em uso.");
 
+        var plan = await FindActivePlanAsync(vm.PlanCode, ct);
+        if (plan is null) return (false, "Plano invalido ou inativo.");
+
         var now = _clock.UtcNow;
         var account = new Account
         {
@@ -418,7 +425,8 @@ public sealed class RootAdminService
             Slug = slug,
             PrimaryEmail = vm.Email.Trim().ToLowerInvariant(),
             OwnerAccountId = account.Id,
-            PlanCode = vm.PlanCode,
+            PlanCode = plan.Code,
+            StorageQuotaBytes = plan.StorageQuotaBytes,
             CreatedAtUtc = now
         };
         _db.Schools.Add(school);
@@ -456,6 +464,9 @@ public sealed class RootAdminService
         if (account.PlatformRole == PlatformAccessRole.PlatformAdmin)
             return (false, "Conta Root nao pode ser editada por este painel.");
 
+        var plan = await FindActivePlanAsync(vm.PlanCode, ct);
+        if (plan is null) return (false, "Plano invalido ou inativo.");
+
         account.DisplayName = vm.DisplayName.Trim();
         await _accountStore.UpdateAsync(account, ct);
 
@@ -463,7 +474,8 @@ public sealed class RootAdminService
         if (school is not null)
         {
             school.Name = vm.SchoolName.Trim();
-            school.PlanCode = vm.PlanCode;
+            school.PlanCode = plan.Code;
+            school.StorageQuotaBytes = plan.StorageQuotaBytes;
         }
 
         var schoolUser = await _db.SchoolUsers.FirstOrDefaultAsync(u => u.AccountId == vm.AccountId, ct);
@@ -627,6 +639,16 @@ public sealed class RootAdminService
     }
 
     // ──── Storage ──────────────────────────────────────────────────────────────
+
+    private async Task<Plan?> FindActivePlanAsync(string planCode, CancellationToken ct)
+    {
+        var normalized = planCode.Trim().ToLowerInvariant();
+        if (normalized is not ("professor" or "escola"))
+            return null;
+
+        return await _db.Plans.AsNoTracking()
+            .FirstOrDefaultAsync(plan => plan.Code == normalized && plan.IsActive, ct);
+    }
 
     public async Task<List<StorageRow>> GetStorageOverviewAsync(CancellationToken ct = default)
     {

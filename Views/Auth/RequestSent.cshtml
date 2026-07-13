@@ -17,6 +17,10 @@
         </div>
 
         <h1 id="sent-title" style="font-size:20px;margin-bottom:10px">Solicitação recebida!</h1>
+        @if (TempData["RequestWarning"] is string warning)
+        {
+            <div class="auth-validation" style="margin-bottom:12px;text-align:left">@warning</div>
+        }
         <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px">
             Sua solicitação de acesso foi registrada com sucesso.<br>
             Nossa equipe irá analisá-la e você receberá um e-mail com os próximos passos.
