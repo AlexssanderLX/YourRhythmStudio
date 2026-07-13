@@ -82,14 +82,27 @@ jobs:
       - name: Configure SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          test -n "$VPS_SSH_KEY"
-          test -n "$VPS_HOST"
+          if [ -z "$VPS_HOST" ]; then
+            echo "Missing required secret: VPS_HOST" >&2
+            exit 1
+          fi
+
+          if [ -n "$VPS_SSH_KEY_B64" ]; then
+            printf '%s' "$VPS_SSH_KEY_B64" | base64 -d > ~/.ssh_key_tmp
+          elif [ -n "$VPS_SSH_KEY" ]; then
+            printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh_key_tmp
+          else
+            echo "Missing required secret: set VPS_SSH_KEY_B64 or VPS_SSH_KEY" >&2
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/yourrhythm_deploy
+          mv ~/.ssh_key_tmp ~/.ssh/yourrhythm_deploy
           chmod 600 ~/.ssh/yourrhythm_deploy
           ssh-keyscan -p "${VPS_PORT:-22}" "$VPS_HOST" >> ~/.ssh/known_hosts
 

@@ -313,15 +313,15 @@ Secrets:
 VPS_HOST=140.82.26.53
 VPS_PORT=22
 VPS_USER=github-deploy
-VPS_SSH_KEY=<conteudo da chave privada SSH autorizada na VPS>
+VPS_SSH_KEY_B64=<chave privada SSH em base64, uma linha so>
 ```
 
-Nao commitar a chave privada. O valor de `VPS_SSH_KEY` deve ser colado apenas no cofre de secrets do GitHub.
+Nao commitar a chave privada. O valor de `VPS_SSH_KEY_B64` deve ser colado apenas no cofre de secrets do GitHub.
 
-Chave privada gerada localmente para copiar para o secret:
+Chave privada gerada localmente para copiar para o secret em base64:
 
 ```powershell
-Get-Content $env:USERPROFILE\.ssh\yourrhythm_github_actions_deploy -Raw | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.ssh\yourrhythm_github_actions_deploy")) | Set-Clipboard
 ```
 
 Depois de criar e testar o secret no GitHub, remova a copia local para que a VPS seja acessada por deploy somente via GitHub Actions:
