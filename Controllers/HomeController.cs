@@ -43,6 +43,12 @@ namespace YourRhythmStudio.Controllers
             }
         }
 
+        [Route("piano")]
+        public IActionResult Piano()
+        {
+            return View();
+        }
+
         [Route("privacidade")]
         public IActionResult Privacy()
         {

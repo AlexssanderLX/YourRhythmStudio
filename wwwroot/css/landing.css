@@ -44,17 +44,100 @@ body {
 /* Scroll lock while mobile menu is open */
 body.nav-open { overflow: hidden; }
 
-/* Ambient blue glow — no animation, no GPU cost */
+/* Ambient blue glow fallback (shown when hero-bg is absent or on reduced tier) */
 body::before {
     content: "";
     position: fixed;
     top: -20%; left: 50%;
     width: 860px; height: 860px;
     transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(30, 91, 255, 0.13), transparent 60%);
+    background: radial-gradient(circle, rgba(30, 91, 255, 0.11), transparent 60%);
     pointer-events: none;
     z-index: 0;
     filter: blur(18px);
+}
+
+/* =========================================================
+   Hero animated BACKGROUND — ambient piano keyboard
+   position:fixed so it underlies all sections (z-index 0).
+   CSS animations run on standard tier; GSAP-driven rising
+   notes / particles / melody only run on enhanced tier.
+   ========================================================= */
+@keyframes breathe { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: .92; transform: scale(1.05); } }
+@keyframes flow    { to { stroke-dashoffset: -180; } }
+
+.hero-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none; overflow: hidden;
+}
+
+.hero-bg-glow {
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(40% 50% at 24% 32%, rgba(30, 91, 255, 0.18), transparent 70%),
+        radial-gradient(46% 56% at 74% 64%, rgba(46, 155, 255, 0.15), transparent 70%);
+    animation: breathe 7s ease-in-out infinite;
+}
+
+.hero-bg-waves {
+    position: absolute; left: 0; bottom: 16%;
+    width: 100%; height: 200px; opacity: .5;
+}
+.bw {
+    fill: none; stroke: url(#bgwv); stroke-width: 2;
+    stroke-linecap: round; stroke-dasharray: 6 12;
+    animation: flow 5s linear infinite;
+}
+.bw.bw2 { opacity: .6; animation-duration: 7s; }
+.bw.bw3 { opacity: .4; animation-duration: 9s; }
+
+.rising-notes { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.rnote {
+    position: absolute; color: rgba(107, 192, 255, 0.55);
+    text-shadow: 0 0 14px rgba(46, 155, 255, 0.7);
+    will-change: transform, opacity; user-select: none;
+}
+
+.hero-bg-particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.bgp { position: absolute; border-radius: 50%; background: rgba(107, 192, 255, 0.7); box-shadow: 0 0 8px rgba(46, 155, 255, 0.85); }
+
+/* Receding perspective keyboard at the bottom */
+.bg-keyboard {
+    position: absolute; left: 50%; bottom: -4%;
+    width: 124%; height: 165px; display: flex;
+    transform: translateX(-50%) perspective(760px) rotateX(46deg);
+    transform-origin: bottom center;
+    opacity: .38;
+    -webkit-mask-image: linear-gradient(to top, #000 35%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 35%, transparent 100%);
+}
+.bgk-wkey {
+    position: relative; flex: 1;
+    background: linear-gradient(180deg, rgba(46, 62, 104, 0.55), rgba(10, 16, 32, 0.7));
+    border-right: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 0 0 4px 4px;
+}
+.bgk-wkey:last-child { border-right: none; }
+.bgk-bkey {
+    position: absolute; top: 0; right: -30%; width: 60%; height: 60%; z-index: 3;
+    background: linear-gradient(180deg, #1a2238, #04060d);
+    border-radius: 0 0 3px 3px; box-shadow: 0 4px 7px rgba(0, 0, 0, .5);
+}
+.klight {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 100%; z-index: 2;
+    background: linear-gradient(180deg, rgba(107, 192, 255, 0) 0%, rgba(46, 155, 255, 0.95) 100%);
+    box-shadow: 0 0 26px rgba(46, 155, 255, 0.9);
+    opacity: 0; mix-blend-mode: screen; border-radius: 0 0 4px 4px;
+}
+/* Vignette scrim keeps text readable over the keyboard */
+.hero-bg::after {
+    content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    background:
+        radial-gradient(125% 80% at 50% 38%, transparent 38%, rgba(6, 7, 13, 0.5) 100%),
+        linear-gradient(0deg, rgba(6, 7, 13, 0.4) 0%, transparent 22%);
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-bg-glow, .bw { animation: none !important; }
 }
 
 a { color: inherit; text-decoration: none; }
@@ -122,7 +205,12 @@ h1, h2, h3 {
     transition: border-color .3s ease, background .3s ease;
 }
 .nav.scrolled { border-bottom-color: var(--border-soft); background: rgba(6, 7, 13, 0.8); }
-.nav-inner { display: flex; align-items: center; justify-content: space-between; height: 74px; }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; height: 74px; gap: 16px; }
+
+/* Desktop nav links (Piano Virtual) */
+.nav-links { display: flex; align-items: center; gap: 28px; flex: 1; padding-left: 24px; }
+.nav-links a { color: var(--muted); font-weight: 500; font-size: 15px; transition: color .2s; white-space: nowrap; }
+.nav-links a:hover, .nav-links a:focus-visible { color: var(--ink); outline: none; }
 .brand { display: flex; align-items: center; gap: 11px; }
 .brand img { width: 38px; height: 38px; }
 .brand-text { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
@@ -605,7 +693,9 @@ h1, h2, h3 {
     .steps { grid-template-columns: 1fr; gap: 32px; }
     .step-arrow { display: none; }
     .nav-cta { display: none; }
+    .nav-links { display: none; }
     .nav-hamburger { display: flex; }
+    .bg-keyboard { height: 120px; opacity: .32; bottom: -6%; }
 }
 
 @media (max-width: 560px) {
@@ -614,6 +704,8 @@ h1, h2, h3 {
     .feat-grid { grid-template-columns: 1fr 1fr; }
     .wrap { padding: 0 20px; }
     .sec { padding: 64px 0; }
+    .bg-keyboard { display: none; }
+    .hero-bg-waves { bottom: 28%; opacity: .3; }
 
     /* Mini card goes inline below main card on small screens */
     .hero-visual { padding-bottom: 0; }

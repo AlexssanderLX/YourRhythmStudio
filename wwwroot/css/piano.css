@@ -1,0 +1,418 @@
+/* =========================================================
+   YourRhythm Studio — Piano Virtual page
+   ========================================================= */
+
+/* ─── Page hero ────────────────────────────────────────── */
+.pv-hero {
+    padding: 80px 0 40px;
+    text-align: center;
+}
+.pv-hero h1 {
+    font-size: clamp(32px, 6vw, 52px);
+    margin-bottom: 14px;
+}
+.pv-hero p {
+    color: var(--muted);
+    font-size: 18px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* ─── Tutorial cards ─────────────────────────────────────── */
+.pv-tutorial {
+    padding: 0 0 48px;
+}
+.pv-tut-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 0;
+}
+.pv-tut-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 20px;
+}
+.pv-tut-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    line-height: 1;
+}
+.pv-tut-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+}
+.pv-tut-card p {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ─── Piano section wrapper ──────────────────────────────── */
+.pv-section {
+    padding: 0 0 80px;
+}
+
+/* Controls row */
+.pv-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.pv-controls label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.pv-vol-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pv-vol-icon { color: var(--muted); flex-shrink: 0; }
+input[type="range"]#pvVolume {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 110px;
+    height: 5px;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.1);
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"]#pvVolume::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--blue-bright);
+    box-shadow: 0 0 8px rgba(46,155,255,0.5);
+    cursor: pointer;
+}
+input[type="range"]#pvVolume::-moz-range-thumb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: none;
+    background: var(--blue-bright);
+    box-shadow: 0 0 8px rgba(46,155,255,0.5);
+    cursor: pointer;
+}
+
+.pv-labels-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pv-labels-wrap span {
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+}
+/* custom checkbox */
+.pv-checkbox {
+    position: relative;
+    width: 36px; height: 20px;
+    flex-shrink: 0;
+}
+.pv-checkbox input { opacity: 0; width: 0; height: 0; position: absolute; }
+.pv-checkbox-track {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s;
+}
+.pv-checkbox-track::after {
+    content: "";
+    position: absolute;
+    left: 3px; top: 50%;
+    transform: translateY(-50%);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: left .2s, background .2s;
+}
+.pv-checkbox input:checked ~ .pv-checkbox-track {
+    background: rgba(46,155,255,0.2);
+    border-color: var(--blue-bright);
+}
+.pv-checkbox input:checked ~ .pv-checkbox-track::after {
+    left: 19px;
+    background: var(--blue-bright);
+}
+.pv-checkbox input:focus-visible ~ .pv-checkbox-track {
+    outline: 2px solid var(--blue-bright);
+    outline-offset: 2px;
+}
+
+/* ─── Piano keyboard ─────────────────────────────────────── */
+.pv-piano-outer {
+    background: linear-gradient(180deg, rgba(10,14,28,0.95), rgba(6,7,13,0.98));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    box-shadow: 0 32px 80px -32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.pv-octave-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+.pv-octave-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+/* Scrollable wrapper: pan-x on mobile if keyboard is wider than viewport */
+.pv-piano-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(107,192,255,0.2) transparent;
+    padding-bottom: 4px;
+}
+.pv-piano-scroll::-webkit-scrollbar { height: 4px; }
+.pv-piano-scroll::-webkit-scrollbar-thumb {
+    background: rgba(107,192,255,0.2); border-radius: 2px;
+}
+
+/* The keyboard row */
+.pv-piano {
+    display: flex;
+    height: 190px;
+    min-width: 560px; /* prevents collapse before scrolling kicks in */
+    user-select: none;
+    touch-action: none; /* handled manually so notes play on touch */
+    position: relative;
+}
+
+/* White keys */
+.pv-wkey {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: linear-gradient(180deg, #e4eeff 0%, #c0d2ec 100%);
+    border-right: 1px solid rgba(8,12,22,0.28);
+    border-bottom: 4px solid rgba(0,0,0,0.18);
+    border-radius: 0 0 7px 7px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    transition: background .08s, box-shadow .08s;
+}
+.pv-wkey:last-child { border-right: none; }
+.pv-wkey:focus-visible {
+    outline: 2px solid var(--blue-bright);
+    outline-offset: -2px;
+    z-index: 2;
+}
+.pv-wkey.pressed {
+    background: linear-gradient(180deg, #b4d4fa 0%, #7fb8f2 100%);
+    box-shadow: inset 0 4px 10px rgba(46,155,255,0.28);
+    border-bottom-color: rgba(46,155,255,0.3);
+}
+
+/* White key note label */
+.pv-wlabel {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    color: #3c466b;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0;
+    transition: opacity .15s;
+    line-height: 1;
+}
+/* C labels always visible (octave marker) */
+.pv-wkey[data-note^="C"] .pv-wlabel { opacity: 1; color: #2a3a8a; }
+/* All labels visible when toggle is on */
+.pv-piano.show-labels .pv-wlabel { opacity: 1; }
+/* Keyboard shortcut hint inside label */
+.pv-wkey.has-shortcut.pv-piano-shortcut-visible .pv-wlabel::after {
+    content: attr(data-key);
+    display: block;
+    font-size: 9px;
+    color: var(--blue-deep);
+    margin-top: 2px;
+    opacity: 0.7;
+}
+
+/* Black keys (nested inside wkey for correct DOM hit-testing) */
+.pv-bkey {
+    position: absolute;
+    top: 0;
+    right: -32%;
+    width: 64%;
+    height: 60%;
+    z-index: 5;
+    background: linear-gradient(180deg, #1e2a40 0%, #050810 88%);
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.65), inset 0 -2px 4px rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background .08s, box-shadow .08s;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
+}
+.pv-bkey:focus-visible {
+    outline: 2px solid var(--blue-bright);
+    outline-offset: -2px;
+}
+.pv-bkey.pressed {
+    background: linear-gradient(180deg, #1e3a60 0%, #0a1830 90%);
+    box-shadow: 0 3px 7px rgba(0,0,0,0.6), 0 0 18px rgba(46,155,255,0.45);
+}
+/* Black key label (only when show-labels is on) */
+.pv-blabel {
+    font-size: 8px;
+    font-weight: 700;
+    color: rgba(107,192,255,0.5);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.pv-piano.show-labels .pv-blabel { opacity: 1; }
+
+/* ─── Octave divider ─────────────────────────────────────── */
+/* thin accent line at each C key to mark octave start */
+.pv-wkey[data-note^="C"] {
+    border-left: 2px solid rgba(107,192,255,0.18);
+}
+.pv-wkey:first-child { border-left: none; }
+
+/* ─── First-touch hint ───────────────────────────────────── */
+.pv-hint {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--faint);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: opacity .4s;
+}
+.pv-hint svg { opacity: 0.5; flex-shrink: 0; }
+.pv-hint.pv-hint-hide { opacity: 0; pointer-events: none; }
+
+/* ─── Keyboard shortcuts guide ───────────────────────────── */
+.pv-shortcuts {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.pv-shortcuts summary {
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color .2s;
+    user-select: none;
+}
+.pv-shortcuts summary::after {
+    content: "▾";
+    margin-left: auto;
+    font-size: 12px;
+    transition: transform .2s;
+}
+.pv-shortcuts[open] summary::after { transform: rotate(180deg); }
+.pv-shortcuts summary:hover { color: var(--ink); }
+.pv-shortcuts summary:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 2px; }
+
+.pv-shortcut-body {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border-soft);
+}
+.pv-shortcut-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.pv-shortcut-row:last-child { margin-bottom: 0; }
+.pv-sc-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--muted);
+}
+.pv-sc-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue-bright);
+}
+.pv-sc-note {
+    color: var(--faint);
+    font-size: 11px;
+}
+
+/* ─── Back to home ───────────────────────────────────────── */
+.pv-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    transition: color .2s;
+    margin-bottom: 32px;
+}
+.pv-back:hover { color: var(--ink); }
+.pv-back svg { flex-shrink: 0; }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 760px) {
+    .pv-hero { padding: 60px 0 28px; }
+    .pv-tut-grid { grid-template-columns: 1fr; gap: 10px; }
+    .pv-tut-card { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; align-items: start; }
+    .pv-tut-icon { font-size: 22px; grid-row: span 2; margin-bottom: 0; padding-top: 2px; }
+    .pv-piano { height: 160px; }
+}
+@media (max-width: 480px) {
+    .pv-hero p { font-size: 16px; }
+    .pv-piano { height: 140px; }
+    .pv-controls { gap: 14px; }
+    input[type="range"]#pvVolume { width: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pv-wkey, .pv-bkey, .pv-wlabel, .pv-blabel { transition: none; }
+}

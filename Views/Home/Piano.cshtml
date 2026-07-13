@@ -1,0 +1,279 @@
+@{
+    ViewData["Title"] = "Piano Virtual";
+    ViewData["NoBg"]  = true;      // skip ambient bg keyboard on this page
+    Layout = "_LandingLayout";
+
+    // Keyboard: 3 octaves C3–B5
+    var white   = new[] { "C", "D", "E", "F", "G", "A", "B" };
+    var hasBlk  = new[] { true, true, false, true, true, true, false };
+    var firstOct = 3;
+    var octaves  = 3;
+
+    // Shortcut annotations (key → note)
+    var shortcuts = new Dictionary<string, string> {
+        { "A","C4" }, { "W","C#4" }, { "S","D4" }, { "E","D#4" }, { "D","E4" },
+        { "F","F4" }, { "T","F#4" }, { "G","G4" }, { "Y","G#4" }, { "H","A4" },
+        { "U","A#4"}, { "J","B4"  },
+        { "K","C5" }, { "O","C#5" }, { "L","D5" }, { "P","D#5" }, { ";","E5" },
+        { "Z","F5" }, { "X","G5"  }, { "C","A5" }, { "V","B5"  }
+    };
+    // Reverse map note → key label
+    var noteKey = shortcuts.ToDictionary(kv => kv.Value, kv => kv.Key);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/piano.css" asp-append-version="true" />
+}
+
+<!-- ===================== NAV ===================== -->
+<header class="nav" id="nav">
+    <div class="wrap nav-inner">
+        <a class="brand" href="/">
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" width="38" height="38" />
+            <span class="brand-text">YourRhythm<span>.</span>
+                <span class="brand-sub">Studio</span>
+            </span>
+        </a>
+        <nav class="nav-links" aria-label="Navegação principal">
+            <a asp-controller="Home" asp-action="Piano" style="color:var(--ink)">Piano Virtual</a>
+        </nav>
+        <div class="nav-cta">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="nav-login" asp-controller="Dashboard" asp-action="Index">Meu painel</a>
+                <form asp-controller="Auth" asp-action="Logout" method="post" class="nav-logout">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary" style="padding:11px 20px">Sair</button>
+                </form>
+            }
+            else
+            {
+                <a class="nav-login" asp-controller="Auth" asp-action="Login">Entrar</a>
+                <a class="btn btn-primary" style="padding:11px 20px" asp-controller="Auth" asp-action="Register">Solicitar acesso</a>
+            }
+        </div>
+        <button class="nav-hamburger" id="navHamburger" type="button"
+                aria-label="Abrir menu" aria-expanded="false" aria-controls="navMobile">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</header>
+
+<div class="nav-mobile-backdrop" id="navMobileBackdrop" aria-hidden="true"></div>
+<nav class="nav-mobile" id="navMobile" aria-label="Menu de navegação" aria-hidden="true">
+    <div class="nav-mobile-top">
+        <button class="nav-mobile-close" id="navMobileClose" type="button" aria-label="Fechar menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M2 2l14 14M16 2L2 16"/>
+            </svg>
+        </button>
+    </div>
+    <div class="nav-mobile-auth">
+        <a class="nav-mobile-link" asp-controller="Home" asp-action="Piano" style="color:var(--ink)">Piano Virtual</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a class="nav-mobile-link" asp-controller="Dashboard" asp-action="Index">Meu painel</a>
+            <form asp-controller="Auth" asp-action="Logout" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary nav-mobile-cta">Sair</button>
+            </form>
+        }
+        else
+        {
+            <a class="nav-mobile-link" asp-controller="Auth" asp-action="Login">Entrar</a>
+            <a class="btn btn-primary nav-mobile-cta" asp-controller="Auth" asp-action="Register">Solicitar acesso →</a>
+        }
+        <a asp-controller="Home" asp-action="Privacy" class="nav-mobile-link nav-mobile-link--secondary">Privacidade</a>
+    </div>
+</nav>
+
+<!-- ===================== MAIN ===================== -->
+<main>
+    <!-- Hero -->
+    <section class="pv-hero">
+        <div class="wrap">
+            <a href="/" class="pv-back">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Início
+            </a>
+            <span class="eyebrow" style="margin-bottom:18px">
+                <span class="dot"></span> Demonstração interativa
+            </span>
+            <h1>Piano <span class="grad">Virtual</span></h1>
+            <p>Toque as teclas, explore as notas e veja como o piano se organiza.</p>
+        </div>
+    </section>
+
+    <!-- Tutorial -->
+    <section class="pv-tutorial">
+        <div class="wrap">
+            <div class="pv-tut-grid">
+                <div class="pv-tut-card">
+                    <div class="pv-tut-icon">🎹</div>
+                    <h3>Teclas brancas</h3>
+                    <p>São as 7 notas naturais: <strong>Dó Ré Mi Fá Sol Lá Si</strong> (C D E F G A B). Repetem-se por todo o teclado.</p>
+                </div>
+                <div class="pv-tut-card">
+                    <div class="pv-tut-icon">🖤</div>
+                    <h3>Padrão 2 + 3</h3>
+                    <p>As teclas pretas formam grupos de <strong>2 e depois 3</strong>. O Dó (C) fica sempre à esquerda do grupo de 2 teclas pretas.</p>
+                </div>
+                <div class="pv-tut-card">
+                    <div class="pv-tut-icon">🔁</div>
+                    <h3>Oitavas</h3>
+                    <p>A sequência de 7 notas se repete. Cada repetição é uma <strong>oitava acima</strong> — o som dobra em frequência.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Piano -->
+    <section class="pv-section">
+        <div class="wrap">
+
+            <!-- Controls -->
+            <div class="pv-controls">
+                <div class="pv-vol-wrap">
+                    <label for="pvVolume">Volume</label>
+                    <svg class="pv-vol-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                    <input type="range" id="pvVolume" min="0" max="1" step="0.05" value="0.65"
+                           aria-label="Controle de volume" />
+                </div>
+                <label class="pv-labels-wrap">
+                    <span>Mostrar notas</span>
+                    <span class="pv-checkbox">
+                        <input type="checkbox" id="pvLabels" aria-label="Mostrar rótulos de notas" />
+                        <span class="pv-checkbox-track"></span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- Keyboard -->
+            <div class="pv-piano-outer">
+                <div class="pv-octave-header">
+                    <span class="pv-octave-label">C@(firstOct) — B@(firstOct + octaves - 1) · @(octaves) oitavas · @(octaves * 7) teclas brancas</span>
+                    <span class="pv-octave-label" style="color:var(--faint);font-size:10px">Tecle ou toque</span>
+                </div>
+                <div class="pv-piano-scroll" role="region" aria-label="Teclado de piano, @octaves oitavas">
+                    <div class="pv-piano" id="pvPiano" aria-label="Piano virtual — C@(firstOct) a B@(firstOct + octaves - 1)">
+                        @for (var o = 0; o < octaves; o++)
+                        {
+                            var oct = firstOct + o;
+                            for (var i = 0; i < white.Length; i++)
+                            {
+                                var note  = white[i] + oct;
+                                var label = noteKey.TryGetValue(note, out var k) ? k : null;
+                                <div class="pv-key pv-wkey @(label != null ? "has-shortcut" : "")"
+                                     data-note="@note"
+                                     @(label != null ? $"data-key=\"{label}\"" : "")
+                                     role="button"
+                                     aria-label="@note"
+                                     aria-pressed="false"
+                                     tabindex="0">
+                                    <span class="pv-wlabel" aria-hidden="true">
+                                        @white[i]@oct
+                                        @if (label != null) {
+                                            <br /><small style="font-size:8px;color:var(--blue-deep);opacity:0.6">@label</small>
+                                        }
+                                    </span>
+                                    @if (hasBlk[i])
+                                    {
+                                        var sharpNote = white[i] + "#" + oct;
+                                        var sharpLabel = noteKey.TryGetValue(sharpNote, out var sk) ? sk : null;
+                                        <div class="pv-key pv-bkey"
+                                             data-note="@sharpNote"
+                                             @(sharpLabel != null ? $"data-key=\"{sharpLabel}\"" : "")
+                                             role="button"
+                                             aria-label="@sharpNote"
+                                             aria-pressed="false"
+                                             tabindex="-1">
+                                            <span class="pv-blabel" aria-hidden="true">@white[i]♯</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                <p class="pv-hint" id="pvHint">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z"/>
+                        <path d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    Toque em uma tecla para ouvir o som
+                </p>
+            </div>
+
+            <!-- Keyboard shortcuts -->
+            <details class="pv-shortcuts">
+                <summary>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                        <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/>
+                    </svg>
+                    Atalhos de teclado
+                </summary>
+                <div class="pv-shortcut-body">
+                    <div class="pv-shortcut-row">
+                        @{
+                            var row1 = new[] {
+                                ("A","C4"), ("W","C#4"), ("S","D4"), ("E","D#4"), ("D","E4"),
+                                ("F","F4"), ("T","F#4"), ("G","G4"), ("Y","G#4"), ("H","A4"),
+                                ("U","A#4"), ("J","B4")
+                            };
+                        }
+                        @foreach (var (sc, sn) in row1)
+                        {
+                            <span class="pv-sc-item">
+                                <span class="pv-sc-key">@sc</span>
+                                <span class="pv-sc-note">@sn</span>
+                            </span>
+                        }
+                    </div>
+                    <div class="pv-shortcut-row">
+                        @{
+                            var row2 = new[] {
+                                ("K","C5"), ("O","C#5"), ("L","D5"), ("P","D#5"), (";","E5"),
+                                ("Z","F5"), ("X","G5"), ("C","A5"), ("V","B5")
+                            };
+                        }
+                        @foreach (var (sc, sn) in row2)
+                        {
+                            <span class="pv-sc-item">
+                                <span class="pv-sc-key">@sc</span>
+                                <span class="pv-sc-note">@sn</span>
+                            </span>
+                        }
+                    </div>
+                </div>
+            </details>
+
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta" style="padding:64px 0">
+        <div class="wrap">
+            <div>
+                <h2>Gostou da experiência?<br><span class="grad">Veja seus alunos evoluírem.</span></h2>
+                <p style="color:var(--muted);max-width:460px;margin:16px auto 28px">
+                    YourRhythm Studio organiza missões, repertório e progresso para manter seus alunos praticando toda semana.
+                </p>
+                <a asp-controller="Auth" asp-action="Register" class="btn btn-primary" style="padding:16px 32px;font-size:15px">
+                    Solicitar acesso <span class="arrow">&rarr;</span>
+                </a>
+            </div>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="~/js/piano.js" asp-append-version="true"></script>
+}

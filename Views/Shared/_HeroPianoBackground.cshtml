@@ -1,1 +1,46 @@
-@* Background removed — ambient glow handled by CSS body::before. *@
+@*
+    Ambient animated piano background — rendered on every landing page.
+    Purely decorative (aria-hidden). Animation activated by landing.js
+    only on "enhanced" capability tier; "standard" sees the static keyboard
+    with CSS waves; "reduced" (prefers-reduced-motion) sees nothing moving.
+*@
+@{
+    var bgWhite = new[] { "C", "D", "E", "F", "G", "A", "B" };
+    var bgSharp = new[] { true, true, false, true, true, true, false };
+    var bgOctaves = 5;
+}
+<div class="hero-bg" aria-hidden="true">
+    <span class="hero-bg-glow"></span>
+
+    <svg class="hero-bg-waves" viewBox="0 0 1200 200" preserveAspectRatio="none">
+        <defs>
+            <linearGradient id="bgwv" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#6BC0FF" stop-opacity="0"/>
+                <stop offset=".5" stop-color="#6BC0FF"/>
+                <stop offset="1" stop-color="#1E5BFF" stop-opacity="0"/>
+            </linearGradient>
+        </defs>
+        <path class="bw bw1" d="M0,100 C200,40 400,160 600,100 S1000,40 1200,100"/>
+        <path class="bw bw2" d="M0,120 C220,70 420,150 620,112 S1040,52 1200,116"/>
+        <path class="bw bw3" d="M0,84 C180,48 380,132 600,90 S1020,36 1200,86"/>
+    </svg>
+
+    <div class="rising-notes" id="risingNotes"></div>
+    <div class="hero-bg-particles" id="bgParticles"></div>
+
+    <div class="bg-keyboard" id="bgKeyboard">
+        @for (var o = 0; o < bgOctaves; o++)
+        {
+            for (var i = 0; i < bgWhite.Length; i++)
+            {
+                <div class="bgk-wkey" data-note="@bgWhite[i]" data-oct="@o">
+                    <i class="klight"></i>
+                    @if (bgSharp[i])
+                    {
+                        <i class="bgk-bkey"></i>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

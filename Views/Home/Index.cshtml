@@ -12,6 +12,9 @@
                 <span class="brand-sub">Studio</span>
             </span>
         </a>
+        <nav class="nav-links" aria-label="Navegação principal">
+            <a asp-controller="Home" asp-action="Piano">Piano Virtual</a>
+        </nav>
         <div class="nav-cta">
             @if (User.Identity?.IsAuthenticated == true)
             {
@@ -45,6 +48,7 @@
         </button>
     </div>
     <div class="nav-mobile-auth">
+        <a class="nav-mobile-link" asp-controller="Home" asp-action="Piano">Piano Virtual</a>
         @if (User.Identity?.IsAuthenticated == true)
         {
             <a class="nav-mobile-link" asp-controller="Dashboard" asp-action="Index">Meu painel</a>

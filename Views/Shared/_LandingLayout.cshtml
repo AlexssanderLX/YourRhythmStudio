@@ -13,9 +13,12 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    @await Html.PartialAsync("_HeroPianoBackground")
+    @if (!(ViewData["NoBg"] is bool noBg && noBg)) {
+        @await Html.PartialAsync("_HeroPianoBackground")
+    }
     @RenderBody()
     @await Html.PartialAsync("_SoundtrackPlayer")
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
