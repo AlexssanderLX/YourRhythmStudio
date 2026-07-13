@@ -156,32 +156,25 @@ public sealed class MissionService
     {
         var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
 
-        return await _db.Assignments
+        var assignments = await _db.Assignments
             .AsNoTracking()
             .Where(a => a.SchoolId == schoolId
                      && a.TeacherProfileId == teacherProfileId
                      && a.IsMission
                      && a.Status == AssignmentStatus.AwaitingReview)
-            .Join(_db.StudentProfiles.AsNoTracking(),
-                a => a.StudentProfileId,
-                s => s.Id,
-                (a, s) => new { a, s })
-            .Join(_db.SchoolUsers.AsNoTracking(),
-                x => x.s.SchoolUserId,
-                u => u.Id,
-                (x, u) => new MissionSummary(
-                    x.a.Id,
-                    x.a.StudentProfileId,
-                    u.DisplayName,
-                    x.a.Title,
-                    x.a.Status,
-                    x.a.CurrentRound,
-                    x.a.SubmittedForReviewAtUtc,
-                    x.a.CreatedAtUtc,
-                    x.a.XpReward,
-                    x.a.Rarity))
-            .OrderBy(m => m.SubmittedForReviewAtUtc)
+            .OrderBy(a => a.SubmittedForReviewAtUtc)
             .ToListAsync(ct);
+
+        if (!assignments.Any()) return Array.Empty<MissionSummary>();
+
+        var studentIds = assignments.Select(a => a.StudentProfileId).Distinct().ToList();
+        var nameMap = await StudentNameMapAsync(studentIds, ct);
+
+        return assignments.Select(a => new MissionSummary(
+            a.Id, a.StudentProfileId,
+            nameMap.GetValueOrDefault(a.StudentProfileId, "Aluno"),
+            a.Title, a.Status, a.CurrentRound, a.SubmittedForReviewAtUtc,
+            a.CreatedAtUtc, a.XpReward, a.Rarity)).ToList();
     }
 
     // ── Teacher: list missions for a student ─────────────────────────────────
@@ -195,23 +188,22 @@ public sealed class MissionService
         await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
             _db, schoolId, teacherProfileId, studentProfileId, ct);
 
-        var studentName = await _db.StudentProfiles
-            .AsNoTracking()
-            .Where(s => s.Id == studentProfileId)
-            .Join(_db.SchoolUsers.AsNoTracking(), s => s.SchoolUserId, u => u.Id, (s, u) => u.DisplayName)
-            .FirstOrDefaultAsync(ct) ?? "Aluno";
+        var nameMap = await StudentNameMapAsync(new[] { studentProfileId }, ct);
+        var studentName = nameMap.GetValueOrDefault(studentProfileId, "Aluno");
 
-        return await _db.Assignments
+        var assignments = await _db.Assignments
             .AsNoTracking()
             .Where(a => a.SchoolId == schoolId
                      && a.TeacherProfileId == teacherProfileId
                      && a.StudentProfileId == studentProfileId
                      && a.IsMission)
             .OrderByDescending(a => a.CreatedAtUtc)
-            .Select(a => new MissionSummary(
-                a.Id, a.StudentProfileId, studentName, a.Title, a.Status,
-                a.CurrentRound, a.SubmittedForReviewAtUtc, a.CreatedAtUtc, a.XpReward, a.Rarity))
             .ToListAsync(ct);
+
+        return assignments.Select(a => new MissionSummary(
+            a.Id, a.StudentProfileId, studentName, a.Title, a.Status,
+            a.CurrentRound, a.SubmittedForReviewAtUtc, a.CreatedAtUtc, a.XpReward, a.Rarity))
+            .ToList();
     }
 
     // ── Teacher: get mission detail (with student answers + review history) ──
@@ -231,11 +223,8 @@ public sealed class MissionService
                                    && a.IsMission, ct);
         if (assignment is null) return null;
 
-        var studentName = await _db.StudentProfiles
-            .AsNoTracking()
-            .Where(s => s.Id == assignment.StudentProfileId)
-            .Join(_db.SchoolUsers.AsNoTracking(), s => s.SchoolUserId, u => u.Id, (s, u) => u.DisplayName)
-            .FirstOrDefaultAsync(ct) ?? "Aluno";
+        var nameMap = await StudentNameMapAsync(new[] { assignment.StudentProfileId }, ct);
+        var studentName = nameMap.GetValueOrDefault(assignment.StudentProfileId, "Aluno");
 
         var questions = await _db.MissionQuestions
             .AsNoTracking()
@@ -596,6 +585,28 @@ public sealed class MissionService
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private async Task<Dictionary<Guid, string>> StudentNameMapAsync(
+        IEnumerable<Guid> studentProfileIds,
+        CancellationToken ct)
+    {
+        var ids = studentProfileIds.Distinct().ToList();
+        var profiles = await _db.StudentProfiles.AsNoTracking()
+            .Where(s => ids.Contains(s.Id))
+            .Select(s => new { s.Id, s.SchoolUserId })
+            .ToListAsync(ct);
+
+        var userIds = profiles.Select(p => p.SchoolUserId).Distinct().ToList();
+        var users = await _db.SchoolUsers.AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.DisplayName })
+            .ToListAsync(ct);
+
+        var userMap = users.ToDictionary(u => u.Id, u => u.DisplayName);
+        return profiles.ToDictionary(
+            p => p.Id,
+            p => userMap.GetValueOrDefault(p.SchoolUserId, "Aluno"));
+    }
 
     private static void ValidateMimeType(MissionQuestionType? type, string contentType)
     {
