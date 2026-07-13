@@ -1,13 +1,18 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
+using YourRhythmStudio.ViewModels.Settings;
 
 namespace YourRhythmStudio.Controllers;
 
 [Authorize(AuthenticationSchemes = "YourRhythmCookie")]
 public class DashboardController : Controller
 {
+    private const string CookieScheme = "YourRhythmCookie";
+
     private readonly IUserProfileResolver _profileResolver;
     private readonly SettingsService _settingsService;
 
@@ -28,8 +33,6 @@ public class DashboardController : Controller
             _ => View("School"),
         };
     }
-
-    // ---------- Teacher pages ----------
 
     [HttpGet]
     public IActionResult Students()
@@ -63,8 +66,6 @@ public class DashboardController : Controller
             : Forbid();
     }
 
-    // ---------- Student pages ----------
-
     [HttpGet]
     public IActionResult Repertoire()
     {
@@ -89,8 +90,6 @@ public class DashboardController : Controller
             : Forbid();
     }
 
-    // ---------- School pages ----------
-
     [HttpGet]
     public IActionResult Teachers()
     {
@@ -107,75 +106,193 @@ public class DashboardController : Controller
             : Forbid();
     }
 
-    // ---------- Settings ----------
-
     [HttpGet]
     public async Task<IActionResult> Settings(CancellationToken ct)
     {
         var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
-
-        ViewData["Role"] = profile.Role switch
+        var role = profile.Role switch
         {
             YourRhythmRoles.Student => "student",
             YourRhythmRoles.Teacher => "teacher",
             _ => "school"
         };
-        ViewData["Title"] = "Configurações";
-        ViewData["DashTitle"] = "Configurações";
 
-        if (profile.SchoolUserId.HasValue)
-            ViewData["Account"] = await _settingsService.GetAccountAsync(profile.SchoolUserId.Value, ct);
+        ViewData["Role"] = role;
+        ViewData["Title"] = "Conta";
+        ViewData["DashTitle"] = "Conta";
 
-        if (profile.TeacherProfileId.HasValue)
-            ViewData["TeacherProfile"] = await _settingsService.GetTeacherProfileAsync(profile.TeacherProfileId.Value, ct);
+        if (profile.Role == YourRhythmRoles.Student)
+        {
+            var account = await _settingsService.GetStudentAccountAsync(profile, ct);
+            return View("Settings", new AccountSettingsPageViewModel
+            {
+                Role = role,
+                Student = new StudentAccountSettingsViewModel
+                {
+                    Profile = new StudentProfileFormViewModel
+                    {
+                        DisplayName = account.DisplayName,
+                        ExternalContact = account.ExternalContact,
+                        Instrument = account.Instrument,
+                        CurrentLevel = account.CurrentLevel,
+                        CurrentLevelBadge = account.CurrentLevelBadge,
+                        ProfilePhotoUrl = account.ProfilePhotoUrl
+                    }
+                }
+            });
+        }
 
-        if ((profile.Role == YourRhythmRoles.SchoolOwner || profile.Role == YourRhythmRoles.SchoolAdmin)
-            && profile.SchoolId.HasValue)
-            ViewData["SchoolInfo"] = await _settingsService.GetSchoolAsync(profile.SchoolId.Value, ct);
+        if (profile.Role == YourRhythmRoles.Teacher)
+        {
+            var account = await _settingsService.GetTeacherAccountAsync(profile, ct);
+            return View("Settings", new AccountSettingsPageViewModel
+            {
+                Role = role,
+                Teacher = new TeacherAccountSettingsViewModel
+                {
+                    Profile = new TeacherProfilePhotoFormViewModel
+                    {
+                        DisplayName = account.DisplayName,
+                        Email = account.Email,
+                        ProfilePhotoUrl = account.ProfilePhotoUrl
+                    },
+                    Email = new TeacherEmailFormViewModel
+                    {
+                        CurrentEmail = account.Email,
+                        NewEmail = account.Email
+                    },
+                    Password = new TeacherPasswordFormViewModel()
+                }
+            });
+        }
 
-        return View("Settings");
+        return View("Settings", new AccountSettingsPageViewModel { Role = role });
     }
 
-    [HttpPost("Dashboard/Settings/Account")]
+    [HttpPost("Dashboard/Settings/StudentProfile")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveAccount(
-        string displayName, string? phone, string? city, CancellationToken ct)
+    public async Task<IActionResult> SaveStudentProfile(StudentProfileFormViewModel model, CancellationToken ct)
     {
         var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
-        if (profile.SchoolUserId.HasValue && !string.IsNullOrWhiteSpace(displayName))
-            await _settingsService.SaveAccountAsync(profile.SchoolUserId.Value, displayName, phone, city, ct);
+        if (profile.Role != YourRhythmRoles.Student)
+            return Forbid();
 
-        TempData["SettingsSuccess"] = "Conta atualizada.";
-        return RedirectToAction(nameof(Settings));
-    }
+        if (!ModelState.IsValid)
+        {
+            TempData["SettingsError"] = FirstModelError();
+            return RedirectToAction(nameof(Settings));
+        }
 
-    [HttpPost("Dashboard/Settings/TeacherProfile")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveTeacherProfile(
-        string? instrumentFocus, string? bio, CancellationToken ct)
-    {
-        var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
-        if (profile.TeacherProfileId.HasValue)
-            await _settingsService.SaveTeacherProfileAsync(
-                profile.TeacherProfileId.Value,
-                instrumentFocus ?? string.Empty,
-                bio ?? string.Empty,
+        try
+        {
+            var result = await _settingsService.UpdateStudentAccountAsync(
+                profile,
+                new UpdateStudentAccountRequest(model.DisplayName, model.ExternalContact, model.Photo, model.RemovePhoto),
                 ct);
+            await RefreshIdentityAsync(result);
+            TempData["SettingsSuccess"] = "Perfil atualizado.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["SettingsError"] = ex.Message;
+        }
 
-        TempData["SettingsSuccess"] = "Perfil de professor atualizado.";
         return RedirectToAction(nameof(Settings));
     }
 
-    [HttpPost("Dashboard/Settings/Studio")]
+    [HttpPost("Dashboard/Settings/TeacherPhoto")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveStudio(string? schoolName, CancellationToken ct)
+    public async Task<IActionResult> SaveTeacherPhoto(TeacherProfilePhotoFormViewModel model, CancellationToken ct)
     {
         var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
-        if (profile.SchoolId.HasValue && !string.IsNullOrWhiteSpace(schoolName))
-            await _settingsService.SaveSchoolNameAsync(profile.SchoolId.Value, schoolName, ct);
+        if (profile.Role != YourRhythmRoles.Teacher)
+            return Forbid();
 
-        TempData["SettingsSuccess"] = "Informações do studio atualizadas.";
-        return RedirectToAction(nameof(Settings));
+        try
+        {
+            var result = await _settingsService.UpdateTeacherPhotoAsync(
+                profile,
+                new UpdateTeacherPhotoRequest(model.Photo, model.RemovePhoto),
+                ct);
+            await RefreshIdentityAsync(result);
+            TempData["SettingsSuccess"] = "Foto atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["SettingsError"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Settings), null, "profile");
+    }
+
+    [HttpPost("Dashboard/Settings/TeacherEmail")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeTeacherEmail(TeacherEmailFormViewModel model, CancellationToken ct)
+    {
+        var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
+        if (profile.Role != YourRhythmRoles.Teacher)
+            return Forbid();
+
+        if (!ModelState.IsValid)
+        {
+            TempData["SettingsError"] = FirstModelError();
+            return RedirectToAction(nameof(Settings), null, "email");
+        }
+
+        try
+        {
+            var result = await _settingsService.ChangeTeacherEmailAsync(
+                profile,
+                new ChangeTeacherEmailRequest(model.NewEmail, model.CurrentPassword),
+                ct);
+            await RefreshIdentityAsync(result);
+            TempData["SettingsSuccess"] = "E-mail de acesso atualizado.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["SettingsError"] = "Senha atual incorreta.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["SettingsError"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Settings), null, "email");
+    }
+
+    [HttpPost("Dashboard/Settings/TeacherPassword")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeTeacherPassword(TeacherPasswordFormViewModel model, CancellationToken ct)
+    {
+        var profile = await _profileResolver.ResolveCurrentAsync(User, ct);
+        if (profile.Role != YourRhythmRoles.Teacher)
+            return Forbid();
+
+        if (!ModelState.IsValid)
+        {
+            TempData["SettingsError"] = FirstModelError();
+            return RedirectToAction(nameof(Settings), null, "security");
+        }
+
+        try
+        {
+            var result = await _settingsService.ChangeTeacherPasswordAsync(
+                profile,
+                new ChangeTeacherPasswordRequest(model.CurrentPassword, model.NewPassword),
+                ct);
+            await RefreshIdentityAsync(result);
+            TempData["SettingsSuccess"] = "Senha atualizada com seguranca.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["SettingsError"] = "Senha atual incorreta.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["SettingsError"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Settings), null, "security");
     }
 
     private bool RequireRole(string role) => CurrentRole() == role;
@@ -184,4 +301,27 @@ public class DashboardController : Controller
         CurrentRole() is YourRhythmRoles.SchoolOwner or YourRhythmRoles.SchoolAdmin;
 
     private string? CurrentRole() => User.FindFirst("YourRhythmRole")?.Value;
+
+    private string FirstModelError()
+        => ModelState.Values.SelectMany(value => value.Errors).FirstOrDefault()?.ErrorMessage
+            ?? "Verifique os dados informados.";
+
+    private async Task RefreshIdentityAsync(CredentialUpdateResult result)
+    {
+        var claims = User.Claims
+            .Where(claim => claim.Type != ClaimTypes.Name && claim.Type != ClaimTypes.Email)
+            .ToList();
+        claims.Add(new Claim(ClaimTypes.Name, result.DisplayName));
+        claims.Add(new Claim(ClaimTypes.Email, result.Email));
+
+        var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
+        await HttpContext.SignInAsync(
+            CookieScheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+            });
+    }
 }

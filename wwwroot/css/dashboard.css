@@ -204,26 +204,170 @@
 
 @media (max-width: 640px) {
     .student-action-modal {
-        align-items: end;
-        padding: 10px;
+        place-items: center;
+        padding: 20px 10px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .student-action-modal-backdrop {
+        background: rgba(0,0,0,.76);
+        backdrop-filter: blur(12px);
     }
 
     .student-action-modal-card {
-        border-radius: 18px 18px 12px 12px;
+        width: 100%;
+        max-height: calc(100dvh - 40px);
+        padding: 16px;
+        border-radius: 18px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background:
+            linear-gradient(135deg, rgba(46,155,255,.08), rgba(255,100,100,.035)),
+            #080d18;
+        box-shadow: 0 20px 70px rgba(0,0,0,.72);
+    }
+
+    .student-action-modal-card .student-panel-head {
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .student-action-modal-card .student-panel-head h2 {
+        font-size: 18px;
+        overflow-wrap: anywhere;
+    }
+
+    .student-action-modal-card .student-jump-btn {
+        min-height: 36px;
+        padding: 8px 12px;
+        flex-shrink: 0;
+    }
+
+    .student-action-modal-card .auth-form {
+        gap: 10px;
+    }
+
+    .student-action-modal-card .auth-form label {
+        margin-bottom: 4px;
+        font-size: 12.5px;
+    }
+
+    .student-action-modal-card .auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+    .student-action-modal-card .auth-form textarea,
+    .student-action-modal-card .auth-form select {
+        min-height: 44px;
+        padding: 10px 12px;
+        border-radius: 11px;
+        font-size: 14px;
+    }
+
+    .student-action-modal-card .auth-form textarea {
+        min-height: 70px;
+        max-height: 132px;
+    }
+
+    .student-action-modal-card .auth-form button[type="submit"] {
+        min-height: 46px;
+        padding: 12px 16px;
+        margin-top: 0;
+    }
+
+    .qr-modal-card {
+        width: min(420px, 100%);
+        max-height: calc(100dvh - 40px);
+    }
+
+    .qr-modal-card .student-panel-head {
+        margin-bottom: 12px;
+    }
+
+    .student-qr-code {
+        width: min(236px, 68vw);
+        margin: 10px auto 16px;
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .qr-modal-card .student-access-row {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .qr-modal-card .student-access-row input,
+    .qr-modal-card .student-access-row .btn {
+        width: 100%;
     }
 
     .student-modal-grid {
         grid-template-columns: 1fr;
     }
 
-    .student-delete-actions,
-    .student-management-actions {
+    .student-delete-actions {
         flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
     }
 
-    .student-delete-actions .btn,
-    .student-management-actions .student-action-btn {
+    .student-delete-actions .btn {
         width: 100%;
+        min-height: 42px;
+    }
+
+    .student-delete-warning {
+        gap: 6px;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 13px;
+    }
+
+    .student-delete-warning p {
+        font-size: 12.5px;
+    }
+
+    .student-card-actions {
+        padding-top: 10px;
+    }
+
+    .student-card-actions .student-management-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .student-card-actions .student-action-btn {
+        width: 100%;
+        min-height: 40px;
+        padding: 9px 10px;
+        border-radius: 12px;
+        flex: 0 0 auto;
+        font-size: 12.5px;
+    }
+
+    .student-profile-card {
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .student-avatar-lg {
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        font-size: 14px;
+    }
+
+    .student-profile-main h1 {
+        font-size: clamp(24px, 8vw, 34px);
+    }
+
+    .student-xp-badge {
+        padding-top: 10px;
+    }
+
+    .student-xp-badge strong {
+        font-size: 28px;
     }
 }
 .dash-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 18px; }
@@ -261,9 +405,16 @@
 .dash-user-caret { color: var(--muted); flex-shrink: 0; }
 .dash-avatar {
     width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+    overflow: hidden;
     display: grid; place-items: center;
     font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
     background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
+}
+.dash-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 .dash-user-meta { flex: 1; min-width: 0; }
 .dash-user-meta strong { display: block; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

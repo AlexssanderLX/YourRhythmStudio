@@ -66,8 +66,6 @@
     <div class="s-ph-hex s-ph-hex-svg">
         <partial name="_LevelBadge" model="@level" />
     </div>
-    <div class="s-ph-xp-big" id="lvlXpBig" data-count="@xp">@xp</div>
-    <div class="s-ph-xp-lbl">XP total</div>
 
     <div style="margin:16px 0 0;padding:0 4px;position:relative;z-index:1">
         <div class="s-bar-labels" style="margin-bottom:5px">
@@ -357,9 +355,6 @@
 (function(){
     /* ── reveal / counter / bars ── */
     document.querySelectorAll('[data-yr-reveal]').forEach(function(el){ el.classList.add('yr-visible'); });
-
-    var bigEl = document.getElementById('lvlXpBig');
-    if (bigEl && window.yrCountUp) window.yrCountUp(bigEl, parseInt(bigEl.dataset.count||'0',10), 900);
 
     if (window.yrBarAnimate) {
         window.yrBarAnimate(document.getElementById('lvlXpFill'), @xpPct);

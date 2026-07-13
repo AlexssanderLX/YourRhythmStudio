@@ -65,6 +65,7 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(user => user.Role).HasMaxLength(40).IsRequired();
             entity.Property(user => user.Phone).HasMaxLength(40);
             entity.Property(user => user.City).HasMaxLength(120);
+            entity.Property(user => user.ProfilePhotoPath).HasMaxLength(260);
             entity.HasIndex(user => new { user.SchoolId, user.Email }).IsUnique();
             entity.HasOne(user => user.School)
                 .WithMany(school => school.Users)

@@ -20,6 +20,8 @@ public sealed class SchoolUser
 
     public string? City { get; set; }
 
+    public string? ProfilePhotoPath { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;

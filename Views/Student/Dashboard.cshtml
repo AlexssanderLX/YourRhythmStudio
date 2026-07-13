@@ -51,10 +51,6 @@
             <div class="s-hero-rank">@rankLabel · Nível @level</div>
         </div>
 
-        <div class="s-hero-xp">
-            <div class="s-xp-num" id="heroXp" data-count="@xp">@xp</div>
-            <div class="s-xp-tag">XP total</div>
-        </div>
     </div>
 
     <div class="s-bar-area">
@@ -193,9 +189,6 @@
 (function(){
     // Count-up for hero XP and chips
     function runCountUps() {
-        var heroEl = document.getElementById('heroXp');
-        if (heroEl) window.yrCountUp(heroEl, parseInt(heroEl.dataset.count || '0'), 900);
-
         document.querySelectorAll('.s-chip-val[data-count]').forEach(function(el){
             window.yrCountUp(el, parseInt(el.dataset.count || '0'), 700);
         });

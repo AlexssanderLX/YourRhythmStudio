@@ -1,441 +1,258 @@
+@model YourRhythmStudio.ViewModels.Settings.AccountSettingsPageViewModel
 @{
     Layout = "_DashboardLayout";
-
-    var role = (ViewData["Role"] as string) ?? "school";
-    var isStudent = role == "student";
-    var isTeacher = role == "teacher";
-    var isSchool = role == "school";
-
-    var account = ViewData["Account"] as YourRhythmStudio.Application.Users.AccountSettingsDto;
-    var teacherPrf = ViewData["TeacherProfile"] as YourRhythmStudio.Application.Users.TeacherProfileSettingsDto;
-    var schoolInfo = ViewData["SchoolInfo"] as (string Name, string PlanCode)?;
-
-    var displayName = account?.DisplayName ?? User.Identity?.Name ?? "Usuario";
-    var email = account?.Email ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "-";
-    var phone = account?.Phone ?? "";
-    var city = account?.City ?? "";
-    var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        .Take(2).Select(part => char.ToUpperInvariant(part[0])));
-    if (string.IsNullOrWhiteSpace(initials)) initials = "YR";
-
-    var roleLabel = role switch
-    {
-        "student" => "Aluno",
-        "teacher" => "Professor",
-        "school" => "Escola",
-        _ => "Studio"
-    };
-
-    var planLabel = schoolInfo?.PlanCode switch
-    {
-        "escola" => "Escola - R$ 249,90/mes",
-        _ => "Professor - R$ 149,90/mes"
-    };
-
+    var isStudent = Model.Role == "student";
+    var isTeacher = Model.Role == "teacher";
+    var student = Model.Student?.Profile;
+    var teacher = Model.Teacher;
+    var displayName = student?.DisplayName ?? teacher?.Profile.DisplayName ?? User.Identity?.Name ?? "YourRhythm";
+    var photoUrl = student?.ProfilePhotoUrl ?? teacher?.Profile.ProfilePhotoUrl;
+    var initials = Initials(displayName);
     var successMsg = TempData["SettingsSuccess"] as string;
+    var errorMsg = TempData["SettingsError"] as string;
 }
 
 @if (!string.IsNullOrWhiteSpace(successMsg))
 {
-    <div class="cfg-toast">@successMsg</div>
+    <div class="account-feedback success" role="status">@successMsg</div>
+}
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="account-feedback error" role="alert">@errorMsg</div>
 }
 
-<section class="settings-shell">
-    <header class="settings-hero">
-        <div class="settings-avatar">@initials</div>
-        <div class="settings-hero-copy">
-            <span>Configuracoes</span>
-            <h1>@displayName</h1>
-            <p>@roleLabel - @email</p>
+<section class="account-page">
+    <header class="account-hero">
+        <div class="account-photo-preview" data-photo-preview>
+            @if (!string.IsNullOrWhiteSpace(photoUrl))
+            {
+                <img src="@photoUrl" alt="Foto de perfil de @displayName" />
+            }
+            else
+            {
+                <span>@initials</span>
+            }
         </div>
-        <div class="settings-status">
-            <strong>Ativo</strong>
-            <span>Conta verificada</span>
+        <div>
+            <span class="account-kicker">Conta YourRhythm</span>
+            <h1>@displayName</h1>
+            <p>@(isStudent ? "Perfil do aluno" : isTeacher ? "Perfil do professor" : "Configuracoes da conta")</p>
         </div>
     </header>
 
-    <div class="settings-layout">
-        <nav class="settings-tabs" id="settingsTabs" aria-label="Secoes de configuracao">
-            <a href="#account" class="settings-tab active" data-section="account">
-                <span>Conta</span>
-                <small>Dados pessoais</small>
-            </a>
-            @if (isStudent)
-            {
-                <a href="#study" class="settings-tab" data-section="study">
-                    <span>Estudo</span>
-                    <small>Rotina e metas</small>
-                </a>
-            }
-            @if (isTeacher)
-            {
-                <a href="#teacher" class="settings-tab" data-section="teacher">
-                    <span>Professor</span>
-                    <small>Perfil e aulas</small>
-                </a>
-            }
-            @if (isSchool)
-            {
-                <a href="#studio" class="settings-tab" data-section="studio">
-                    <span>Escola</span>
-                    <small>Studio e plano</small>
-                </a>
-            }
-            <a href="#notifications" class="settings-tab" data-section="notifications">
-                <span>Alertas</span>
-                <small>E-mail e lembretes</small>
-            </a>
-            <a href="#appearance" class="settings-tab" data-section="appearance">
-                <span>Aparencia</span>
-                <small>Tema e densidade</small>
-            </a>
-            <a href="#privacy" class="settings-tab" data-section="privacy">
-                <span>Privacidade</span>
-                <small>Dados e sessoes</small>
-            </a>
-        </nav>
-
-        <div class="settings-content">
-            <section class="settings-section" id="account">
-                <div class="settings-section-head">
-                    <div>
-                        <span>Conta</span>
-                        <h2>Dados principais</h2>
-                    </div>
-                    <small>Salvo no backend</small>
+    @if (isStudent && student is not null)
+    {
+        <form asp-action="SaveStudentProfile" asp-controller="Dashboard" method="post" enctype="multipart/form-data" class="account-card account-form" data-safe-submit>
+            @Html.AntiForgeryToken()
+            <div class="account-section-head">
+                <div>
+                    <span>Aluno</span>
+                    <h2>Meu perfil</h2>
                 </div>
+                <strong class="level-badge">Nivel @student.CurrentLevel - @student.CurrentLevelBadge</strong>
+            </div>
 
-                <form action="/Dashboard/Settings/Account" method="post" class="settings-card settings-form">
+            <div class="account-photo-row">
+                <div class="account-photo-preview compact" data-photo-preview>
+                    @if (!string.IsNullOrWhiteSpace(student.ProfilePhotoUrl))
+                    {
+                        <img src="@student.ProfilePhotoUrl" alt="Foto de perfil de @student.DisplayName" />
+                    }
+                    else
+                    {
+                        <span>@Initials(student.DisplayName)</span>
+                    }
+                </div>
+                <div class="account-photo-actions">
+                    <label class="account-file-btn">
+                        <input name="Photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-photo-input />
+                        Enviar foto
+                    </label>
+                    <label class="account-check">
+                        <input name="RemovePhoto" type="checkbox" value="true" />
+                        Remover foto atual
+                    </label>
+                    <small>JPG, PNG ou WebP. Maximo 5 MB.</small>
+                </div>
+            </div>
+
+            <div class="account-grid">
+                <label class="account-field span-2">
+                    <span>Nome</span>
+                    <input name="DisplayName" value="@student.DisplayName" autocomplete="name" />
+                </label>
+                <label class="account-field span-2">
+                    <span>Contato externo opcional</span>
+                    <input name="ExternalContact" value="@student.ExternalContact" autocomplete="email tel" placeholder="Telefone ou e-mail dos pais/responsavel" />
+                    <small>Usado fora do app. Nao altera seu acesso.</small>
+                </label>
+                <label class="account-field">
+                    <span>Instrumento</span>
+                    <input value="@student.Instrument" disabled />
+                </label>
+                <label class="account-field">
+                    <span>Nivel atual</span>
+                    <input value="Nivel @student.CurrentLevel - @student.CurrentLevelBadge" disabled />
+                </label>
+            </div>
+
+            <div class="account-actions">
+                <button type="submit" class="account-primary" data-loading-text="Salvando...">Salvar perfil</button>
+            </div>
+        </form>
+    }
+
+    @if (isTeacher && teacher is not null)
+    {
+        <div class="account-layout">
+            <section class="account-card account-form" id="profile">
+                <div class="account-section-head">
+                    <div>
+                        <span>Perfil</span>
+                        <h2>Foto e acesso</h2>
+                    </div>
+                </div>
+                <form asp-action="SaveTeacherPhoto" asp-controller="Dashboard" method="post" enctype="multipart/form-data" data-safe-submit>
                     @Html.AntiForgeryToken()
-                    <div class="settings-grid">
-                        <label class="settings-field span-2">
-                            <span>Nome completo</span>
-                            <input type="text" name="displayName" value="@displayName" placeholder="Seu nome" required />
-                        </label>
-                        <label class="settings-field span-2">
-                            <span>E-mail de acesso</span>
-                            <input type="email" value="@email" disabled />
-                            <small>O acesso usa magic link. A troca de e-mail precisa de fluxo seguro.</small>
-                        </label>
-                        <label class="settings-field">
-                            <span>Telefone</span>
-                            <input type="tel" name="phone" value="@phone" placeholder="(11) 99999-9999" />
-                        </label>
-                        <label class="settings-field">
-                            <span>Cidade</span>
-                            <input type="text" name="city" value="@city" placeholder="Sao Paulo, SP" />
+                    <div class="account-photo-row">
+                        <div class="account-photo-preview compact" data-photo-preview>
+                            @if (!string.IsNullOrWhiteSpace(teacher.Profile.ProfilePhotoUrl))
+                            {
+                                <img src="@teacher.Profile.ProfilePhotoUrl" alt="Foto de perfil de @teacher.Profile.DisplayName" />
+                            }
+                            else
+                            {
+                                <span>@Initials(teacher.Profile.DisplayName)</span>
+                            }
+                        </div>
+                        <div class="account-photo-actions">
+                            <label class="account-file-btn">
+                                <input name="Photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-photo-input />
+                                Enviar foto
+                            </label>
+                            <label class="account-check">
+                                <input name="RemovePhoto" type="checkbox" value="true" />
+                                Remover foto atual
+                            </label>
+                            <small>JPG, PNG ou WebP. Maximo 5 MB.</small>
+                        </div>
+                    </div>
+                    <div class="account-grid">
+                        <label class="account-field span-2">
+                            <span>E-mail de acesso atual</span>
+                            <input value="@teacher.Profile.Email" autocomplete="email" disabled />
                         </label>
                     </div>
-                    <div class="settings-actions">
-                        <button type="submit" class="settings-primary">Salvar conta</button>
+                    <div class="account-actions">
+                        <button type="submit" class="account-primary" data-loading-text="Salvando...">Salvar foto</button>
                     </div>
                 </form>
             </section>
 
-            @if (isStudent)
-            {
-                <section class="settings-section hidden" id="study">
-                    <div class="settings-section-head">
-                        <div>
-                            <span>Aluno</span>
-                            <h2>Rotina de estudo</h2>
-                        </div>
-                        <small>Preferencias deste dispositivo</small>
-                    </div>
-
-                    <form class="settings-card settings-form local-settings-form" data-scope="student-study">
-                        <div class="settings-grid">
-                            <label class="settings-field">
-                                <span>Instrumento principal</span>
-                                <input data-setting="instrument" type="text" placeholder="Piano, violao, canto..." />
-                            </label>
-                            <label class="settings-field">
-                                <span>Meta semanal</span>
-                                <select data-setting="weeklyGoal">
-                                    <option value="2">2 praticas</option>
-                                    <option value="3">3 praticas</option>
-                                    <option value="5">5 praticas</option>
-                                    <option value="7">Todos os dias</option>
-                                </select>
-                            </label>
-                            <label class="settings-field">
-                                <span>Horario preferido</span>
-                                <input data-setting="practiceTime" type="time" />
-                            </label>
-                            <label class="settings-field">
-                                <span>Duracao ideal</span>
-                                <select data-setting="practiceMinutes">
-                                    <option value="15">15 minutos</option>
-                                    <option value="30">30 minutos</option>
-                                    <option value="45">45 minutos</option>
-                                    <option value="60">60 minutos</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="settings-actions">
-                            <button type="submit" class="settings-primary">Salvar rotina</button>
-                        </div>
-                    </form>
-                </section>
-            }
-
-            @if (isTeacher)
-            {
-                <section class="settings-section hidden" id="teacher">
-                    <div class="settings-section-head">
-                        <div>
-                            <span>Professor</span>
-                            <h2>Perfil e padroes de aula</h2>
-                        </div>
-                        <small>Perfil salvo no backend</small>
-                    </div>
-
-                    <form action="/Dashboard/Settings/TeacherProfile" method="post" class="settings-card settings-form">
-                        @Html.AntiForgeryToken()
-                        <div class="settings-grid">
-                            <label class="settings-field span-2">
-                                <span>Foco instrumental</span>
-                                <input type="text" name="instrumentFocus" value="@(teacherPrf?.InstrumentFocus ?? "")" placeholder="Piano, violao, canto, teoria..." />
-                            </label>
-                            <label class="settings-field span-2">
-                                <span>Bio para alunos</span>
-                                <textarea name="bio" rows="5" placeholder="Conte como voce ensina e o que o aluno pode esperar.">@(teacherPrf?.Bio ?? "")</textarea>
-                            </label>
-                        </div>
-                        <div class="settings-actions">
-                            <button type="submit" class="settings-primary">Salvar perfil</button>
-                        </div>
-                    </form>
-
-                    <form class="settings-card settings-form local-settings-form" data-scope="teacher-defaults">
-                        <h3>Padroes rapidos</h3>
-                        <div class="settings-grid">
-                            <label class="settings-field">
-                                <span>XP padrao por missao</span>
-                                <input data-setting="defaultXp" type="number" min="0" max="10000" placeholder="50" />
-                            </label>
-                            <label class="settings-field">
-                                <span>Duracao padrao da aula</span>
-                                <select data-setting="lessonLength">
-                                    <option value="30">30 minutos</option>
-                                    <option value="45">45 minutos</option>
-                                    <option value="60">60 minutos</option>
-                                    <option value="90">90 minutos</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="settings-actions">
-                            <button type="submit" class="settings-secondary">Salvar padroes</button>
-                        </div>
-                    </form>
-                </section>
-            }
-
-            @if (isSchool)
-            {
-                <section class="settings-section hidden" id="studio">
-                    <div class="settings-section-head">
-                        <div>
-                            <span>Escola</span>
-                            <h2>Studio e plano</h2>
-                        </div>
-                        <small>Nome salvo no backend</small>
-                    </div>
-
-                    <form action="/Dashboard/Settings/Studio" method="post" class="settings-card settings-form">
-                        @Html.AntiForgeryToken()
-                        <div class="settings-grid">
-                            <label class="settings-field span-2">
-                                <span>Nome da escola/studio</span>
-                                <input type="text" name="schoolName" value="@(schoolInfo?.Name ?? "")" placeholder="YourRhythm Studio" required />
-                            </label>
-                        </div>
-                        <div class="settings-actions">
-                            <button type="submit" class="settings-primary">Salvar escola</button>
-                        </div>
-                    </form>
-
-                    <div class="settings-card plan-card">
-                        <div>
-                            <span>Plano atual</span>
-                            <strong>@planLabel</strong>
-                            <p>Cobranca mensal e suporte por e-mail.</p>
-                        </div>
-                        <a class="settings-secondary as-link" href="mailto:suporte@yourrhythm.com.br">Falar com suporte</a>
-                    </div>
-                </section>
-            }
-
-            <section class="settings-section hidden" id="notifications">
-                <div class="settings-section-head">
+            <section class="account-card account-form" id="email">
+                <div class="account-section-head">
                     <div>
-                        <span>Alertas</span>
-                        <h2>Notificacoes importantes</h2>
+                        <span>Seguranca</span>
+                        <h2>Alterar e-mail</h2>
                     </div>
-                    <small>Preferencias deste dispositivo</small>
                 </div>
-
-                <form class="settings-card local-settings-form" data-scope="notifications">
-                    <div class="settings-toggle-list">
-                        <label class="settings-toggle">
-                            <input data-setting="weeklySummary" type="checkbox" checked />
-                            <span></span>
-                            <div>
-                                <strong>Resumo semanal</strong>
-                                <small>Receber resumo de progresso toda semana.</small>
-                            </div>
+                <form asp-action="ChangeTeacherEmail" asp-controller="Dashboard" method="post" data-safe-submit>
+                    @Html.AntiForgeryToken()
+                    <input name="CurrentEmail" value="@teacher.Email.CurrentEmail" type="hidden" />
+                    <div class="account-grid">
+                        <label class="account-field span-2">
+                            <span>Novo e-mail de acesso</span>
+                            <input name="NewEmail" value="@teacher.Email.NewEmail" autocomplete="email" />
                         </label>
-                        <label class="settings-toggle">
-                            <input data-setting="newAssignments" type="checkbox" checked />
-                            <span></span>
-                            <div>
-                                <strong>Novas missoes</strong>
-                                <small>Avisar quando houver uma nova missao.</small>
-                            </div>
-                        </label>
-                        <label class="settings-toggle">
-                            <input data-setting="feedbackAlerts" type="checkbox" checked />
-                            <span></span>
-                            <div>
-                                <strong>Feedback recebido</strong>
-                                <small>Avisar quando o professor enviar feedback visivel.</small>
-                            </div>
-                        </label>
-                        <label class="settings-toggle">
-                            <input data-setting="practiceReminder" type="checkbox" />
-                            <span></span>
-                            <div>
-                                <strong>Lembrete de pratica</strong>
-                                <small>Usar o horario preferido para lembrar estudo.</small>
-                            </div>
+                        <label class="account-field span-2">
+                            <span>Senha atual</span>
+                            <input name="CurrentPassword" type="password" autocomplete="current-password" value="" />
                         </label>
                     </div>
-                    <div class="settings-actions">
-                        <button type="submit" class="settings-primary">Salvar alertas</button>
+                    <div class="account-actions">
+                        <button type="submit" class="account-primary" data-loading-text="Alterando...">Alterar e-mail</button>
                     </div>
                 </form>
             </section>
 
-            <section class="settings-section hidden" id="appearance">
-                <div class="settings-section-head">
+            <section class="account-card account-form" id="security">
+                <div class="account-section-head">
                     <div>
-                        <span>Aparencia</span>
-                        <h2>Leitura e conforto</h2>
+                        <span>Seguranca</span>
+                        <h2>Trocar senha</h2>
                     </div>
-                    <small>Preferencias deste dispositivo</small>
                 </div>
-
-                <form class="settings-card settings-form local-settings-form" data-scope="appearance">
-                    <div class="settings-grid">
-                        <label class="settings-field">
-                            <span>Tema</span>
-                            <select data-setting="theme">
-                                <option value="dark">Escuro</option>
-                                <option value="system">Sistema</option>
-                                <option value="contrast">Alto contraste</option>
-                            </select>
+                <form asp-action="ChangeTeacherPassword" asp-controller="Dashboard" method="post" data-safe-submit>
+                    @Html.AntiForgeryToken()
+                    <div class="account-grid">
+                        <label class="account-field span-2">
+                            <span>Senha atual</span>
+                            <input name="CurrentPassword" type="password" autocomplete="current-password" value="" />
                         </label>
-                        <label class="settings-field">
-                            <span>Densidade</span>
-                            <select data-setting="density">
-                                <option value="comfortable">Confortavel</option>
-                                <option value="compact">Compacta</option>
-                            </select>
+                        <label class="account-field">
+                            <span>Nova senha</span>
+                            <input name="NewPassword" type="password" autocomplete="new-password" value="" />
                         </label>
-                        <label class="settings-field">
-                            <span>Cor de destaque</span>
-                            <select data-setting="accent">
-                                <option value="blue">Azul YourRhythm</option>
-                                <option value="gold">Dourado XP</option>
-                                <option value="green">Verde progresso</option>
-                            </select>
-                        </label>
-                        <label class="settings-field">
-                            <span>Animações</span>
-                            <select data-setting="motion">
-                                <option value="normal">Normais</option>
-                                <option value="reduced">Reduzidas</option>
-                            </select>
+                        <label class="account-field">
+                            <span>Confirmar nova senha</span>
+                            <input name="ConfirmPassword" type="password" autocomplete="new-password" value="" />
                         </label>
                     </div>
-                    <div class="settings-actions">
-                        <button type="submit" class="settings-primary">Salvar aparencia</button>
+                    <div class="account-actions">
+                        <button type="submit" class="account-primary" data-loading-text="Salvando...">Trocar senha</button>
                     </div>
                 </form>
-            </section>
-
-            <section class="settings-section hidden" id="privacy">
-                <div class="settings-section-head">
-                    <div>
-                        <span>Privacidade</span>
-                        <h2>Seguranca e dados</h2>
-                    </div>
-                    <small>Acoes da conta</small>
-                </div>
-
-                <div class="settings-card security-stack">
-                    <div class="security-row">
-                        <div>
-                            <strong>Acesso por magic link</strong>
-                            <small>Sem senha fixa. O link de acesso e enviado ao e-mail da conta.</small>
-                        </div>
-                        <span class="settings-pill">Ativo</span>
-                    </div>
-                    <div class="security-row">
-                        <div>
-                            <strong>Exportar meus dados</strong>
-                            <small>Preparado para uma proxima etapa de privacidade.</small>
-                        </div>
-                        <button type="button" class="settings-secondary" disabled>Em breve</button>
-                    </div>
-                    <div class="security-row danger">
-                        <div>
-                            <strong>Encerrar sessao</strong>
-                            <small>Sair deste dispositivo agora.</small>
-                        </div>
-                        <form asp-controller="Auth" asp-action="Logout" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="settings-danger">Sair</button>
-                        </form>
-                    </div>
-                </div>
             </section>
         </div>
-    </div>
+    }
 </section>
 
 <style>
-.settings-shell {
+.account-page {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: 1180px;
+    max-width: 980px;
 }
-.settings-hero {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 16px;
-    padding: 18px;
+.account-hero,
+.account-card {
     border: 1px solid rgba(107,192,255,.18);
+    background: linear-gradient(135deg, rgba(46,155,255,.10), rgba(9,12,22,.94));
     border-radius: 22px;
-    background: linear-gradient(135deg, rgba(46,155,255,.12), rgba(9,12,22,.92));
 }
-.settings-avatar {
-    width: 58px;
-    height: 58px;
-    border-radius: 16px;
+.account-hero {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 18px;
+}
+.account-photo-preview {
+    width: 72px;
+    height: 72px;
     display: grid;
     place-items: center;
-    font-family: var(--font-display);
-    font-weight: 800;
+    overflow: hidden;
+    border-radius: 22px;
     color: #fff;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
     background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
+    border: 1px solid rgba(107,192,255,.28);
 }
-.settings-hero-copy { min-width: 0; }
-.settings-hero-copy span,
-.settings-section-head span,
-.plan-card span {
+.account-photo-preview.compact {
+    width: 86px;
+    height: 86px;
+    border-radius: 24px;
+}
+.account-photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.account-kicker,
+.account-section-head span {
     display: block;
     color: var(--blue-bright);
     font-size: 10.5px;
@@ -443,442 +260,261 @@
     letter-spacing: .14em;
     text-transform: uppercase;
 }
-.settings-hero-copy h1 {
-    margin: 5px 0 2px;
-    font-family: var(--font-display);
-    font-size: clamp(24px, 4vw, 34px);
-    line-height: 1.05;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.settings-hero-copy p,
-.settings-status span {
-    margin: 0;
-    color: var(--muted);
-    font-size: 13px;
-}
-.settings-status {
-    padding: 10px 14px;
-    border-radius: 16px;
-    background: rgba(255,255,255,.045);
-    border: 1px solid var(--border-soft);
-    text-align: right;
-}
-.settings-status strong {
-    display: block;
-    color: #22D07A;
-    font-family: var(--font-display);
-}
-.settings-layout {
-    display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-}
-.settings-tabs {
-    position: sticky;
-    top: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border-soft);
-    background: linear-gradient(180deg, rgba(16,22,40,.72), rgba(9,12,22,.86));
-}
-.settings-tab {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 12px;
-    border-radius: 14px;
-    color: inherit;
-    text-decoration: none;
-    border: 1px solid transparent;
-}
-.settings-tab span {
-    font-size: 13.5px;
-    font-weight: 700;
-}
-.settings-tab small {
-    color: var(--muted);
-    font-size: 11px;
-}
-.settings-tab.active {
-    border-color: rgba(107,192,255,.24);
-    background: rgba(46,155,255,.10);
-}
-.settings-content,
-.settings-section {
-    min-width: 0;
-}
-.settings-section {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-.settings-section.hidden {
-    display: none;
-}
-.settings-section-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-}
-.settings-section-head h2 {
+.account-hero h1,
+.account-section-head h2 {
     margin: 4px 0 0;
     font-family: var(--font-display);
-    font-size: 22px;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
 }
-.settings-section-head small {
+.account-hero h1 {
+    font-size: clamp(26px, 7vw, 42px);
+}
+.account-hero p {
+    margin: 4px 0 0;
     color: var(--muted);
-    font-size: 12px;
 }
-.settings-card {
+.account-layout {
+    display: grid;
+    gap: 16px;
+}
+.account-card {
     padding: 18px;
-    border-radius: 20px;
-    border: 1px solid var(--border-soft);
-    background: linear-gradient(180deg, rgba(16,22,40,.72), rgba(9,12,22,.86));
 }
-.settings-card h3 {
-    margin: 0 0 14px;
-    font-family: var(--font-display);
-    font-size: 15px;
-}
-.settings-form {
+.account-form,
+.account-form form {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
-.settings-grid {
+.account-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.level-badge {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(46,155,255,.14);
+    border: 1px solid rgba(107,192,255,.28);
+    font-size: 12px;
+}
+.account-photo-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+}
+.account-photo-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.account-photo-actions small {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 12px;
+}
+.account-file-btn,
+.account-check {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+}
+.account-file-btn {
+    padding: 10px 14px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
+    cursor: pointer;
+}
+.account-file-btn input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.account-check {
+    color: var(--muted);
+}
+.account-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--blue-bright);
+}
+.account-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
 }
-.settings-field {
+.account-field {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    min-width: 0;
 }
-.settings-field.span-2,
-.span-2 {
+.account-field.span-2 {
     grid-column: span 2;
 }
-.settings-field span {
+.account-field span {
     color: var(--muted);
     font-size: 12px;
     font-weight: 700;
 }
-.settings-field input,
-.settings-field select,
-.settings-field textarea {
+.account-field input {
     width: 100%;
-    min-width: 0;
     box-sizing: border-box;
+    min-height: 46px;
     padding: 12px 14px;
-    border-radius: 13px;
+    border-radius: 14px;
     border: 1px solid var(--border-soft);
-    background: rgba(255,255,255,.045);
     color: var(--ink);
+    background: rgba(255,255,255,.045);
     font: inherit;
     outline: none;
 }
-.settings-field textarea {
-    resize: vertical;
-}
-.settings-field input:focus,
-.settings-field select:focus,
-.settings-field textarea:focus {
+.account-field input:focus {
     border-color: var(--blue-bright);
+    box-shadow: 0 0 0 3px rgba(46,155,255,.16);
 }
-.settings-field input:disabled {
-    opacity: .55;
-    cursor: not-allowed;
+.account-field input:disabled {
+    color: #c8d3ec;
+    opacity: .78;
 }
-.settings-field small {
+.account-field small,
+.account-field em {
     color: var(--muted);
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: 12px;
+    font-style: normal;
+    line-height: 1.35;
 }
-.settings-actions {
+.account-field em:not(:empty) {
+    color: #ffb0b0;
+}
+.account-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
 }
-.settings-primary,
-.settings-secondary,
-.settings-danger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 10px 16px;
+.account-primary {
+    min-height: 44px;
+    padding: 11px 18px;
+    border: 0;
     border-radius: 999px;
-    border: 1px solid transparent;
-    font: inherit;
-    font-size: 13.5px;
-    font-weight: 800;
-    cursor: pointer;
-    text-decoration: none;
-}
-.settings-primary {
     color: #fff;
     background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
-}
-.settings-secondary {
-    color: var(--ink);
-    background: rgba(255,255,255,.045);
-    border-color: var(--border-soft);
-}
-.settings-secondary:disabled {
-    opacity: .45;
-    cursor: not-allowed;
-}
-.settings-danger {
-    color: #ffb0b0;
-    background: rgba(255,100,100,.08);
-    border-color: rgba(255,100,100,.24);
-}
-.as-link {
-    white-space: nowrap;
-}
-.settings-toggle-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-.settings-toggle,
-.security-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border-soft);
-}
-.settings-toggle:last-child,
-.security-row:last-child {
-    border-bottom: none;
-}
-.settings-toggle {
-    justify-content: flex-start;
+    font: inherit;
+    font-weight: 800;
     cursor: pointer;
 }
-.settings-toggle input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+.account-primary:disabled {
+    opacity: .65;
+    cursor: wait;
 }
-.settings-toggle > span {
-    position: relative;
-    width: 46px;
-    height: 26px;
-    border-radius: 999px;
-    flex-shrink: 0;
-    background: rgba(255,255,255,.11);
-    border: 1px solid var(--border-soft);
-}
-.settings-toggle > span::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform .18s ease;
-}
-.settings-toggle input:checked + span {
-    background: linear-gradient(135deg, var(--blue-bright), var(--blue-deep));
-}
-.settings-toggle input:checked + span::after {
-    transform: translateX(20px);
-}
-.settings-toggle strong,
-.security-row strong {
-    display: block;
-    font-size: 14px;
-}
-.settings-toggle small,
-.security-row small,
-.plan-card p {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.45;
-}
-.plan-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-.plan-card strong {
-    display: block;
-    margin-top: 5px;
-    font-family: var(--font-display);
-    font-size: 20px;
-}
-.settings-pill {
-    flex-shrink: 0;
-    padding: 5px 12px;
-    border-radius: 999px;
-    color: #22D07A;
-    background: rgba(34,208,122,.10);
-    border: 1px solid rgba(34,208,122,.22);
-    font-size: 12px;
-    font-weight: 800;
-}
-.cfg-toast {
-    max-width: 1180px;
-    margin-bottom: 12px;
+.account-feedback {
+    max-width: 980px;
     padding: 12px 16px;
     border-radius: 14px;
-    color: #4ade80;
-    background: rgba(34,197,94,.12);
-    border: 1px solid rgba(34,197,94,.25);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
 }
-
-@@media (max-width: 900px) {
-    .settings-layout {
-        grid-template-columns: 1fr;
+.account-feedback.success {
+    color: #a9f3c8;
+    background: rgba(34,208,122,.10);
+    border: 1px solid rgba(34,208,122,.26);
+}
+.account-feedback.error {
+    color: #ffb0b0;
+    background: rgba(255,100,100,.10);
+    border: 1px solid rgba(255,100,100,.26);
+}
+@@media (min-width: 900px) {
+    .account-layout {
+        grid-template-columns: 1fr 1fr;
     }
-    .settings-tabs {
-        position: sticky;
-        top: 94px;
-        z-index: 50;
-        flex-direction: row;
-        overflow-x: auto;
-        border-radius: 16px;
-        scrollbar-width: none;
-    }
-    .settings-tabs::-webkit-scrollbar {
-        display: none;
-    }
-    .settings-tab {
-        flex: 0 0 auto;
-        min-width: 132px;
+    #profile {
+        grid-column: 1 / -1;
     }
 }
-
 @@media (max-width: 620px) {
-    .settings-shell {
+    .account-page {
         gap: 12px;
     }
-    .settings-hero {
-        grid-template-columns: auto minmax(0, 1fr);
-        padding: 15px;
+    .account-hero,
+    .account-card {
         border-radius: 18px;
     }
-    .settings-status {
-        grid-column: 1 / -1;
-        text-align: left;
+    .account-hero,
+    .account-card {
+        padding: 14px;
     }
-    .settings-grid {
+    .account-photo-preview {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        font-size: 18px;
+    }
+    .account-photo-preview.compact {
+        width: 74px;
+        height: 74px;
+    }
+    .account-photo-row,
+    .account-grid {
         grid-template-columns: 1fr;
     }
-    .settings-field.span-2,
-    .span-2 {
+    .account-field.span-2 {
         grid-column: auto;
     }
-    .settings-card {
-        padding: 15px;
-        border-radius: 18px;
-    }
-    .settings-section-head {
-        align-items: flex-start;
+    .account-section-head {
         flex-direction: column;
     }
-    .settings-actions,
-    .plan-card,
-    .security-row {
-        align-items: stretch;
-        flex-direction: column;
-    }
-    .settings-primary,
-    .settings-secondary,
-    .settings-danger,
-    .as-link {
+    .account-photo-actions,
+    .account-actions,
+    .account-primary,
+    .account-file-btn {
         width: 100%;
-    }
-    .settings-tabs {
-        top: 92px;
-        margin-left: -2px;
-        margin-right: -2px;
-        padding: 8px;
-    }
-    .settings-tab {
-        min-width: 118px;
-        padding: 10px;
     }
 }
 </style>
 
 <script>
 (function () {
-    var tabs = document.querySelectorAll('.settings-tab[data-section]');
-    var sections = document.querySelectorAll('.settings-section');
-
-    function activate(id) {
-        tabs.forEach(function (tab) {
-            tab.classList.toggle('active', tab.dataset.section === id);
-        });
-        sections.forEach(function (section) {
-            section.classList.toggle('hidden', section.id !== id);
-        });
-        history.replaceState(null, '', '#' + id);
-    }
-
-    tabs.forEach(function (tab) {
-        tab.addEventListener('click', function (event) {
-            event.preventDefault();
-            activate(tab.dataset.section);
+    document.querySelectorAll('[data-photo-input]').forEach(function (input) {
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+            var form = input.closest('form') || document;
+            var preview = form.querySelector('[data-photo-preview]');
+            if (!preview) return;
+            var img = document.createElement('img');
+            img.alt = 'Previa da foto selecionada';
+            img.src = URL.createObjectURL(file);
+            preview.replaceChildren(img);
         });
     });
 
-    var hash = location.hash.replace('#', '');
-    if (hash && document.getElementById(hash)) {
-        activate(hash);
-    }
-
-    function key(scope, name) {
-        return 'yourrhythm.settings.' + scope + '.' + name;
-    }
-
-    document.querySelectorAll('.local-settings-form').forEach(function (form) {
-        var scope = form.dataset.scope || 'default';
-        form.querySelectorAll('[data-setting]').forEach(function (field) {
-            var saved = localStorage.getItem(key(scope, field.dataset.setting));
-            if (saved !== null) {
-                if (field.type === 'checkbox') {
-                    field.checked = saved === 'true';
-                } else {
-                    field.value = saved;
-                }
-            }
-            field.addEventListener('change', function () {
-                localStorage.setItem(key(scope, field.dataset.setting), field.type === 'checkbox' ? field.checked : field.value);
-            });
-        });
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-            form.querySelectorAll('[data-setting]').forEach(function (field) {
-                localStorage.setItem(key(scope, field.dataset.setting), field.type === 'checkbox' ? field.checked : field.value);
-            });
+    document.querySelectorAll('[data-safe-submit]').forEach(function (form) {
+        form.addEventListener('submit', function () {
             var button = form.querySelector('button[type="submit"]');
-            if (!button) return;
-            var original = button.textContent;
-            button.textContent = 'Salvo';
-            window.setTimeout(function () { button.textContent = original; }, 1400);
+            if (!button || button.disabled) return;
+            button.dataset.originalText = button.textContent || '';
+            button.textContent = button.dataset.loadingText || 'Salvando...';
+            button.disabled = true;
         });
     });
 }());
 </script>
+
+@functions {
+    private static string Initials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray();
+        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
+    }
+}

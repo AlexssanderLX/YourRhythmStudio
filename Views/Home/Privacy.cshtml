@@ -1,6 +1,549 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    ViewData["Title"] = "Política de Privacidade";
+    Layout = "_LandingLayout";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<style>
+.priv-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+    color: var(--ink, #e2e8f0);
+}
+
+.priv-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent, #3B82F6);
+    margin-bottom: 16px;
+}
+
+.priv-title {
+    font-family: var(--font-display, 'Oswald', sans-serif);
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    color: var(--ink, #f1f5f9);
+}
+
+.priv-subtitle {
+    font-size: 16px;
+    color: var(--muted, #94a3b8);
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+.priv-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    font-size: 12px;
+    color: var(--muted, #64748b);
+    padding: 16px 0;
+    border-top: 1px solid var(--border-soft, rgba(255,255,255,.08));
+    border-bottom: 1px solid var(--border-soft, rgba(255,255,255,.08));
+    margin-bottom: 56px;
+}
+
+.priv-meta strong { color: var(--ink-soft, #cbd5e1); }
+
+.priv-section {
+    margin-bottom: 52px;
+}
+
+.priv-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent, #3B82F6);
+    margin-bottom: 6px;
+}
+
+.priv-section h2 {
+    font-family: var(--font-display, 'Oswald', sans-serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink, #f1f5f9);
+    margin-bottom: 16px;
+    line-height: 1.2;
+}
+
+.priv-section p {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--ink-soft, #cbd5e1);
+    margin-bottom: 12px;
+}
+
+.priv-section p:last-child { margin-bottom: 0; }
+
+.priv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.priv-table th {
+    background: rgba(255,255,255,.05);
+    color: var(--muted, #94a3b8);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-soft, rgba(255,255,255,.08));
+}
+
+.priv-table td {
+    padding: 10px 14px;
+    color: var(--ink-soft, #cbd5e1);
+    border-bottom: 1px solid var(--border-soft, rgba(255,255,255,.06));
+    vertical-align: top;
+}
+
+.priv-table tr:last-child td { border-bottom: none; }
+.priv-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+.priv-base {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.priv-base-item {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft, rgba(255,255,255,.08));
+}
+
+.priv-base-item strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent, #3B82F6);
+    margin-bottom: 6px;
+}
+
+.priv-base-item p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted, #94a3b8);
+    line-height: 1.6;
+}
+
+.priv-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.priv-list li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-soft, #cbd5e1);
+    padding-left: 20px;
+    position: relative;
+}
+
+.priv-list li::before {
+    content: '·';
+    position: absolute;
+    left: 6px;
+    color: var(--accent, #3B82F6);
+    font-weight: 700;
+}
+
+.priv-security-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.priv-sec-card {
+    padding: 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft, rgba(255,255,255,.08));
+}
+
+.priv-sec-card .icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.priv-sec-card strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink, #f1f5f9);
+    margin-bottom: 4px;
+}
+
+.priv-sec-card span {
+    font-size: 12px;
+    color: var(--muted, #94a3b8);
+    line-height: 1.5;
+}
+
+.priv-rights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.priv-right {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft, rgba(255,255,255,.08));
+}
+
+.priv-right .icon { font-size: 18px; margin-bottom: 6px; display: block; }
+.priv-right strong { display: block; font-size: 13px; font-weight: 600; color: var(--ink, #f1f5f9); margin-bottom: 4px; }
+.priv-right span { font-size: 12px; color: var(--muted, #94a3b8); line-height: 1.5; }
+
+.priv-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.priv-contact-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft, rgba(255,255,255,.08));
+}
+
+.priv-contact-card .icon { font-size: 20px; flex-shrink: 0; }
+.priv-contact-card strong { display: block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #94a3b8); margin-bottom: 4px; }
+.priv-contact-card a, .priv-contact-card span { font-size: 13px; color: var(--ink-soft, #cbd5e1); word-break: break-all; text-decoration: none; }
+.priv-contact-card a:hover { color: var(--accent, #3B82F6); }
+
+.priv-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted, #94a3b8);
+    text-decoration: none;
+    margin-bottom: 40px;
+    transition: color .15s;
+}
+.priv-back:hover { color: var(--ink, #f1f5f9); }
+.priv-back svg { flex-shrink: 0; }
+
+@@media (max-width: 600px) {
+    .priv-security-grid,
+    .priv-rights-grid,
+    .priv-contact-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="priv-wrap">
+    <a href="@Url.Action("Index","Home")" class="priv-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+        Início
+    </a>
+
+    <div class="priv-eyebrow">LGPD · LEI 13.709/2018</div>
+    <div class="priv-title">Política de Privacidade</div>
+    <div class="priv-subtitle">Transparência total sobre como tratamos seus dados.<br>Seus direitos são nossa responsabilidade.</div>
+
+    <div class="priv-meta">
+        <span>Versão: <strong>1.0</strong></span>
+        <span>Vigência: <strong>julho de 2026</strong></span>
+        <span>Controlador: <strong>YourRhythm</strong></span>
+    </div>
+
+    @* 01 *@
+    <div class="priv-section">
+        <div class="priv-num">01</div>
+        <h2>Quem somos</h2>
+        <p>
+            O YourRhythm é uma plataforma de gestão de ensino musical desenvolvida e operada por
+            Alexssander Ferreira de Almeida, com sede no Brasil. Atuamos como controlador dos dados
+            de professores e alunos que se cadastram diretamente na plataforma.
+        </p>
+        <p>
+            Os dados pedagógicos inseridos pelo professor (lições, tarefas, repertório, habilidades e
+            avaliações) são de responsabilidade do próprio professor, que atua como controlador
+            independente em relação aos seus alunos. Nós processamos esses dados como operador,
+            conforme as instruções do professor.
+        </p>
+    </div>
+
+    @* 02 *@
+    <div class="priv-section">
+        <div class="priv-num">02</div>
+        <h2>Dados que coletamos</h2>
+        <table class="priv-table">
+            <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th>Exemplos</th>
+                    <th>Origem</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Identificação</td>
+                    <td>Nome, e-mail</td>
+                    <td>Cadastro</td>
+                </tr>
+                <tr>
+                    <td>Acesso</td>
+                    <td>Senha (hash), IP, dispositivo</td>
+                    <td>Login</td>
+                </tr>
+                <tr>
+                    <td>Perfil pedagógico</td>
+                    <td>Instrumento, nível, observações do professor</td>
+                    <td>Configuração pelo professor</td>
+                </tr>
+                <tr>
+                    <td>Atividade musical</td>
+                    <td>Tarefas, lições, repertório, habilidades, XP, nível</td>
+                    <td>Uso da plataforma</td>
+                </tr>
+                <tr>
+                    <td>Feedback</td>
+                    <td>Anotações e feedbacks do professor ao aluno</td>
+                    <td>Professor</td>
+                </tr>
+                <tr>
+                    <td>Técnico</td>
+                    <td>Logs de erro, horários de acesso, versão do app</td>
+                    <td>Automático</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            Não coletamos dados sensíveis (origem racial, saúde, biometria, dados religiosos ou políticos)
+            nem dados financeiros. O YourRhythm não processa pagamentos diretamente.
+        </p>
+    </div>
+
+    @* 03 *@
+    <div class="priv-section">
+        <div class="priv-num">03</div>
+        <h2>Finalidade e base legal</h2>
+        <div class="priv-base">
+            <div class="priv-base-item">
+                <strong>Execução de contrato</strong>
+                <p>Criar e manter contas de professor e aluno, registrar o progresso pedagógico e operar todos os módulos da plataforma (tarefas, lições, repertório, habilidades e progressão de nível).</p>
+            </div>
+            <div class="priv-base-item">
+                <strong>Interesse legítimo</strong>
+                <p>Garantir a segurança da plataforma, prevenir fraudes, monitorar a estabilidade do sistema e melhorar a experiência com base em uso agregado e anônimo.</p>
+            </div>
+            <div class="priv-base-item">
+                <strong>Obrigação legal</strong>
+                <p>Cumprir determinações de autoridades públicas, ordens judiciais ou regulação aplicável.</p>
+            </div>
+            <div class="priv-base-item">
+                <strong>Consentimento</strong>
+                <p>Para comunicações opcionais, como novidades sobre a plataforma e atualizações pedagógicas (revogável a qualquer momento).</p>
+            </div>
+        </div>
+    </div>
+
+    @* 04 *@
+    <div class="priv-section">
+        <div class="priv-num">04</div>
+        <h2>Compartilhamento de dados</h2>
+        <p>Seus dados não são vendidos. Compartilhamos apenas quando necessário para operar o serviço:</p>
+        <ul class="priv-list">
+            <li><strong>Provedor de hospedagem (VPS)</strong> — armazenamento dos dados em servidor dedicado no Brasil.</li>
+            <li><strong>Autoridades públicas</strong> — quando exigido por lei, ordem judicial ou regulação aplicável.</li>
+        </ul>
+        <p style="margin-top:14px">
+            Todos os terceiros são contratualmente obrigados a proteger seus dados e a utilizá-los
+            apenas para a finalidade específica para a qual foram compartilhados.
+        </p>
+    </div>
+
+    @* 05 *@
+    <div class="priv-section">
+        <div class="priv-num">05</div>
+        <h2>Armazenamento e segurança</h2>
+        <div class="priv-security-grid">
+            <div class="priv-sec-card">
+                <span class="icon">🔐</span>
+                <strong>Criptografia em trânsito</strong>
+                <span>TLS 1.2+ em todas as conexões entre cliente e servidor.</span>
+            </div>
+            <div class="priv-sec-card">
+                <span class="icon">🔑</span>
+                <strong>Senhas com hash</strong>
+                <span>Nenhuma senha é armazenada em texto plano. Utilizamos hash seguro com salt.</span>
+            </div>
+            <div class="priv-sec-card">
+                <span class="icon">🛡</span>
+                <strong>Controle de acesso</strong>
+                <span>Professor acessa apenas os dados dos seus alunos. Aluno acessa apenas o próprio perfil.</span>
+            </div>
+            <div class="priv-sec-card">
+                <span class="icon">🌐</span>
+                <strong>Servidor no Brasil</strong>
+                <span>Dados hospedados em VPS dedicado com acesso restrito via SSH.</span>
+            </div>
+        </div>
+    </div>
+
+    @* 06 *@
+    <div class="priv-section">
+        <div class="priv-num">06</div>
+        <h2>Retenção de dados</h2>
+        <p>Mantemos seus dados enquanto a conta estiver ativa ou pelo período necessário para cumprir obrigações legais.</p>
+        <ul class="priv-list">
+            <li><strong>Dados de conta:</strong> mantidos durante a vigência do uso e por até 5 anos após o encerramento (obrigação legal).</li>
+            <li><strong>Dados pedagógicos</strong> (tarefas, lições, repertório): mantidos enquanto a conta estiver ativa; exportáveis a pedido.</li>
+            <li><strong>Logs de acesso:</strong> retidos por 6 meses para fins de segurança e auditoria.</li>
+            <li><strong>Após solicitação de exclusão:</strong> eliminamos os dados em até 30 dias, exceto os que tenhamos obrigação legal de manter.</li>
+        </ul>
+    </div>
+
+    @* 07 *@
+    <div class="priv-section">
+        <div class="priv-num">07</div>
+        <h2>Seus direitos garantidos pela LGPD</h2>
+        <p>
+            A Lei Geral de Proteção de Dados (Lei 13.709/2018) garante a você os seguintes direitos.
+            Para exercer qualquer um deles, entre em contato conosco. Respondemos em até 15 dias úteis.
+        </p>
+        <div class="priv-rights-grid">
+            <div class="priv-right">
+                <span class="icon">👁</span>
+                <strong>Acesso</strong>
+                <span>Saber quais dados temos sobre você e como os usamos.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">✏️</span>
+                <strong>Retificação</strong>
+                <span>Corrigir dados incompletos, inexatos ou desatualizados.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">🗑</span>
+                <strong>Eliminação</strong>
+                <span>Pedir a exclusão de dados tratados com base em consentimento.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">📦</span>
+                <strong>Portabilidade</strong>
+                <span>Receber seus dados em formato estruturado e transferível.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">ℹ️</span>
+                <strong>Informação</strong>
+                <span>Saber com quais entidades compartilhamos seus dados.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">🚫</span>
+                <strong>Oposição</strong>
+                <span>Opor-se a tratamento que viola a legislação vigente.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">🔓</span>
+                <strong>Revogação</strong>
+                <span>Retirar o consentimento dado anteriormente a qualquer momento.</span>
+            </div>
+            <div class="priv-right">
+                <span class="icon">⚖️</span>
+                <strong>Petição</strong>
+                <span>Peticionar à ANPD contra o controlador de seus dados.</span>
+            </div>
+        </div>
+    </div>
+
+    @* 08 *@
+    <div class="priv-section">
+        <div class="priv-num">08</div>
+        <h2>Cookies e tecnologias similares</h2>
+        <p>Utilizamos apenas cookies técnicos e essenciais:</p>
+        <ul class="priv-list">
+            <li><strong>Cookie de sessão:</strong> mantém seu login ativo durante o uso do painel. Expirado ao fechar o navegador ou após inatividade.</li>
+            <li><strong>Token de autenticação:</strong> armazenado em cookie HttpOnly com flag Secure para prevenir acesso via JavaScript.</li>
+        </ul>
+        <p style="margin-top:12px">
+            Não utilizamos cookies de rastreamento, analytics de terceiros, pixels de redes sociais
+            ou qualquer tecnologia de perfilamento comportamental.
+        </p>
+    </div>
+
+    @* 09 *@
+    <div class="priv-section">
+        <div class="priv-num">09</div>
+        <h2>Menores de idade</h2>
+        <p>
+            O YourRhythm pode ser utilizado por alunos menores de 18 anos exclusivamente mediante
+            cadastro realizado pelo professor responsável, com ciência dos pais ou responsáveis legais.
+            Não coletamos dados diretamente de menores sem essa intermediação. Caso identifiquemos
+            coleta inadequada, procederemos com a eliminação imediata dos dados e notificaremos
+            o professor vinculado.
+        </p>
+    </div>
+
+    @* 10 *@
+    <div class="priv-section">
+        <div class="priv-num">10</div>
+        <h2>Alterações nesta política</h2>
+        <p>
+            Podemos atualizar esta política periodicamente. Alterações relevantes serão comunicadas
+            por e-mail ou por aviso visível na plataforma com antecedência mínima de 15 dias.
+            O uso continuado após a vigência da nova versão implica aceite dos termos atualizados.
+        </p>
+        <p>O histórico de versões ficará disponível para consulta mediante solicitação.</p>
+    </div>
+
+    @* 11 *@
+    <div class="priv-section">
+        <div class="priv-num">11</div>
+        <h2>Contato e Encarregado de Dados</h2>
+        <p>Para solicitações relacionadas à privacidade, exercício de direitos ou dúvidas sobre esta política, entre em contato:</p>
+        <div class="priv-contact-grid">
+            <div class="priv-contact-card">
+                <span class="icon">✉️</span>
+                <div>
+                    <strong>E-mail</strong>
+                    <a href="mailto:alexssander.f.almeida2006@@gmail.com">alexssander.f.almeida2006@@gmail.com</a>
+                </div>
+            </div>
+            <div class="priv-contact-card">
+                <span class="icon">💬</span>
+                <div>
+                    <strong>WhatsApp</strong>
+                    <a href="https://wa.me/5511977936534" target="_blank" rel="noopener">+55 11 97793-6534</a>
+                </div>
+            </div>
+            <div class="priv-contact-card">
+                <span class="icon">🏢</span>
+                <div>
+                    <strong>Autoridade Nacional</strong>
+                    <a href="https://www.gov.br/anpd" target="_blank" rel="noopener">ANPD — gov.br/anpd</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

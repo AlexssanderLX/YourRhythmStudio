@@ -1,3 +1,5 @@
+@inject YourRhythmStudio.Application.Users.IUserProfileResolver DashboardProfileResolver
+@inject YourRhythmStudio.Application.Users.SettingsService DashboardSettingsService
 @{
     var displayName = User.Identity?.Name ?? "Usuário";
     var role = (ViewData["Role"] as string) ?? "school";
@@ -57,6 +59,23 @@
     var settingsUrl = Url.Action("Settings", "Dashboard")!;
     var isSettings  = currentAction == "settings";
     var hideDashTopbar = ViewData["HideDashTopbar"] as bool? == true;
+    string? dashboardPhotoUrl = null;
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        try
+        {
+            var dashboardProfile = await DashboardProfileResolver.ResolveCurrentAsync(User);
+            if (dashboardProfile.SchoolUserId is Guid schoolUserId)
+            {
+                var dashboardAccount = await DashboardSettingsService.GetAccountAsync(schoolUserId);
+                dashboardPhotoUrl = dashboardAccount?.ProfilePhotoUrl;
+            }
+        }
+        catch
+        {
+            dashboardPhotoUrl = null;
+        }
+    }
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -109,7 +128,16 @@
                 </a>
                 <div class="mob-actions">
                     <a href="@settingsUrl" class="mob-avatar-btn @(isSettings ? "mob-avatar-active" : "")" title="Configurações" aria-label="Configurações">
-                        <div class="dash-avatar mob-avatar">@initials</div>
+                        <div class="dash-avatar mob-avatar">
+                            @if (!string.IsNullOrWhiteSpace(dashboardPhotoUrl))
+                            {
+                                <img src="@dashboardPhotoUrl" alt="Foto de perfil de @displayName" />
+                            }
+                            else
+                            {
+                                @initials
+                            }
+                        </div>
                     </a>
                 </div>
             </div>
@@ -134,7 +162,16 @@
 
             
             <a href="@settingsUrl" class="dash-user @(isSettings ? "dash-user-active" : "")" title="Configurações">
-                <div class="dash-avatar">@initials</div>
+                <div class="dash-avatar">
+                    @if (!string.IsNullOrWhiteSpace(dashboardPhotoUrl))
+                    {
+                        <img src="@dashboardPhotoUrl" alt="Foto de perfil de @displayName" />
+                    }
+                    else
+                    {
+                        @initials
+                    }
+                </div>
                 <div class="dash-user-meta">
                     <strong>@displayName</strong>
                     <span>@roleLabel</span>
