@@ -33,23 +33,76 @@
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
-    // --- Mobile nav hamburger ---
-    var hamburger = document.getElementById("navHamburger");
-    var mobileNav = document.getElementById("navMobile");
-    if (hamburger && mobileNav) {
-        hamburger.addEventListener("click", function () {
-            var open = mobileNav.classList.toggle("open");
-            hamburger.setAttribute("aria-expanded", open ? "true" : "false");
-            hamburger.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
-        });
-        mobileNav.querySelectorAll("a").forEach(function (a) {
-            a.addEventListener("click", function () {
-                mobileNav.classList.remove("open");
-                hamburger.setAttribute("aria-expanded", "false");
-                hamburger.setAttribute("aria-label", "Abrir menu");
+    // --- Mobile nav drawer ---
+    (function () {
+        var hamburger = document.getElementById("navHamburger");
+        var mobileNav  = document.getElementById("navMobile");
+        var backdrop   = document.getElementById("navMobileBackdrop");
+        var closeBtn   = document.getElementById("navMobileClose");
+        if (!hamburger || !mobileNav) return;
+
+        var isOpen = false;
+
+        function focusable(container) {
+            return Array.from(container.querySelectorAll(
+                'a[href]:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )).filter(function (el) {
+                return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
             });
+        }
+
+        function openMenu() {
+            if (isOpen) return;
+            isOpen = true;
+            mobileNav.classList.add("open");
+            mobileNav.removeAttribute("aria-hidden");
+            if (backdrop) backdrop.classList.add("open");
+            hamburger.setAttribute("aria-expanded", "true");
+            hamburger.setAttribute("aria-label", "Fechar menu");
+            document.body.classList.add("nav-open");
+            // Focus first item (close button)
+            var first = focusable(mobileNav)[0];
+            if (first) setTimeout(function () { first.focus(); }, 30);
+            document.addEventListener("keydown", onKey);
+        }
+
+        function closeMenu() {
+            if (!isOpen) return;
+            isOpen = false;
+            mobileNav.classList.remove("open");
+            mobileNav.setAttribute("aria-hidden", "true");
+            if (backdrop) backdrop.classList.remove("open");
+            hamburger.setAttribute("aria-expanded", "false");
+            hamburger.setAttribute("aria-label", "Abrir menu");
+            document.body.classList.remove("nav-open");
+            hamburger.focus();
+            document.removeEventListener("keydown", onKey);
+        }
+
+        function onKey(e) {
+            if (e.key === "Escape") { closeMenu(); return; }
+            if (e.key !== "Tab") return;
+            var items = focusable(mobileNav);
+            if (!items.length) return;
+            var first = items[0], last = items[items.length - 1];
+            if (e.shiftKey) {
+                if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+            } else {
+                if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
+        }
+
+        hamburger.addEventListener("click", function () {
+            if (isOpen) closeMenu(); else openMenu();
         });
-    }
+        if (closeBtn) closeBtn.addEventListener("click", closeMenu);
+        if (backdrop) backdrop.addEventListener("click", closeMenu);
+
+        // Close on any anchor link click inside the menu (navigates or scrolls)
+        mobileNav.addEventListener("click", function (e) {
+            if (e.target.closest("a[href]")) closeMenu();
+        });
+    })();
 
     // --- Playable mini digital piano ---
     (function () {
