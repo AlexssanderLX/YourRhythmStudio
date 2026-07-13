@@ -9,7 +9,6 @@ using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Learning.Enums;
 using YourRhythmStudio.ViewModels.Learning;
-using YourRhythmStudio.ViewModels.Learning;
 
 namespace YourRhythmStudio.Controllers;
 
