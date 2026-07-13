@@ -28,6 +28,8 @@ public class DashboardController : Controller
         var role = CurrentRole();
         return role switch
         {
+            YourRhythmRoles.RootAdmin => RedirectToAction("Index", "Root"),
+            YourRhythmRoles.PlatformAdmin => RedirectToAction("Index", "Root"),
             YourRhythmRoles.Student => RedirectToAction("Dashboard", "Student"),
             YourRhythmRoles.Teacher => RedirectToAction("Dashboard", "Teacher"),
             _ => RedirectToAction("Index", "Home"),
