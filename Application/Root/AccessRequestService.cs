@@ -25,6 +25,15 @@ public sealed class AccessRequestService
         _logger = logger;
     }
 
+    private async Task<string?> GetNotificationRecipientAsync(CancellationToken ct)
+    {
+        // Prioridade: 1. DB settings  2. Config/env var
+        var setting = await _db.AdminSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Key == AdminSettingKeys.NotificationRecipient, ct);
+        if (!string.IsNullOrWhiteSpace(setting?.Value)) return setting.Value;
+        return _config["Email:AdminNotificationRecipient"];
+    }
+
     public async Task<bool> SubmitAsync(RegisterViewModel model, CancellationToken ct = default)
     {
         var emailNorm = model.Email.Trim().ToLowerInvariant();
@@ -59,10 +68,10 @@ public sealed class AccessRequestService
 
     private async Task SendNotificationAsync(AccessRequest request, CancellationToken ct)
     {
-        var recipient = _config["Email:AdminNotificationRecipient"];
+        var recipient = await GetNotificationRecipientAsync(ct);
         if (string.IsNullOrWhiteSpace(recipient))
         {
-            _logger.LogWarning("Email:AdminNotificationRecipient nao configurado. Notificacao de solicitacao nao enviada.");
+            _logger.LogWarning("Destinatario de notificacao nao configurado. Configure em /Root/Settings ou Email:AdminNotificationRecipient.");
             return;
         }
 

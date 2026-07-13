@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Foundation.Access.Abstractions;
 using Foundation.Access.Accounts;
@@ -10,47 +12,32 @@ namespace YourRhythmStudio.Infrastructure.Root;
 
 public static class RootBootstrap
 {
+    // Email interno fixo para a conta root (o admin pode alterar depois no painel)
+    public const string RootEmail = "ROOT@YOURRHYTHM.LOCAL";
+
     public static async Task EnsureRootAccountAsync(IServiceProvider services, CancellationToken ct = default)
     {
-        var config = services.GetRequiredService<IConfiguration>();
-        var rootEmail = config["YOURRHYTHM_ROOT_EMAIL"] ?? Environment.GetEnvironmentVariable("YOURRHYTHM_ROOT_EMAIL");
-        var rootPassword = config["YOURRHYTHM_ROOT_PASSWORD"] ?? Environment.GetEnvironmentVariable("YOURRHYTHM_ROOT_PASSWORD");
-        var rootName = config["YOURRHYTHM_ROOT_DISPLAY_NAME"]
-                       ?? Environment.GetEnvironmentVariable("YOURRHYTHM_ROOT_DISPLAY_NAME")
-                       ?? "Root Admin";
+        using var scope = services.CreateScope();
+        var sp = scope.ServiceProvider;
+        var accountStore = sp.GetRequiredService<IAccountStore>();
+        var hasher = sp.GetRequiredService<IPasswordHasher>();
+        var clock = sp.GetRequiredService<IClock>();
+        var logger = sp.GetRequiredService<ILogger<IAccountStore>>();
 
-        if (string.IsNullOrWhiteSpace(rootEmail) || string.IsNullOrWhiteSpace(rootPassword))
-        {
-            var logger = services.GetRequiredService<ILogger<IAccountStore>>();
-            logger.LogWarning("Conta Root nao configurada. Defina YOURRHYTHM_ROOT_EMAIL e YOURRHYTHM_ROOT_PASSWORD para criar a conta Root.");
-            return;
-        }
+        var existing = await accountStore.FindByEmailAsync(RootEmail, ct);
+        if (existing is not null) return;
 
-        var accountStore = services.GetRequiredService<IAccountStore>();
-        var hasher = services.GetRequiredService<IPasswordHasher>();
-        var clock = services.GetRequiredService<IClock>();
-
-        var emailNorm = rootEmail.Trim().ToUpperInvariant();
-        var existing = await accountStore.FindByEmailAsync(emailNorm, ct);
-
-        if (existing is not null)
-        {
-            if (existing.PlatformRole != PlatformAccessRole.PlatformAdmin)
-            {
-                var logger = services.GetRequiredService<ILogger<IAccountStore>>();
-                logger.LogWarning("Conta {Email} existe mas nao e PlatformAdmin. Bootstrap Root ignorado.", rootEmail);
-            }
-            return;
-        }
-
+        // Gera senha segura aleatória — exibida uma única vez no log
+        var password = GeneratePassword();
         var now = clock.UtcNow;
+
         var account = new Account
         {
-            DisplayName = rootName,
-            Email = emailNorm,
+            DisplayName = "Root Admin",
+            Email = RootEmail,
             Status = AccountStatus.Active,
             PlatformRole = PlatformAccessRole.PlatformAdmin,
-            PasswordCredential = hasher.HashPassword(rootPassword),
+            PasswordCredential = hasher.HashPassword(password),
             CreatedAtUtc = now,
             ActivatedAtUtc = now,
             SecurityStamp = Guid.NewGuid().ToString("N")
@@ -58,8 +45,22 @@ public static class RootBootstrap
 
         await accountStore.SaveAsync(account, ct);
 
-        var logger2 = services.GetRequiredService<ILogger<IAccountStore>>();
-        logger2.LogInformation("Conta Root criada com sucesso para {Email}.", rootEmail);
+        // Salva em arquivo local (não versionado)
+        await WriteCredentialsFileAsync(password);
+
+        logger.LogWarning(
+            "\n" +
+            "╔══════════════════════════════════════════════════════╗\n" +
+            "║         CONTA ROOT CRIADA — SALVE ESTAS CREDENCIAIS  ║\n" +
+            "╠══════════════════════════════════════════════════════╣\n" +
+            "║  Login : root@yourrhythm.local                       ║\n" +
+            "║  Senha : {Password,-52}║\n" +
+            "╠══════════════════════════════════════════════════════╣\n" +
+            "║  Estas credenciais aparecem UMA ÚNICA VEZ.           ║\n" +
+            "║  Salvas também em: root-credentials.txt              ║\n" +
+            "║  Altere-as em /Root/Settings após o primeiro login.  ║\n" +
+            "╚══════════════════════════════════════════════════════╝",
+            password);
     }
 
     public static async Task EnsureDefaultPlansAsync(IServiceProvider services, CancellationToken ct = default)
@@ -93,5 +94,60 @@ public static class RootBootstrap
             });
 
         await db.SaveChangesAsync(ct);
+    }
+
+    private static string GeneratePassword()
+    {
+        const string lower = "abcdefghjkmnpqrstuvwxyz";
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string digits = "23456789";
+        const string special = "@#$!%&*";
+        const string all = lower + upper + digits + special;
+
+        var bytes = RandomNumberGenerator.GetBytes(20);
+        var sb = new StringBuilder();
+
+        // Garante pelo menos um de cada categoria
+        sb.Append(lower[bytes[0] % lower.Length]);
+        sb.Append(upper[bytes[1] % upper.Length]);
+        sb.Append(digits[bytes[2] % digits.Length]);
+        sb.Append(special[bytes[3] % special.Length]);
+
+        for (int i = 4; i < 16; i++)
+            sb.Append(all[bytes[i] % all.Length]);
+
+        // Embaralha
+        var chars = sb.ToString().ToCharArray();
+        var shuffleBytes = RandomNumberGenerator.GetBytes(chars.Length);
+        for (int i = chars.Length - 1; i > 0; i--)
+        {
+            int j = shuffleBytes[i] % (i + 1);
+            (chars[i], chars[j]) = (chars[j], chars[i]);
+        }
+
+        return new string(chars);
+    }
+
+    private static async Task WriteCredentialsFileAsync(string password)
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "root-credentials.txt");
+            await File.WriteAllTextAsync(path,
+                $"""
+                YourRhythm Studio — Credenciais iniciais da conta Root
+                Geradas em: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC
+
+                Login : root@yourrhythm.local
+                Senha : {password}
+
+                Altere estas credenciais em /Root/Settings apos o primeiro login.
+                Exclua este arquivo depois de salvar as credenciais em local seguro.
+                """);
+        }
+        catch
+        {
+            // Se nao conseguir gravar o arquivo, as credenciais ainda aparecem no log
+        }
     }
 }

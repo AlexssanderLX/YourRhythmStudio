@@ -48,6 +48,8 @@ public sealed class YourRhythmDbContext : DbContext
 
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
+    public DbSet<AdminSetting> AdminSettings => Set<AdminSetting>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -429,6 +431,14 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(l => l.Notes).HasMaxLength(500);
             entity.HasIndex(l => l.ActorAccountId);
             entity.HasIndex(l => new { l.TargetType, l.TargetId });
+        });
+
+        modelBuilder.Entity<AdminSetting>(entity =>
+        {
+            entity.ToTable("admin_settings");
+            entity.HasKey(s => s.Key);
+            entity.Property(s => s.Key).HasMaxLength(80).IsRequired();
+            entity.Property(s => s.Value).HasMaxLength(500);
         });
     }
 }

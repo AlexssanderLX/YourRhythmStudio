@@ -226,6 +226,40 @@ public sealed class UpsertPlanViewModel
     public bool IsActive { get; set; } = true;
 }
 
+// ──── Settings ─────────────────────────────────────────────────────────────────
+
+public sealed class RootSettingsViewModel
+{
+    public string CurrentEmail { get; set; } = string.Empty;
+    public string NotificationRecipient { get; set; } = string.Empty;
+}
+
+public sealed class UpdateRootCredentialsViewModel
+{
+    [Required(ErrorMessage = "Informe o e-mail.")]
+    [EmailAddress]
+    [Display(Name = "E-mail de login")]
+    public string NewEmail { get; set; } = string.Empty;
+
+    [DataType(DataType.Password)]
+    [MinLength(8, ErrorMessage = "Minimo 8 caracteres.")]
+    [Display(Name = "Nova senha (deixe em branco para manter)")]
+    public string? NewPassword { get; set; }
+
+    [Required(ErrorMessage = "Confirme sua senha atual.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Senha atual")]
+    public string CurrentPassword { get; set; } = string.Empty;
+}
+
+public sealed class UpdateNotificationRecipientViewModel
+{
+    [Required(ErrorMessage = "Informe o e-mail de destino.")]
+    [EmailAddress]
+    [Display(Name = "E-mail destinatario das notificacoes")]
+    public string Recipient { get; set; } = string.Empty;
+}
+
 // ──── Storage ──────────────────────────────────────────────────────────────────
 
 public sealed class StorageOverviewViewModel

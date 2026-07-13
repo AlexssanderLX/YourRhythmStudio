@@ -661,6 +661,88 @@ public sealed class RootAdminService
         return (true, null);
     }
 
+    // ──── Admin Settings ───────────────────────────────────────────────────────
+
+    public async Task<string?> GetSettingAsync(string key, CancellationToken ct = default)
+    {
+        var setting = await _db.AdminSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, ct);
+        return setting?.Value;
+    }
+
+    public async Task SaveSettingAsync(string key, string? value, CancellationToken ct = default)
+    {
+        var setting = await _db.AdminSettings.FirstOrDefaultAsync(s => s.Key == key, ct);
+        if (setting is null)
+        {
+            _db.AdminSettings.Add(new Domain.Root.AdminSetting { Key = key, Value = value, UpdatedAtUtc = _clock.UtcNow });
+        }
+        else
+        {
+            setting.Value = value;
+            setting.UpdatedAtUtc = _clock.UtcNow;
+        }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<RootSettingsViewModel> GetSettingsViewModelAsync(Guid rootAccountId, CancellationToken ct = default)
+    {
+        var account = await _accountStore.FindByIdAsync(rootAccountId, ct);
+        var recipient = await GetSettingAsync(AdminSettingKeys.NotificationRecipient, ct);
+
+        return new RootSettingsViewModel
+        {
+            CurrentEmail = account?.Email.ToLowerInvariant() ?? string.Empty,
+            NotificationRecipient = recipient ?? string.Empty
+        };
+    }
+
+    public async Task<(bool Success, string? Error)> UpdateRootCredentialsAsync(
+        Guid rootAccountId, string newEmail, string? newPassword, string currentPassword, CancellationToken ct = default)
+    {
+        var account = await _accountStore.FindByIdAsync(rootAccountId, ct);
+        if (account is null) return (false, "Conta Root nao encontrada.");
+
+        // Verifica senha atual
+        if (!_passwordHasher.Verify(currentPassword, account.PasswordCredential).IsSuccess)
+            return (false, "Senha atual incorreta.");
+
+        var emailNorm = newEmail.Trim().ToUpperInvariant();
+
+        // Verifica conflito de email apenas se mudou
+        if (emailNorm != account.Email)
+        {
+            var conflict = await _accountStore.FindByEmailAsync(emailNorm, ct);
+            if (conflict is not null && conflict.Id != rootAccountId)
+                return (false, "Este e-mail ja esta em uso.");
+
+            account.Email = emailNorm;
+        }
+
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            if (newPassword.Length < 8)
+                return (false, "A nova senha deve ter pelo menos 8 caracteres.");
+            account.PasswordCredential = _passwordHasher.HashPassword(newPassword);
+            account.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
+
+        await _accountStore.UpdateAsync(account, ct);
+
+        _db.AdminAuditLogs.Add(new AdminAuditLog
+        {
+            ActorAccountId = rootAccountId,
+            ActorEmail = account.Email.ToLowerInvariant(),
+            Action = "UpdateRootCredentials",
+            TargetType = "Account",
+            TargetId = rootAccountId.ToString(),
+            Notes = "Credenciais Root atualizadas",
+            CreatedAtUtc = _clock.UtcNow
+        });
+        await _db.SaveChangesAsync(ct);
+
+        return (true, null);
+    }
+
     private static string GenerateSlug(string name)
     {
         var s = name.Trim().ToLowerInvariant();

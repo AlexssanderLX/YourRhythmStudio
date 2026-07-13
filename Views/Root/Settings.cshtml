@@ -1,0 +1,60 @@
+@model YourRhythmStudio.ViewModels.Root.RootSettingsViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Configuracoes"; ViewData["RootSection"] = "settings"; }
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+    @* ── Credenciais da conta Root ── *@
+    <div class="root-card">
+        <div class="root-card-title">Credenciais da conta Root</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+            E-mail atual: <strong>@Model.CurrentEmail</strong>
+        </p>
+        <form method="post" action="/Root/Settings/Credentials" class="root-form">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label for="cred-email">Novo e-mail de login</label>
+                <input type="email" id="cred-email" name="NewEmail" value="@Model.CurrentEmail" required maxlength="256" />
+            </div>
+            <div class="form-group">
+                <label for="cred-pwd">Nova senha <span style="font-weight:400;color:var(--muted)">(deixe em branco para manter)</span></label>
+                <input type="password" id="cred-pwd" name="NewPassword" minlength="8" autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+                <label for="cred-current">Senha atual <span style="color:#ef4444">*</span></label>
+                <input type="password" id="cred-current" name="CurrentPassword" required autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn-root btn-primary">Salvar credenciais</button>
+        </form>
+    </div>
+
+    @* ── Notificacoes de acesso ── *@
+    <div class="root-card">
+        <div class="root-card-title">Notificacoes de acesso</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+            Quando alguem solicitar acesso ao sistema, um e-mail de aviso sera enviado para o endereco abaixo.
+        </p>
+        <form method="post" action="/Root/Settings/Notification" class="root-form">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label for="notif-email">E-mail destinatario</label>
+                <input type="email" id="notif-email" name="Recipient"
+                       value="@Model.NotificationRecipient" required maxlength="256"
+                       placeholder="seu@email.com" />
+            </div>
+            <button type="submit" class="btn-root btn-primary">Salvar destinatario</button>
+        </form>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px">
+            Configuracoes de SMTP (servidor, porta, usuario, senha) devem ser definidas via
+            <code style="background:var(--bg);padding:1px 4px;border-radius:4px">User Secrets</code> ou variaveis de ambiente.
+            Ver documentacao para detalhes.
+        </p>
+    </div>
+
+</div>
+
+@* Responsivo *@
+<style>
+@@media (max-width: 700px) {
+    div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+}
+</style>

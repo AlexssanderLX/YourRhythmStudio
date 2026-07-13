@@ -161,6 +161,45 @@ public sealed class RootController : Controller
         return RedirectToAction(nameof(AccountDetail), new { id });
     }
 
+    // ──── Settings ─────────────────────────────────────────────────────────────
+
+    [HttpGet("Settings")]
+    public async Task<IActionResult> Settings()
+    {
+        ViewData["RootSection"] = "settings";
+        return View(await _svc.GetSettingsViewModelAsync(ActorId));
+    }
+
+    [HttpPost("Settings/Credentials")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateCredentials(UpdateRootCredentialsViewModel vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "Verifique os campos e tente novamente.";
+            return RedirectToAction(nameof(Settings));
+        }
+
+        var (ok, err) = await _svc.UpdateRootCredentialsAsync(ActorId, vm.NewEmail, vm.NewPassword, vm.CurrentPassword);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok ? "Credenciais atualizadas. Faca login novamente se alterou o e-mail." : err;
+        return RedirectToAction(nameof(Settings));
+    }
+
+    [HttpPost("Settings/Notification")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateNotification(UpdateNotificationRecipientViewModel vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "E-mail invalido.";
+            return RedirectToAction(nameof(Settings));
+        }
+
+        await _svc.SaveSettingAsync(Domain.Root.AdminSettingKeys.NotificationRecipient, vm.Recipient.Trim());
+        TempData["SuccessMessage"] = "Destinatario de notificacoes atualizado.";
+        return RedirectToAction(nameof(Settings));
+    }
+
     // ──── Plans ────────────────────────────────────────────────────────────────
 
     [HttpGet("Plans")]
