@@ -327,40 +327,9 @@ public sealed class TeacherController : Controller
         [Bind(Prefix = "Base.Assignment")] CreateAssignmentViewModel model,
         CancellationToken cancellationToken)
     {
-        model = ReadAssignmentForm(model);
-        TryValidateModel(model);
-        if (!ModelState.IsValid || model.StudentProfileId != studentId)
-        {
-            TempData["Error"] = "Dados da missao invalidos.";
-            return RedirectToAction(nameof(StudentDetail), new { studentId });
-        }
-
-        var profile = await CurrentProfile(cancellationToken);
-        try
-        {
-            var xpReward = model.UseDefaultXp
-                ? DefaultXpFor(model.Rarity)
-                : model.XpReward;
-
-            await _assignmentService.CreateAssignmentAsync(
-                profile,
-                new CreateAssignmentRequest(
-                    studentId,
-                    model.Title,
-                    string.IsNullOrWhiteSpace(model.Description) ? model.Title : model.Description,
-                    model.DueAtUtc,
-                    xpReward,
-                    model.Rarity,
-                    model.SkillRewardId),
-                cancellationToken);
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
-        {
-            TempData["Error"] = $"Nao foi possivel criar a missao: {ex.Message}";
-            return RedirectToAction(nameof(StudentDetail), new { studentId });
-        }
-
-        return RedirectToAction(nameof(StudentAssignments), new { studentId });
+        await CurrentProfile(cancellationToken);
+        TempData["Error"] = "Use a central de missoes para criar atividades pedagogicas.";
+        return RedirectToAction(nameof(CreateMission), new { studentId });
     }
 
     [HttpPost("Students/{studentId:guid}/Assignments/{assignmentId:guid}")]
@@ -735,52 +704,64 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(LevelDetail), new { level });
     }
 
-    // ── Devolutivas ───────────────────────────────────────────────────────────
+    // ── Missions ──────────────────────────────────────────────────────────────
+
+    [HttpGet("Missions")]
+    public async Task<IActionResult> Missions(CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var missions = await _missionService.ListForTeacherAsync(profile, cancellationToken);
+        var pending = await _missionService.ListAwaitingReviewAsync(profile, cancellationToken);
+        return View("Devolutivas", new DevolutivasViewModel { Missions = missions, Pending = pending });
+    }
 
     [HttpGet("Devolutivas")]
-    public async Task<IActionResult> Devolutivas(CancellationToken cancellationToken)
-    {
-        var profile = await CurrentProfile(cancellationToken);
-        var pending = await _missionService.ListAwaitingReviewAsync(profile, cancellationToken);
-        return View(new DevolutivasViewModel { Pending = pending });
-    }
+    public IActionResult Devolutivas()
+        => RedirectToAction(nameof(Missions));
 
-    // ── Mission create ────────────────────────────────────────────────────────
-
+    [HttpGet("Missions/Create")]
     [HttpGet("Students/{studentId:guid}/Missions/Create")]
-    public async Task<IActionResult> CreateMission(Guid studentId, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateMission(Guid? studentId, CancellationToken cancellationToken)
     {
-        var detail = await LoadStudentDetail(studentId, cancellationToken);
-        if (detail is null) return Forbid();
-
         var profile = await CurrentProfile(cancellationToken);
-        var skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
+        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+        var selectedStudent = studentId.HasValue
+            ? students.FirstOrDefault(student => student.StudentProfileId == studentId.Value)
+            : students.FirstOrDefault();
 
-        ViewBag.Skills = skills;
-        return View(new CreateMissionViewModel
+        if (studentId.HasValue && selectedStudent is null) return Forbid();
+
+        var model = new CreateMissionViewModel
         {
-            StudentProfileId = studentId,
-            StudentName = detail.Detail.Student.DisplayName
-        });
+            StudentProfileId = selectedStudent?.StudentProfileId ?? Guid.Empty,
+            StudentName = selectedStudent?.DisplayName ?? string.Empty,
+            StudentOptions = students
+        };
+
+        await PopulateMissionCreateLookups(profile, model, cancellationToken);
+        return View(model);
     }
 
+    [HttpPost("Missions/Create")]
     [HttpPost("Students/{studentId:guid}/Missions/Create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateMission(
-        Guid studentId,
+        Guid? studentId,
         CreateMissionViewModel model,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid || model.StudentProfileId != studentId)
+        if (studentId.HasValue && model.StudentProfileId != studentId.Value)
         {
-            var detail2 = await LoadStudentDetail(studentId, cancellationToken);
-            var profile2 = await CurrentProfile(cancellationToken);
-            ViewBag.Skills = await _skillService.ListSkillsAsync(profile2, cancellationToken);
-            model.StudentName = detail2?.Detail.Student.DisplayName ?? string.Empty;
-            return View(model);
+            ModelState.AddModelError(nameof(model.StudentProfileId), "Aluno invalido para esta missao.");
         }
 
         var profile = await CurrentProfile(cancellationToken);
+        await PopulateMissionCreateLookups(profile, model, cancellationToken);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
 
         List<CreateMissionQuestionRequest> questions;
         try
@@ -793,12 +774,14 @@ public sealed class TeacherController : Controller
         catch
         {
             ModelState.AddModelError(string.Empty, "Perguntas invalidas. Tente novamente.");
+            await PopulateMissionCreateLookups(profile, model, cancellationToken);
             return View(model);
         }
 
         if (questions.Count == 0)
         {
             ModelState.AddModelError(string.Empty, "Adicione ao menos uma pergunta a missao.");
+            await PopulateMissionCreateLookups(profile, model, cancellationToken);
             return View(model);
         }
 
@@ -813,7 +796,7 @@ public sealed class TeacherController : Controller
             var missionId = await _missionService.CreateMissionAsync(
                 profile,
                 new CreateMissionRequest(
-                    studentId,
+                    model.StudentProfileId,
                     model.Title,
                     model.Description,
                     dueAtUtc,
@@ -825,11 +808,12 @@ public sealed class TeacherController : Controller
 
             TempData["Success"] = "Missao criada com sucesso.";
             return RedirectToAction(nameof(MissionDetail),
-                new { studentId, missionId });
+                new { studentId = model.StudentProfileId, missionId });
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
         {
             ModelState.AddModelError(string.Empty, ex.Message);
+            await PopulateMissionCreateLookups(profile, model, cancellationToken);
             return View(model);
         }
     }
@@ -1010,6 +994,19 @@ public sealed class TeacherController : Controller
         var accessUrl = QueryHelpers.AddQueryString(issued.AbsoluteUrl, "code", issued.PublicCode);
         var qr = await _qrArtifactGenerator.GenerateSvgAsync(accessUrl, $"student-access-{student.StudentProfileId:N}", cancellationToken);
         return new StudentAccessLinkViewModel(accessUrl, qr.DataUri);
+    }
+
+    private async Task PopulateMissionCreateLookups(
+        AuthenticatedUserProfile profile,
+        CreateMissionViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+        model.StudentOptions = students;
+        model.StudentName = students
+            .FirstOrDefault(student => student.StudentProfileId == model.StudentProfileId)
+            ?.DisplayName ?? string.Empty;
+        ViewBag.Skills = await _skillService.ListSkillsAsync(profile, cancellationToken);
     }
 
     private Task<AuthenticatedUserProfile> CurrentProfile(CancellationToken cancellationToken)

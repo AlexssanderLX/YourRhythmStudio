@@ -9,10 +9,12 @@ namespace YourRhythmStudio.ViewModels.Learning;
 
 public sealed class CreateMissionViewModel
 {
-    [Required]
+    [Required(ErrorMessage = "Escolha o aluno que recebera a missao.")]
     public Guid StudentProfileId { get; set; }
 
     public string StudentName { get; set; } = string.Empty;
+
+    public IReadOnlyCollection<TeacherStudentSummary> StudentOptions { get; set; } = Array.Empty<TeacherStudentSummary>();
 
     [Required(ErrorMessage = "Titulo da missao e obrigatorio.")]
     [StringLength(180)]
@@ -40,6 +42,7 @@ public sealed class MissionQuestionFormItem
     public string QuestionText { get; set; } = string.Empty;
     public MissionQuestionType QuestionType { get; set; } = MissionQuestionType.Text;
     public bool IsRequired { get; set; } = true;
+    public IReadOnlyList<string> Options { get; set; } = Array.Empty<string>();
 }
 
 // ── Teacher mission review ────────────────────────────────────────────────────
@@ -60,6 +63,7 @@ public sealed class ReviewMissionViewModel
 
 public sealed class DevolutivasViewModel
 {
+    public required IReadOnlyList<MissionSummary> Missions { get; init; }
     public required IReadOnlyList<MissionSummary> Pending { get; init; }
 }
 

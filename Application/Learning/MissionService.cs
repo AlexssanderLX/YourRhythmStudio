@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain.Learning;
 using YourRhythmStudio.Domain.Learning.Enums;
@@ -24,7 +25,8 @@ public sealed record CreateMissionQuestionRequest(
     string QuestionText,
     MissionQuestionType QuestionType,
     int Order,
-    bool IsRequired);
+    bool IsRequired,
+    IReadOnlyList<string>? Options = null);
 
 public sealed record MissionSummary(
     Guid Id,
@@ -43,7 +45,8 @@ public sealed record MissionQuestionDto(
     string QuestionText,
     MissionQuestionType QuestionType,
     int Order,
-    bool IsRequired);
+    bool IsRequired,
+    IReadOnlyList<string> Options);
 
 public sealed record MissionAnswerDto(
     Guid QuestionId,
@@ -140,8 +143,14 @@ public sealed class MissionService
         int order = 0;
         foreach (var q in request.Questions.OrderBy(x => x.Order))
         {
+            var options = NormalizeQuestionOptions(q);
             _db.MissionQuestions.Add(new MissionQuestion(
-                mission.Id, q.QuestionText, q.QuestionType, order++, q.IsRequired));
+                mission.Id,
+                q.QuestionText,
+                q.QuestionType,
+                order++,
+                q.IsRequired,
+                options.Count == 0 ? null : JsonSerializer.Serialize(options)));
         }
 
         await _db.SaveChangesAsync(ct);
@@ -163,6 +172,33 @@ public sealed class MissionService
                      && a.IsMission
                      && a.Status == AssignmentStatus.AwaitingReview)
             .OrderBy(a => a.SubmittedForReviewAtUtc)
+            .ToListAsync(ct);
+
+        if (!assignments.Any()) return Array.Empty<MissionSummary>();
+
+        var studentIds = assignments.Select(a => a.StudentProfileId).Distinct().ToList();
+        var nameMap = await StudentNameMapAsync(studentIds, ct);
+
+        return assignments.Select(a => new MissionSummary(
+            a.Id, a.StudentProfileId,
+            nameMap.GetValueOrDefault(a.StudentProfileId, "Aluno"),
+            a.Title, a.Status, a.CurrentRound, a.SubmittedForReviewAtUtc,
+            a.CreatedAtUtc, a.XpReward, a.Rarity)).ToList();
+    }
+
+    public async Task<IReadOnlyList<MissionSummary>> ListForTeacherAsync(
+        AuthenticatedUserProfile profile,
+        CancellationToken ct = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+
+        var assignments = await _db.Assignments
+            .AsNoTracking()
+            .Where(a => a.SchoolId == schoolId
+                     && a.TeacherProfileId == teacherProfileId
+                     && a.IsMission
+                     && a.Status != AssignmentStatus.Skipped)
+            .OrderByDescending(a => a.CreatedAtUtc)
             .ToListAsync(ct);
 
         if (!assignments.Any()) return Array.Empty<MissionSummary>();
@@ -230,7 +266,13 @@ public sealed class MissionService
             .AsNoTracking()
             .Where(q => q.AssignmentId == missionId)
             .OrderBy(q => q.Order)
-            .Select(q => new MissionQuestionDto(q.Id, q.QuestionText, q.QuestionType, q.Order, q.IsRequired))
+            .Select(q => new MissionQuestionDto(
+                q.Id,
+                q.QuestionText,
+                q.QuestionType,
+                q.Order,
+                q.IsRequired,
+                ReadOptions(q.OptionsJson)))
             .ToListAsync(ct);
 
         var latestAnswers = await _db.MissionAnswers
@@ -405,7 +447,13 @@ public sealed class MissionService
         var questions = await _db.MissionQuestions.AsNoTracking()
             .Where(q => q.AssignmentId == missionId)
             .OrderBy(q => q.Order)
-            .Select(q => new MissionQuestionDto(q.Id, q.QuestionText, q.QuestionType, q.Order, q.IsRequired))
+            .Select(q => new MissionQuestionDto(
+                q.Id,
+                q.QuestionText,
+                q.QuestionType,
+                q.Order,
+                q.IsRequired,
+                ReadOptions(q.OptionsJson)))
             .ToListAsync(ct);
 
         var currentAnswers = await _db.MissionAnswers.AsNoTracking()
@@ -478,7 +526,7 @@ public sealed class MissionService
 
             var existing = await _db.MissionAnswers
                 .Where(a => a.AssignmentId == missionId && a.RoundNumber == round
-                         && !string.IsNullOrEmpty(a.AnswerText) || a.StoredFileName != null)
+                         && (!string.IsNullOrEmpty(a.AnswerText) || a.StoredFileName != null))
                 .Select(a => a.QuestionId)
                 .ToListAsync(ct);
 
@@ -502,15 +550,28 @@ public sealed class MissionService
                 _db.MissionAnswers.Add(existing);
             }
 
+            var question = await _db.MissionQuestions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(q => q.Id == questionId && q.AssignmentId == missionId, ct);
+
+            if (question is null)
+                throw new InvalidOperationException("Pergunta da missao invalida.");
+
             if (!string.IsNullOrWhiteSpace(text))
-                existing.AnswerText = text.Trim();
+            {
+                var cleanText = text.Trim();
+                if (question.QuestionType == MissionQuestionType.MultipleChoice)
+                {
+                    var options = ReadOptions(question.OptionsJson);
+                    if (!options.Contains(cleanText, StringComparer.Ordinal))
+                        throw new InvalidOperationException("Alternativa selecionada invalida.");
+                }
+
+                existing.AnswerText = cleanText;
+            }
 
             if (file is not null)
             {
-                var question = await _db.MissionQuestions
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(q => q.Id == questionId && q.AssignmentId == missionId, ct);
-
                 var maxBytes = question?.QuestionType == MissionQuestionType.Audio
                     ? MaxAudioBytes
                     : MaxFileBytes;
@@ -518,9 +579,9 @@ public sealed class MissionService
                 if (file.Length > maxBytes)
                     throw new InvalidOperationException($"Arquivo '{file.FileName}' excede o tamanho maximo permitido.");
 
-                ValidateMimeType(question?.QuestionType, file.ContentType);
+                ValidateUpload(question?.QuestionType, file.FileName, file.ContentType);
 
-                var ext = Path.GetExtension(file.FileName);
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
                 var storedName = $"{Guid.NewGuid():N}{ext}";
                 var dir = Path.Combine(_env.ContentRootPath, UploadRoot,
                     missionId.ToString(), questionId.ToString());
@@ -537,7 +598,7 @@ public sealed class MissionService
                 }
 
                 existing.StoredFileName = storedName;
-                existing.OriginalFileName = file.FileName;
+                existing.OriginalFileName = SanitizeFileName(file.FileName);
                 existing.ContentType = file.ContentType;
                 existing.SizeBytes = file.Length;
             }
@@ -608,13 +669,87 @@ public sealed class MissionService
             p => userMap.GetValueOrDefault(p.SchoolUserId, "Aluno"));
     }
 
-    private static void ValidateMimeType(MissionQuestionType? type, string contentType)
+    private static IReadOnlyList<string> NormalizeQuestionOptions(CreateMissionQuestionRequest question)
     {
+        if (question.QuestionType != MissionQuestionType.MultipleChoice)
+            return Array.Empty<string>();
+
+        var options = (question.Options ?? Array.Empty<string>())
+            .Select(option => option.Trim())
+            .Where(option => !string.IsNullOrWhiteSpace(option))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (options.Length < 2 || options.Length > 4)
+            throw new ArgumentException("Perguntas de alternativa precisam ter entre 2 e 4 opcoes.");
+
+        return options;
+    }
+
+    private static IReadOnlyList<string> ReadOptions(string? optionsJson)
+    {
+        if (string.IsNullOrWhiteSpace(optionsJson))
+            return Array.Empty<string>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<IReadOnlyList<string>>(optionsJson) ?? Array.Empty<string>();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static void ValidateUpload(MissionQuestionType? type, string fileName, string contentType)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
         if (type == MissionQuestionType.Audio)
         {
-            if (!contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Esta pergunta aceita apenas arquivos de audio.");
+            var allowedAudioExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".mp3", ".wav", ".ogg", ".webm", ".m4a"
+            };
+
+            if (!allowedAudioExtensions.Contains(ext)
+                || !contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Esta pergunta aceita apenas audio MP3, WAV, OGG, WebM ou M4A.");
+            }
+
+            return;
         }
+
+        var allowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp", ".pdf", ".txt", ".doc", ".docx", ".rtf", ".musicxml", ".xml"
+        };
+
+        var allowedMime = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("text/plain", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/rtf", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/xml", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("text/xml", StringComparison.OrdinalIgnoreCase)
+            || contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase);
+
+        if (!allowedFileExtensions.Contains(ext) || !allowedMime)
+        {
+            throw new InvalidOperationException("Arquivo nao permitido. Use imagem, PDF, documento, cifra, partitura ou MusicXML.");
+        }
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var clean = Path.GetFileName(fileName);
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            clean = clean.Replace(c, '_');
+        }
+
+        return string.IsNullOrWhiteSpace(clean) ? "arquivo" : clean;
     }
 
     private async Task TryAutoLevelUpAsync(

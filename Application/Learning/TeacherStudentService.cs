@@ -89,7 +89,8 @@ public sealed class TeacherStudentService
             .AsNoTracking()
             .Where(assignment => assignment.SchoolId == schoolId
                 && assignment.TeacherProfileId == teacherProfileId
-                && assignment.StudentProfileId == studentProfileId)
+                && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission)
             .OrderByDescending(assignment => assignment.CreatedAtUtc)
             .Take(10)
             .Select(assignment => new AssignmentSummary(
@@ -329,6 +330,7 @@ public sealed class TeacherStudentService
         var pendingAssignmentCount = await _dbContext.Assignments.CountAsync(
             assignment => assignment.SchoolId == schoolId
                 && assignment.TeacherProfileId == teacherProfileId
+                && assignment.IsMission
                 && assignment.Status != AssignmentStatus.Completed
                 && assignment.Status != AssignmentStatus.Skipped,
             cancellationToken);
@@ -336,6 +338,7 @@ public sealed class TeacherStudentService
         var recentCompletedAssignmentCount = await _dbContext.Assignments.CountAsync(
             assignment => assignment.SchoolId == schoolId
                 && assignment.TeacherProfileId == teacherProfileId
+                && assignment.IsMission
                 && assignment.Status == AssignmentStatus.Completed
                 && assignment.CompletedAtUtc >= DateTime.UtcNow.AddDays(-14),
             cancellationToken);

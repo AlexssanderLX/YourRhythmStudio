@@ -281,7 +281,9 @@ public sealed class AssignmentService
     {
         var query = _dbContext.Assignments
             .AsNoTracking()
-            .Where(assignment => assignment.SchoolId == schoolId && assignment.StudentProfileId == studentProfileId);
+            .Where(assignment => assignment.SchoolId == schoolId
+                && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission);
 
         if (teacherProfileId is not null)
         {

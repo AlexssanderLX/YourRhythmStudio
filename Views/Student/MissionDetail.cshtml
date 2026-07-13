@@ -107,6 +107,7 @@
                                 @(q.QuestionType switch {
                                     MissionQuestionType.Audio => "🎵 Áudio",
                                     MissionQuestionType.File => "📎 Arquivo",
+                                    MissionQuestionType.MultipleChoice => "Alternativas",
                                     _ => "📝 Texto"
                                 })
                             </span>
@@ -117,6 +118,23 @@
                         {
                             <textarea name="text_@q.Id" class="form-control" rows="4"
                                       placeholder="Digite sua resposta aqui...">@(existing?.AnswerText ?? "")</textarea>
+                        }
+                        else if (q.QuestionType == MissionQuestionType.MultipleChoice)
+                        {
+                            <div class="choice-answer-list">
+                                @foreach (var option in q.Options)
+                                {
+                                    var inputId = $"opt_{q.Id}_{Math.Abs(option.GetHashCode())}";
+                                    <label class="choice-answer" for="@inputId">
+                                        <input id="@inputId"
+                                               type="radio"
+                                               name="text_@q.Id"
+                                               value="@option"
+                                               checked="@(string.Equals(existing?.AnswerText, option, StringComparison.Ordinal) ? "checked" : null)" />
+                                        <span>@option</span>
+                                    </label>
+                                }
+                            </div>
                         }
                         else
                         {
@@ -137,12 +155,12 @@
                             {
                                 <label class="file-upload-label">
                                     @(q.QuestionType == MissionQuestionType.Audio
-                                        ? "Enviar áudio (MP3, WAV, OGG — máx. 10MB)"
-                                        : "Enviar arquivo (máx. 20MB)")
+                                        ? "Enviar audio: MP3, WAV, OGG, WebM ou M4A. Maximo 10 MB e 5 minutos."
+                                        : "Enviar arquivo: imagem, PDF, documento, cifra, partitura ou MusicXML. Maximo 20 MB.")
                                 </label>
                             }
                             <input type="file" name="file_@q.Id" class="form-control-file"
-                                   accept="@(q.QuestionType == MissionQuestionType.Audio ? "audio/*" : "*/*")" />
+                                   accept="@(q.QuestionType == MissionQuestionType.Audio ? ".mp3,.wav,.ogg,.webm,.m4a,audio/*" : ".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx,.rtf,.musicxml,.xml,image/*,application/pdf")" />
                         }
                     </div>
                 }
@@ -229,6 +247,9 @@
     .qa-type-badge { background: #ede9fe; color: #5b21b6; }
     .req-badge { background: #fee2e2; color: #991b1b; }
     .qa-question-text { margin: 0 0 .75rem; font-weight: 500; }
+    .choice-answer-list { display: grid; gap: .5rem; }
+    .choice-answer { display: flex; gap: .65rem; align-items: center; border: 1px solid var(--border, #d1d5db); border-radius: 10px; padding: .75rem; cursor: pointer; }
+    .choice-answer input { width: 18px; height: 18px; }
     .form-control { border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; background: var(--input-bg, #fff); color: inherit; width: 100%; box-sizing: border-box; resize: vertical; }
     .form-control-file { margin-top: .25rem; }
     .form-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .5rem; }

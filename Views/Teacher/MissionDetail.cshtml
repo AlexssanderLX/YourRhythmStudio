@@ -75,11 +75,21 @@
                             @(q.QuestionType switch {
                                 MissionQuestionType.Audio => "🎵 Áudio",
                                 MissionQuestionType.File => "📎 Arquivo",
+                                MissionQuestionType.MultipleChoice => "Alternativas",
                                 _ => "📝 Texto"
                             })
                         </span>
                         @if (q.IsRequired) { <span class="req-badge">Obrigatória</span> }
                         <p>@q.QuestionText</p>
+                        @if (q.QuestionType == MissionQuestionType.MultipleChoice && q.Options.Any())
+                        {
+                            <div class="choice-option-preview">
+                                @foreach (var option in q.Options)
+                                {
+                                    <span>@option</span>
+                                }
+                            </div>
+                        }
                     </div>
                     <div class="qa-answer">
                         @if (answer is null)
@@ -195,6 +205,8 @@
     .qa-item:last-child { border-bottom: none; }
     .qa-question { margin-bottom: .5rem; }
     .qa-question p { margin: .5rem 0 0; font-weight: 500; }
+    .choice-option-preview { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+    .choice-option-preview span { border: 1px solid var(--border, #d1d5db); border-radius: 999px; padding: .18rem .55rem; font-size: .78rem; color: var(--text-muted, #6b7280); }
     .qa-type-badge, .req-badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 99px; margin-right: .3rem; }
     .qa-type-badge { background: #ede9fe; color: #5b21b6; }
     .req-badge { background: #fee2e2; color: #991b1b; }

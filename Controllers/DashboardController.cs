@@ -80,7 +80,7 @@ public class DashboardController : Controller
     public IActionResult Missions()
     {
         return RequireRole(YourRhythmRoles.Teacher)
-            ? RedirectToAction("Students", "Teacher")
+            ? RedirectToAction("Missions", "Teacher")
             : Forbid();
     }
 
@@ -96,7 +96,7 @@ public class DashboardController : Controller
     public IActionResult StudentMissions()
     {
         return RequireRole(YourRhythmRoles.Student)
-            ? RedirectToAction("Assignments", "Student")
+            ? RedirectToAction("Missions", "Student")
             : Forbid();
     }
 

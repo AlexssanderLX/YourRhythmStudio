@@ -3,51 +3,64 @@
 @using YourRhythmStudio.Application.Learning
 @{
     Layout = "_DashboardLayout";
-    ViewData["Title"] = "Criar Missão";
+    ViewData["Title"] = "Criar missao";
     ViewData["Role"] = "teacher";
-    ViewData["DashTitle"] = "Nova Missão";
+    ViewData["DashTitle"] = "Nova missao";
     var skills = ViewBag.Skills as IReadOnlyCollection<SkillSummary> ?? Array.Empty<SkillSummary>();
 }
 
-<div class="dash-section">
+<div class="dash-section mission-create-page">
     <div class="dash-back">
-        <a asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@Model.StudentProfileId">
-            ← @Model.StudentName
-        </a>
+        <a asp-controller="Teacher" asp-action="Missions">← Central de missoes</a>
     </div>
-    <h2>Criar Missão para @Model.StudentName</h2>
+
+    <div class="mission-page-head">
+        <div>
+            <span class="mission-kicker">Professor · YourRhythm</span>
+            <h2>Criar missao</h2>
+            <p>Escolha o aluno, defina o objetivo e adicione os campos da devolutiva.</p>
+        </div>
+    </div>
 
     @if (!ViewData.ModelState.IsValid)
     {
-        <div class="alert alert-error">
-            <asp-validation-summary asp-validation-group="" />
-        </div>
+        <div class="alert alert-error" asp-validation-summary="All"></div>
     }
 
-    <form method="post" id="missionForm">
-        <input type="hidden" asp-for="StudentProfileId" />
-        <input type="hidden" id="questionsJsonInput" asp-for="QuestionsJson" />
+    <form method="post" id="missionForm" asp-controller="Teacher" asp-action="CreateMission">
         @Html.AntiForgeryToken()
+        <input type="hidden" id="questionsJsonInput" asp-for="QuestionsJson" />
 
         <div class="form-card">
-            <h3>Informações da Missão</h3>
+            <h3>1. Informacoes da missao</h3>
 
             <div class="form-group">
-                <label asp-for="Title">Título</label>
-                <input asp-for="Title" class="form-control" placeholder="Ex: Toque a escala de Dó maior..." />
+                <label asp-for="StudentProfileId">Aluno destinatario</label>
+                <select asp-for="StudentProfileId" class="form-control" required>
+                    <option value="">Selecione um aluno</option>
+                    @foreach (var student in Model.StudentOptions.OrderBy(student => student.DisplayName))
+                    {
+                        <option value="@student.StudentProfileId">@student.DisplayName · @student.Instrument</option>
+                    }
+                </select>
+                <span asp-validation-for="StudentProfileId" class="field-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Title">Titulo</label>
+                <input asp-for="Title" class="form-control" placeholder="Ex: Grave a escala de Do maior" />
                 <span asp-validation-for="Title" class="field-error"></span>
             </div>
 
             <div class="form-group">
-                <label asp-for="Description">Descrição / instruções</label>
-                <textarea asp-for="Description" class="form-control" rows="4"
-                          placeholder="Descreva o que o aluno deve fazer..."></textarea>
+                <label asp-for="Description">Descricao / instrucoes</label>
+                <textarea asp-for="Description" class="form-control" rows="4" placeholder="Explique o que o aluno deve fazer."></textarea>
                 <span asp-validation-for="Description" class="field-error"></span>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label asp-for="DueAtLocal">Prazo (opcional)</label>
+                    <label asp-for="DueAtLocal">Prazo opcional</label>
                     <input asp-for="DueAtLocal" type="datetime-local" class="form-control" />
                 </div>
                 <div class="form-group">
@@ -60,17 +73,18 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label asp-for="XpReward">XP de Recompensa</label>
+                    <label asp-for="XpReward">XP de recompensa</label>
                     <input asp-for="XpReward" type="number" class="form-control" min="0" max="10000" />
+                    <span asp-validation-for="XpReward" class="field-error"></span>
                 </div>
             </div>
 
             @if (skills.Any())
             {
                 <div class="form-group">
-                    <label asp-for="SkillRewardId">Skill de Recompensa (opcional, Épica/Lendária)</label>
+                    <label asp-for="SkillRewardId">Skill de recompensa (opcional, Epica/Lendaria)</label>
                     <select asp-for="SkillRewardId" class="form-control">
-                        <option value="">— Nenhuma —</option>
+                        <option value="">Nenhuma</option>
                         @foreach (var s in skills)
                         {
                             <option value="@s.Id">@s.Name</option>
@@ -82,21 +96,21 @@
 
         <div class="form-card" id="questionsCard">
             <div class="questions-header">
-                <h3>Perguntas da Missão</h3>
-                <button type="button" class="btn btn-ghost btn-sm" id="addQuestionBtn">+ Adicionar pergunta</button>
+                <div>
+                    <h3>2. Campos da devolutiva</h3>
+                    <p>Uma missao pode pedir texto, alternativa, arquivo ou audio.</p>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="addQuestionBtn">+ Campo</button>
             </div>
 
             <div id="questionsList" class="questions-list">
-                <p class="empty-questions-msg" id="emptyQuestionsMsg">
-                    Nenhuma pergunta adicionada. Clique em "Adicionar pergunta".
-                </p>
+                <p class="empty-questions-msg" id="emptyQuestionsMsg">Adicione ao menos um campo para o aluno responder.</p>
             </div>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="submitBtn">Criar Missão</button>
-            <a class="btn btn-ghost" asp-controller="Teacher" asp-action="StudentDetail"
-               asp-route-studentId="@Model.StudentProfileId">Cancelar</a>
+            <button type="submit" class="btn btn-primary" id="submitBtn">Enviar missao</button>
+            <a class="btn btn-ghost" asp-controller="Teacher" asp-action="Missions">Cancelar</a>
         </div>
     </form>
 </div>
@@ -104,116 +118,184 @@
 <template id="questionTemplate">
     <div class="question-item" data-index="__IDX__">
         <div class="question-item-header">
-            <span class="question-number">Pergunta <strong class="q-num"></strong></span>
-            <button type="button" class="btn-icon remove-question" title="Remover">✕</button>
+            <span class="question-number">Campo <strong class="q-num"></strong></span>
+            <button type="button" class="btn-icon remove-question" title="Remover">×</button>
         </div>
         <div class="form-group">
-            <label>Texto da Pergunta</label>
-            <input type="text" class="form-control q-text" placeholder="Ex: Grave um áudio tocando o arpejo..." maxlength="1000" required />
+            <label>Enunciado</label>
+            <input type="text" class="form-control q-text" placeholder="Ex: Grave um audio tocando o arpejo" maxlength="1000" required />
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Tipo de Resposta</label>
+                <label>Tipo de resposta</label>
                 <select class="form-control q-type">
-                    <option value="1">Texto</option>
-                    <option value="2">Áudio (≤5 min)</option>
+                    <option value="1">Texto livre</option>
+                    <option value="4">Alternativas</option>
                     <option value="3">Arquivo</option>
+                    <option value="2">Audio</option>
                 </select>
             </div>
-            <div class="form-group" style="align-self:center;padding-top:1.4rem;">
-                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+            <div class="form-group required-wrap">
+                <label>
                     <input type="checkbox" class="q-required" checked />
-                    Obrigatória
+                    Obrigatorio
                 </label>
             </div>
         </div>
+        <div class="choice-options" hidden>
+            <label>Alternativas (2 a 4)</label>
+            <div class="choice-option-list">
+                <input type="text" class="form-control q-option" maxlength="300" placeholder="Alternativa 1" />
+                <input type="text" class="form-control q-option" maxlength="300" placeholder="Alternativa 2" />
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm add-option">+ Alternativa</button>
+        </div>
+        <p class="question-hint q-audio-hint" hidden>Audio: ate 10 MB e 5 minutos. Formatos aceitos: MP3, WAV, OGG, WebM ou M4A.</p>
+        <p class="question-hint q-file-hint" hidden>Arquivo: imagem, PDF, documento, cifra, partitura ou MusicXML, ate 20 MB.</p>
     </div>
 </template>
 
 <style>
+    .mission-create-page { max-width: 920px; }
     .dash-back { margin-bottom: 1rem; }
-    .dash-back a { color: var(--text-muted, #6b7280); text-decoration: none; font-size: .9rem; }
-    .dash-back a:hover { text-decoration: underline; }
-    .form-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    .form-card h3 { margin: 0 0 1.25rem; font-size: 1rem; font-weight: 700; }
+    .dash-back a { color: var(--text-muted, #9ca3af); text-decoration: none; font-size: .9rem; }
+    .mission-page-head { margin-bottom: 1.25rem; }
+    .mission-page-head h2 { margin: .2rem 0; font-size: clamp(1.5rem, 4vw, 2.1rem); }
+    .mission-page-head p { color: var(--text-muted, #9ca3af); margin: 0; }
+    .mission-kicker { color: #60a5fa; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+    .form-card { background: var(--card-bg, #111827); border: 1px solid var(--border, #263247); border-radius: 14px; padding: clamp(1rem, 3vw, 1.5rem); margin-bottom: 1rem; }
+    .form-card h3 { margin: 0 0 1rem; font-size: 1rem; font-weight: 800; }
+    .form-card p { color: var(--text-muted, #9ca3af); font-size: .9rem; margin: .15rem 0 0; }
     .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
-    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-    .form-control { border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: .5rem .75rem; font-size: .9rem; background: var(--input-bg, #fff); color: inherit; width: 100%; box-sizing: border-box; }
-    .form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
-    .field-error { color: #dc2626; font-size: .8rem; }
-    .questions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .questions-header h3 { margin: 0; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
+    .form-control { border: 1px solid var(--border, #334155); border-radius: 10px; padding: .72rem .85rem; font-size: .95rem; background: var(--input-bg, #0f172a); color: inherit; width: 100%; box-sizing: border-box; }
+    .form-control:focus { outline: 2px solid rgba(96,165,250,.45); border-color: #60a5fa; }
+    .form-actions { display: flex; gap: .75rem; margin-top: .5rem; flex-wrap: wrap; }
+    .field-error { color: #f87171; font-size: .82rem; }
+    .questions-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+    .questions-header h3 { margin-bottom: .15rem; }
     .questions-list { display: flex; flex-direction: column; gap: 1rem; }
     .empty-questions-msg { color: var(--text-muted, #9ca3af); font-size: .9rem; }
-    .question-item { border: 1px dashed var(--border, #d1d5db); border-radius: 8px; padding: 1rem; }
+    .question-item { border: 1px dashed var(--border, #334155); border-radius: 12px; padding: 1rem; background: rgba(15,23,42,.42); }
     .question-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
-    .question-number { font-size: .85rem; font-weight: 600; color: var(--text-muted, #6b7280); }
-    .btn-icon { background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem; padding: .2rem .4rem; border-radius: 4px; }
-    .btn-icon:hover { background: #fee2e2; }
-    @@media (prefers-color-scheme: dark) {
-        .form-card { background: #1e2130; border-color: #2d3148; }
-        .form-control { background: #252840; border-color: #3d4166; }
+    .question-number { font-size: .82rem; font-weight: 700; color: var(--text-muted, #9ca3af); text-transform: uppercase; letter-spacing: .08em; }
+    .required-wrap { justify-content: end; }
+    .required-wrap label { display: flex; gap: .5rem; align-items: center; min-height: 44px; }
+    .choice-options { margin-top: .25rem; }
+    .choice-option-list { display: grid; gap: .5rem; margin: .5rem 0 .7rem; }
+    .question-hint { margin: .25rem 0 0; color: var(--text-muted, #9ca3af); font-size: .82rem; line-height: 1.45; }
+    .btn-icon { background: transparent; border: 1px solid rgba(248,113,113,.35); cursor: pointer; color: #fca5a5; font-size: 1rem; padding: .15rem .5rem; border-radius: 8px; min-width: 36px; min-height: 36px; }
+    .btn-icon:hover { background: rgba(248,113,113,.14); }
+    @@media (max-width: 560px) {
+        .questions-header, .form-actions { flex-direction: column; align-items: stretch; }
+        .questions-header .btn, .form-actions .btn { width: 100%; justify-content: center; }
     }
 </style>
 
-<script>
-(function () {
-    var questions = [];
-    var nextId = 0;
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        var nextId = 0;
+        var list = document.getElementById('questionsList');
+        var emptyMsg = document.getElementById('emptyQuestionsMsg');
+        var template = document.getElementById('questionTemplate').innerHTML;
+        var jsonInput = document.getElementById('questionsJsonInput');
+        var form = document.getElementById('missionForm');
+        var submitBtn = document.getElementById('submitBtn');
 
-    var list = document.getElementById('questionsList');
-    var emptyMsg = document.getElementById('emptyQuestionsMsg');
-    var template = document.getElementById('questionTemplate').innerHTML;
-    var jsonInput = document.getElementById('questionsJsonInput');
-    var form = document.getElementById('missionForm');
-
-    document.getElementById('addQuestionBtn').addEventListener('click', function () {
-        var id = nextId++;
-        var html = template.replace(/__IDX__/g, id);
-        var wrapper = document.createElement('div');
-        wrapper.innerHTML = html;
-        var el = wrapper.firstElementChild;
-        list.appendChild(el);
-        el.querySelector('.remove-question').addEventListener('click', function () {
-            el.remove();
-            renumber();
+        document.getElementById('addQuestionBtn').addEventListener('click', function () {
+            addQuestion();
         });
-        renumber();
-    });
 
-    function renumber() {
-        var items = list.querySelectorAll('.question-item');
-        emptyMsg.style.display = items.length === 0 ? '' : 'none';
-        items.forEach(function (item, i) {
-            item.querySelector('.q-num').textContent = i + 1;
-        });
-    }
-
-    form.addEventListener('submit', function (e) {
-        var items = list.querySelectorAll('.question-item');
-        var qs = [];
-        var valid = true;
-        items.forEach(function (item, i) {
-            var text = item.querySelector('.q-text').value.trim();
-            if (!text) { valid = false; }
-            qs.push({
-                questionText: text,
-                questionType: parseInt(item.querySelector('.q-type').value, 10),
-                order: i,
-                isRequired: item.querySelector('.q-required').checked
+        function addQuestion() {
+            var id = nextId++;
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = template.replace(/__IDX__/g, id);
+            var el = wrapper.firstElementChild;
+            list.appendChild(el);
+            el.querySelector('.remove-question').addEventListener('click', function () {
+                el.remove();
+                renumber();
             });
+            wireQuestion(el);
+            renumber();
+        }
+
+        function wireQuestion(el) {
+            var type = el.querySelector('.q-type');
+            var optionsWrap = el.querySelector('.choice-options');
+            var audioHint = el.querySelector('.q-audio-hint');
+            var fileHint = el.querySelector('.q-file-hint');
+            var optionList = el.querySelector('.choice-option-list');
+            var addOption = el.querySelector('.add-option');
+
+            function syncType() {
+                optionsWrap.hidden = type.value !== '4';
+                audioHint.hidden = type.value !== '2';
+                fileHint.hidden = type.value !== '3';
+            }
+
+            type.addEventListener('change', syncType);
+            addOption.addEventListener('click', function () {
+                var count = optionList.querySelectorAll('.q-option').length;
+                if (count >= 4) return;
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control q-option';
+                input.maxLength = 300;
+                input.placeholder = 'Alternativa ' + (count + 1);
+                optionList.appendChild(input);
+            });
+            syncType();
+        }
+
+        function renumber() {
+            var items = list.querySelectorAll('.question-item');
+            emptyMsg.style.display = items.length === 0 ? '' : 'none';
+            items.forEach(function (item, i) {
+                item.querySelector('.q-num').textContent = i + 1;
+            });
+        }
+
+        form.addEventListener('submit', function (e) {
+            var items = list.querySelectorAll('.question-item');
+            var qs = [];
+            var valid = true;
+
+            items.forEach(function (item, i) {
+                var text = item.querySelector('.q-text').value.trim();
+                var type = parseInt(item.querySelector('.q-type').value, 10);
+                var options = [];
+                if (!text) valid = false;
+                if (type === 4) {
+                    options = Array.from(item.querySelectorAll('.q-option'))
+                        .map(function (input) { return input.value.trim(); })
+                        .filter(Boolean);
+                    options = Array.from(new Set(options));
+                    if (options.length < 2 || options.length > 4) valid = false;
+                }
+                qs.push({
+                    questionText: text,
+                    questionType: type,
+                    order: i,
+                    isRequired: item.querySelector('.q-required').checked,
+                    options: options
+                });
+            });
+
+            if (!valid || qs.length === 0) {
+                e.preventDefault();
+                alert('Adicione pelo menos um campo valido. Alternativas precisam ter entre 2 e 4 opcoes.');
+                return;
+            }
+
+            jsonInput.value = JSON.stringify(qs);
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
         });
-        if (!valid) {
-            e.preventDefault();
-            alert('Preencha o texto de todas as perguntas.');
-            return;
-        }
-        if (qs.length === 0) {
-            e.preventDefault();
-            alert('Adicione ao menos uma pergunta à missão.');
-            return;
-        }
-        jsonInput.value = JSON.stringify(qs);
-    });
-})();
-</script>
+
+        addQuestion();
+    }());
+    </script>
+}

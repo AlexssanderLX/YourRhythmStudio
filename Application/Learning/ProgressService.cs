@@ -50,6 +50,7 @@ public sealed class ProgressService
             .AsNoTracking()
             .Where(assignment => assignment.SchoolId == schoolId
                 && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission
                 && assignment.Status != AssignmentStatus.Completed
                 && assignment.Status != AssignmentStatus.Skipped)
             .OrderBy(assignment => assignment.DueAtUtc ?? DateTime.MaxValue)
@@ -71,6 +72,7 @@ public sealed class ProgressService
             .AsNoTracking()
             .Where(assignment => assignment.SchoolId == schoolId
                 && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission
                 && assignment.Status == AssignmentStatus.Completed)
             .OrderByDescending(assignment => assignment.CompletedAtUtc)
             .Take(5)
@@ -133,6 +135,7 @@ public sealed class ProgressService
         var pending = await _dbContext.Assignments.CountAsync(
             assignment => assignment.SchoolId == schoolId
                 && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission
                 && assignment.Status != AssignmentStatus.Completed
                 && assignment.Status != AssignmentStatus.Skipped,
             cancellationToken);
@@ -140,6 +143,7 @@ public sealed class ProgressService
         var completed = await _dbContext.Assignments.CountAsync(
             assignment => assignment.SchoolId == schoolId
                 && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission
                 && assignment.Status == AssignmentStatus.Completed,
             cancellationToken);
 

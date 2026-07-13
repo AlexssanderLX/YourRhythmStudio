@@ -482,6 +482,7 @@ public sealed class YourRhythmDbContext : DbContext
             entity.HasKey(q => q.Id);
             entity.Property(q => q.QuestionText).HasMaxLength(1000).IsRequired();
             entity.Property(q => q.QuestionType).HasConversion<int>();
+            entity.Property(q => q.OptionsJson).HasMaxLength(1600);
             entity.HasIndex(q => q.AssignmentId);
             entity.HasOne<Assignment>()
                 .WithMany()

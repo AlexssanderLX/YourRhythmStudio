@@ -24,7 +24,10 @@
             <p>@student.DisplayName · Nivel @student.CurrentLevel · @student.CurrentXp XP</p>
         </div>
         <div class="module-header-actions">
-            <button type="button" class="btn btn-primary btn-sm" data-open-create>Criar missao</button>
+            <a class="btn btn-primary btn-sm"
+               asp-controller="Teacher"
+               asp-action="CreateMission"
+               asp-route-studentId="@studentId">Criar missao</a>
             <partial name="_StudentManagementActions" model="Model" />
         </div>
     </div>

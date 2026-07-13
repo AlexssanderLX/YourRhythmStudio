@@ -13,7 +13,8 @@ public sealed class MissionQuestion
         string questionText,
         MissionQuestionType questionType,
         int order,
-        bool isRequired)
+        bool isRequired,
+        string? optionsJson = null)
     {
         if (assignmentId == Guid.Empty)
             throw new ArgumentException("AssignmentId is required.", nameof(assignmentId));
@@ -27,6 +28,7 @@ public sealed class MissionQuestion
         QuestionType = questionType;
         Order = order;
         IsRequired = isRequired;
+        OptionsJson = string.IsNullOrWhiteSpace(optionsJson) ? null : optionsJson;
     }
 
     public Guid Id { get; private set; }
@@ -35,4 +37,5 @@ public sealed class MissionQuestion
     public MissionQuestionType QuestionType { get; private set; }
     public int Order { get; private set; }
     public bool IsRequired { get; private set; }
+    public string? OptionsJson { get; private set; }
 }

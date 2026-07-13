@@ -13,7 +13,6 @@ namespace YourRhythmStudio.Controllers;
 public sealed class StudentController : Controller
 {
     private readonly IUserProfileResolver _profileResolver;
-    private readonly AssignmentService _assignmentService;
     private readonly RepertoireService _repertoireService;
     private readonly FeedbackService _feedbackService;
     private readonly ProgressService _progressService;
@@ -23,7 +22,6 @@ public sealed class StudentController : Controller
 
     public StudentController(
         IUserProfileResolver profileResolver,
-        AssignmentService assignmentService,
         RepertoireService repertoireService,
         FeedbackService feedbackService,
         ProgressService progressService,
@@ -32,7 +30,6 @@ public sealed class StudentController : Controller
         MissionService missionService)
     {
         _profileResolver = profileResolver;
-        _assignmentService = assignmentService;
         _repertoireService = repertoireService;
         _feedbackService = feedbackService;
         _progressService = progressService;
@@ -51,30 +48,18 @@ public sealed class StudentController : Controller
     }
 
     [HttpGet("Assignments")]
-    public async Task<IActionResult> Assignments(CancellationToken cancellationToken)
-    {
-        var profile = await CurrentProfile(cancellationToken);
-        var assignments = await _assignmentService.ListForCurrentStudentAsync(profile, cancellationToken);
-        return View(new StudentAssignmentsViewModel { Assignments = assignments });
-    }
+    public IActionResult Assignments()
+        => RedirectToAction(nameof(Missions));
 
     [HttpPost("Assignments/{assignmentId:guid}/Start")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> StartAssignment(Guid assignmentId, CancellationToken cancellationToken)
-    {
-        var profile = await CurrentProfile(cancellationToken);
-        await _assignmentService.StartAssignmentAsync(profile, assignmentId, cancellationToken);
-        return RedirectToAction(nameof(Assignments));
-    }
+    public IActionResult StartAssignment(Guid assignmentId)
+        => NotFound();
 
     [HttpPost("Assignments/{assignmentId:guid}/Complete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CompleteAssignment(Guid assignmentId, CancellationToken cancellationToken)
-    {
-        var profile = await CurrentProfile(cancellationToken);
-        await _assignmentService.CompleteAssignmentAsync(profile, assignmentId, cancellationToken);
-        return RedirectToAction(nameof(Assignments));
-    }
+    public IActionResult CompleteAssignment(Guid assignmentId)
+        => NotFound();
 
     [HttpGet("Repertoire")]
     public async Task<IActionResult> Repertoire(CancellationToken cancellationToken)
