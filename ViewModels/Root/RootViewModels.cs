@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using YourRhythmStudio.Domain.Root;
 
 namespace YourRhythmStudio.ViewModels.Root;
@@ -258,6 +259,35 @@ public sealed class UpdateNotificationRecipientViewModel
     [EmailAddress]
     [Display(Name = "E-mail destinatario das notificacoes")]
     public string Recipient { get; set; } = string.Empty;
+}
+
+// ──── Soundtrack ───────────────────────────────────────────────────────────────
+
+public sealed class SoundtrackViewModel
+{
+    public List<TrackRow> Tracks { get; init; } = [];
+    public int MaxTracks { get; init; } = 10;
+}
+
+public sealed class TrackRow
+{
+    public Guid Id { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string FileName { get; init; } = string.Empty;
+    public int SortOrder { get; init; }
+    public DateTime UploadedAtUtc { get; init; }
+}
+
+public sealed class AddTrackViewModel
+{
+    [Required(ErrorMessage = "Informe o titulo da musica.")]
+    [MaxLength(120)]
+    [Display(Name = "Titulo")]
+    public string Title { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Selecione um arquivo de audio.")]
+    [Display(Name = "Arquivo de audio (mp3, ogg, wav, flac — max 20 MB)")]
+    public IFormFile? File { get; set; }
 }
 
 // ──── Storage ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,107 @@
+@model YourRhythmStudio.ViewModels.Root.SoundtrackViewModel
+@{ Layout = "_RootLayout"; ViewData["Title"] = "Trilha Sonora da Home"; ViewData["RootSection"] = "soundtrack"; }
+
+<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+
+    @* ── Lista de musicas ── *@
+    <div>
+        <div class="root-card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between">
+                <span class="root-card-title" style="margin:0">Musicas ativas</span>
+                <span style="font-size:12px;color:var(--muted)">@Model.Tracks.Count / @Model.MaxTracks</span>
+            </div>
+
+            @if (!Model.Tracks.Any())
+            {
+                <div style="padding:40px;text-align:center;color:var(--muted)">
+                    <p style="margin:0">Nenhuma musica adicionada ainda.</p>
+                    <p style="font-size:12px;margin:4px 0 0">Adicione uma musica ao lado para ela aparecer na pagina inicial.</p>
+                </div>
+            }
+            else
+            {
+                <div class="root-table-wrap">
+                    <table class="root-table" aria-label="Trilha sonora">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Titulo</th>
+                                <th>Arquivo</th>
+                                <th>Adicionada em</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var track in Model.Tracks)
+                        {
+                            <tr>
+                                <td style="color:var(--muted);font-size:12px">@(track.SortOrder + 1)</td>
+                                <td style="font-weight:500">@track.Title</td>
+                                <td style="font-size:12px;color:var(--muted)">
+                                    <audio controls preload="none" style="height:28px;vertical-align:middle;max-width:180px">
+                                        <source src="/audio/landing-soundtrack/@track.FileName" />
+                                    </audio>
+                                </td>
+                                <td style="font-size:12px;color:var(--muted)">@track.UploadedAtUtc.ToString("dd/MM/yy HH:mm")</td>
+                                <td>
+                                    <form method="post" action="/Root/Soundtrack/@track.Id/Remove"
+                                          onsubmit="return confirm('Remover @Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(track.Title))?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn-root btn-danger btn-sm" aria-label="Remover">✕</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <div class="root-card" style="font-size:13px;color:var(--muted)">
+            <div class="root-card-title">Como funciona</div>
+            <ul style="margin:0;padding-left:20px;line-height:1.8">
+                <li>As musicas tocam em sequencia na pagina inicial para visitantes.</li>
+                <li>O player aparece no canto inferior direito, com play/pause e navegacao.</li>
+                <li>Maximo de @Model.MaxTracks musicas. Para trocar a ordem, remova e adicione na ordem desejada.</li>
+                <li>Formatos suportados: mp3, ogg, wav, flac. Limite: 20 MB por arquivo.</li>
+            </ul>
+        </div>
+    </div>
+
+    @* ── Adicionar musica ── *@
+    <div class="root-card">
+        <div class="root-card-title">Adicionar musica</div>
+
+        @if (Model.Tracks.Count >= Model.MaxTracks)
+        {
+            <p style="color:var(--muted);font-size:13px">Limite de @Model.MaxTracks musicas atingido. Remova uma para adicionar outra.</p>
+        }
+        else
+        {
+            <form method="post" action="/Root/Soundtrack/Add" enctype="multipart/form-data" class="root-form">
+                @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label for="track-title">Titulo da musica</label>
+                    <input type="text" id="track-title" name="Title" required maxlength="120" placeholder="Ex: Intro ambiance" />
+                </div>
+                <div class="form-group">
+                    <label for="track-file">Arquivo de audio</label>
+                    <input type="file" id="track-file" name="File" required
+                           accept=".mp3,.ogg,.wav,.flac,audio/mpeg,audio/ogg,audio/wav,audio/flac"
+                           style="padding:6px 12px" />
+                    <p style="font-size:11px;color:var(--muted);margin:4px 0 0">mp3, ogg, wav ou flac. Max 20 MB.</p>
+                </div>
+                <button type="submit" class="btn-root btn-primary" style="width:100%">Adicionar musica</button>
+            </form>
+        }
+    </div>
+
+</div>
+
+@* Responsivo *@
+<style>
+@@media (max-width: 700px) {
+    div[style*="grid-template-columns:1fr 360px"] { grid-template-columns: 1fr !important; }
+}
+</style>

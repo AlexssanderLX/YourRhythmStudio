@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Foundation.Access.Abstractions;
@@ -740,6 +741,57 @@ public sealed class RootAdminService
         });
         await _db.SaveChangesAsync(ct);
 
+        return (true, null);
+    }
+
+    // ──── Landing Soundtrack ───────────────────────────────────────────────────
+
+    public const int MaxTracks = 10;
+    private static readonly string[] AllowedExtensions = [".mp3", ".ogg", ".wav", ".flac"];
+
+    public async Task<List<Domain.Root.LandingTrack>> GetTracksAsync(CancellationToken ct = default) =>
+        await _db.LandingTracks.AsNoTracking().OrderBy(t => t.SortOrder).ThenBy(t => t.UploadedAtUtc).ToListAsync(ct);
+
+    public async Task<(bool Success, string? Error)> AddTrackAsync(
+        string title, IFormFile file, string uploadDir, CancellationToken ct = default)
+    {
+        var count = await _db.LandingTracks.CountAsync(ct);
+        if (count >= MaxTracks) return (false, $"Limite de {MaxTracks} musicas atingido.");
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(ext)) return (false, "Formato invalido. Use mp3, ogg, wav ou flac.");
+
+        if (file.Length > 20 * 1024 * 1024) return (false, "Arquivo muito grande. Limite: 20 MB.");
+
+        Directory.CreateDirectory(uploadDir);
+        var safeFileName = $"{Guid.NewGuid():N}{ext}";
+        var fullPath = Path.Combine(uploadDir, safeFileName);
+
+        await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await file.CopyToAsync(stream, ct);
+
+        var nextOrder = count == 0 ? 0 : await _db.LandingTracks.MaxAsync(t => t.SortOrder, ct) + 1;
+        _db.LandingTracks.Add(new Domain.Root.LandingTrack
+        {
+            Title = title.Trim(),
+            FileName = safeFileName,
+            SortOrder = nextOrder
+        });
+        await _db.SaveChangesAsync(ct);
+        return (true, null);
+    }
+
+    public async Task<(bool Success, string? Error)> RemoveTrackAsync(
+        Guid trackId, string uploadDir, CancellationToken ct = default)
+    {
+        var track = await _db.LandingTracks.FirstOrDefaultAsync(t => t.Id == trackId, ct);
+        if (track is null) return (false, "Musica nao encontrada.");
+
+        var fullPath = Path.Combine(uploadDir, track.FileName);
+        if (File.Exists(fullPath)) File.Delete(fullPath);
+
+        _db.LandingTracks.Remove(track);
+        await _db.SaveChangesAsync(ct);
         return (true, null);
     }
 

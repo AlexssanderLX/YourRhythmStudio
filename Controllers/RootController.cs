@@ -219,6 +219,52 @@ public sealed class RootController : Controller
         return RedirectToAction(nameof(Plans));
     }
 
+    // ──── Soundtrack ───────────────────────────────────────────────────────────
+
+    private string SoundtrackDir => Path.Combine(
+        Directory.GetCurrentDirectory(), "wwwroot", "audio", "landing-soundtrack");
+
+    [HttpGet("Soundtrack")]
+    public async Task<IActionResult> Soundtrack()
+    {
+        ViewData["RootSection"] = "soundtrack";
+        var tracks = await _svc.GetTracksAsync();
+        return View(new SoundtrackViewModel
+        {
+            Tracks = tracks.Select(t => new TrackRow
+            {
+                Id = t.Id, Title = t.Title, FileName = t.FileName,
+                SortOrder = t.SortOrder, UploadedAtUtc = t.UploadedAtUtc
+            }).ToList(),
+            MaxTracks = RootAdminService.MaxTracks
+        });
+    }
+
+    [HttpPost("Soundtrack/Add")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(25 * 1024 * 1024)]
+    public async Task<IActionResult> AddTrack(AddTrackViewModel vm)
+    {
+        if (!ModelState.IsValid || vm.File is null)
+        {
+            TempData["ErrorMessage"] = "Verifique os campos e tente novamente.";
+            return RedirectToAction(nameof(Soundtrack));
+        }
+
+        var (ok, err) = await _svc.AddTrackAsync(vm.Title, vm.File, SoundtrackDir);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok ? "Musica adicionada." : err;
+        return RedirectToAction(nameof(Soundtrack));
+    }
+
+    [HttpPost("Soundtrack/{id:guid}/Remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveTrack(Guid id)
+    {
+        var (ok, err) = await _svc.RemoveTrackAsync(id, SoundtrackDir);
+        TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok ? "Musica removida." : err;
+        return RedirectToAction(nameof(Soundtrack));
+    }
+
     // ──── Storage ──────────────────────────────────────────────────────────────
 
     [HttpGet("Storage")]

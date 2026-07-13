@@ -50,6 +50,8 @@ public sealed class YourRhythmDbContext : DbContext
 
     public DbSet<AdminSetting> AdminSettings => Set<AdminSetting>();
 
+    public DbSet<LandingTrack> LandingTracks => Set<LandingTrack>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -439,6 +441,15 @@ public sealed class YourRhythmDbContext : DbContext
             entity.HasKey(s => s.Key);
             entity.Property(s => s.Key).HasMaxLength(80).IsRequired();
             entity.Property(s => s.Value).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<LandingTrack>(entity =>
+        {
+            entity.ToTable("landing_tracks");
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.Title).HasMaxLength(120).IsRequired();
+            entity.Property(t => t.FileName).HasMaxLength(180).IsRequired();
+            entity.HasIndex(t => t.SortOrder);
         });
     }
 }
