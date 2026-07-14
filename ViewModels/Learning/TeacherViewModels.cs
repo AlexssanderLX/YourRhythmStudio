@@ -128,6 +128,7 @@ public sealed class EditLessonViewModel
 public sealed class TeacherLessonDetailViewModel
 {
     public required LessonDetailSummary Detail { get; init; }
+    public required EditLessonViewModel EditForm { get; init; }
 }
 
 public sealed class AddRepertoireViewModel

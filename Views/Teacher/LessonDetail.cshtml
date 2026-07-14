@@ -1,16 +1,23 @@
-﻿@model YourRhythmStudio.ViewModels.Learning.TeacherLessonDetailViewModel
+@model YourRhythmStudio.ViewModels.Learning.TeacherLessonDetailViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = Model.Detail.Lesson.Title;
     ViewData["Role"] = "teacher";
     ViewData["DashTitle"] = Model.Detail.Lesson.Title;
 
-    var lesson = Model.Detail.Lesson;
-    var student = Model.Detail.Student;
+    var lesson    = Model.Detail.Lesson;
+    var student   = Model.Detail.Student;
     var localDate = lesson.LessonDateUtc.ToLocalTime();
+    var isDone    = lesson.Status == LessonStatus.Completed;
+    var isCx      = lesson.Status == LessonStatus.Cancelled;
+
+    var successMsg = TempData["Success"] as string;
+    var errorMsg   = TempData["Error"] as string;
 }
 
 <section class="lesson-detail-page">
+
     <div class="student-detail-topline">
         <a class="student-back-link" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId">
             <partial name="_DashIcon" model="@("users")" />
@@ -19,15 +26,28 @@
         <a class="student-home-link" asp-controller="Teacher" asp-action="QuickLesson">Nova aula</a>
     </div>
 
+    @if (!string.IsNullOrWhiteSpace(successMsg))
+    {
+        <div class="account-feedback success" role="status">@successMsg</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="account-feedback error" role="alert">@errorMsg</div>
+    }
+
+    @* ── Info header ── *@
     <section class="lesson-detail-hero">
         <div>
             <span class="student-section-kicker">Aula registrada</span>
             <h1>@lesson.Title</h1>
-            <p>@student.DisplayName Â· @student.Instrument</p>
+            <p>@student.DisplayName · @student.Instrument</p>
         </div>
-        <div class="lesson-status-pill">@lesson.Status</div>
+        <div class="lesson-status-pill @(isDone ? "lesson-status-done" : isCx ? "lesson-status-cx" : "")">
+            @(isDone ? "Concluída" : isCx ? "Cancelada" : "Planejada")
+        </div>
     </section>
 
+    @* ── Metrics ── *@
     <section class="lesson-detail-grid">
         <div class="lesson-metric">
             <span>Data</span>
@@ -38,20 +58,93 @@
             <strong>@localDate.ToString("HH:mm")</strong>
         </div>
         <div class="lesson-metric">
-            <span>Nivel do aluno</span>
+            <span>Nível do aluno</span>
             <strong>@student.CurrentLevel</strong>
         </div>
     </section>
 
-    <section class="lesson-notes-card">
-        <span class="student-section-kicker">DescriÃ§Ã£o da aula</span>
-        @if (string.IsNullOrWhiteSpace(lesson.Notes))
-        {
-            <p>Nenhuma descriÃ§Ã£o foi registrada para esta aula.</p>
-        }
-        else
-        {
-            <p>@lesson.Notes</p>
-        }
+    @* ── Edit form ── *@
+    <section class="lesson-compose-card lesson-edit-card">
+        <div class="lesson-edit-head">
+            <h2>Editar aula</h2>
+        </div>
+
+        <form asp-controller="Teacher" asp-action="UpdateLesson"
+              asp-route-studentId="@student.StudentProfileId"
+              asp-route-lessonId="@lesson.Id"
+              method="post" class="auth-form compact-form" data-safe-submit>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EditForm.StudentProfileId" />
+            <input type="hidden" asp-for="EditForm.LessonId" />
+
+            <div>
+                <label asp-for="EditForm.LessonDateUtc">Data e hora</label>
+                <input asp-for="EditForm.LessonDateUtc"
+                       id="lessonEditDate"
+                       type="datetime-local"
+                       asp-format="{0:yyyy-MM-ddTHH:mm}"
+                       step="60" />
+                <span asp-validation-for="EditForm.LessonDateUtc" class="auth-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="EditForm.Title">Nome da aula</label>
+                <input asp-for="EditForm.Title"
+                       id="lessonEditTitle"
+                       placeholder="Nome da aula"
+                       data-auto-title="false" />
+                <span asp-validation-for="EditForm.Title" class="auth-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="EditForm.Notes">Descrição</label>
+                <textarea asp-for="EditForm.Notes"
+                          placeholder="Conteúdo trabalhado, observações, combinados..."></textarea>
+                <span asp-validation-for="EditForm.Notes" class="auth-error"></span>
+            </div>
+
+            <div class="lesson-edit-actions">
+                <button type="submit" class="account-primary" data-loading-text="Salvando...">
+                    Salvar alterações
+                </button>
+            </div>
+        </form>
     </section>
+
 </section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        var date  = document.getElementById('lessonEditDate');
+        var title = document.getElementById('lessonEditTitle');
+        if (!date || !title) return;
+
+        var initialTitle = title.value.trim();
+        var autoPatterns = /^Aula de \d{2}\/\d{2}\/\d{4} as \d{2}:\d{2}$/;
+        var isAuto = autoPatterns.test(initialTitle);
+
+        function pad(v) { return String(v).padStart(2, '0'); }
+        function buildAuto() {
+            if (!isAuto || !date.value) return;
+            var d = new Date(date.value);
+            if (Number.isNaN(d.getTime())) return;
+            title.value = 'Aula de ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
+                + ' as ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        title.addEventListener('input', function () { isAuto = false; });
+        date.addEventListener('change', buildAuto);
+
+        document.querySelectorAll('[data-safe-submit]').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                var btn = form.querySelector('button[type="submit"]');
+                if (!btn || btn.disabled) return;
+                btn.textContent = btn.dataset.loadingText || 'Salvando...';
+                btn.disabled = true;
+            });
+        });
+    }());
+    </script>
+}

@@ -1,136 +1,209 @@
-﻿@model YourRhythmStudio.ViewModels.Learning.TeacherDashboardViewModel
+@model YourRhythmStudio.ViewModels.Learning.TeacherDashboardViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = "Painel do professor";
     ViewData["Role"] = "teacher";
     var first = (User.Identity?.Name ?? "Professor").Split(' ')[0];
-    ViewData["DashTitle"] = $"Bom dia, {first}";
+    ViewData["DashTitle"] = first;
 
     var activeStudents = Model.Summary.ActiveStudentCount;
-    var pending = Model.Summary.PendingAssignmentCount;
-    var completed = Model.Summary.RecentCompletedAssignmentCount;
-    var activityScore = Math.Min(100, activeStudents * 25 + completed * 10);
+    var pending        = Model.Summary.PendingAssignmentCount;
+    var completed      = Model.Summary.RecentCompletedAssignmentCount;
+    var lessons        = Model.Summary.RecentLessons;
+    var students       = Model.Summary.RecentStudents;
+
+    var avgLevel       = students.Any()
+        ? (int)Math.Round(students.Average(s => s.CurrentLevel))
+        : 0;
+    var activityScore  = Math.Min(100, activeStudents * 22 + completed * 8);
+
+    var now      = DateTime.Now;
+    var hour     = now.Hour;
+    var greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+    var weekday  = now.DayOfWeek switch {
+        DayOfWeek.Sunday    => "domingo",
+        DayOfWeek.Monday    => "segunda-feira",
+        DayOfWeek.Tuesday   => "terça-feira",
+        DayOfWeek.Wednesday => "quarta-feira",
+        DayOfWeek.Thursday  => "quinta-feira",
+        DayOfWeek.Friday    => "sexta-feira",
+        _                   => "sábado"
+    };
+    var todayLabel = now.ToString("dd 'de' MMMM", new System.Globalization.CultureInfo("pt-BR"));
 }
 
-<section class="teacher-command">
-    <div class="teacher-command-main">
-        <span class="teacher-kicker">Painel rapido</span>
-        <h2>@first, sua turma esta em movimento.</h2>
-        <p>Priorize alunos, registre a aula e acompanhe missoes recentes sem garimpar telas.</p>
-        <div class="teacher-command-actions">
-            <a class="btn btn-primary btn-sm" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
-            <a class="btn btn-ghost btn-sm" asp-controller="Teacher" asp-action="QuickLesson">Registrar aula</a>
-        </div>
+@* ── Greeting ──────────────────────────────────────────────────────────── *@
+<div class="cmd-greeting">
+    <div>
+        <h1 class="cmd-hello">@greeting, <span>@first</span> 👋</h1>
+        <p class="cmd-subline">
+            Hoje é @weekday, @todayLabel
+            @if (pending > 0) {
+                <span class="cmd-badge cmd-badge--warn">@pending missão@(pending == 1 ? "" : "ões") pendente@(pending == 1 ? "" : "s")</span>
+            } else {
+                <span class="cmd-badge cmd-badge--ok">Tudo em dia</span>
+            }
+        </p>
     </div>
-    <div class="teacher-score-card">
-        <span>Ritmo da turma</span>
-        <strong>@activityScore%</strong>
-        <div class="teacher-score-bar"><i style="width:@activityScore%"></i></div>
-        <small>@activeStudents aluno(s) ativo(s)</small>
+    <span class="cmd-clock" aria-hidden="true">@now.ToString("HH:mm")</span>
+</div>
+
+@* ── KPI Cards ─────────────────────────────────────────────────────────── *@
+<div class="cmd-kpi-grid">
+
+    <a class="cmd-kpi" asp-controller="Teacher" asp-action="Students"
+       aria-label="@activeStudents alunos ativos">
+        <span class="cmd-kpi-icon" aria-hidden="true">👨‍🎓</span>
+        <strong class="cmd-kpi-val">@activeStudents</strong>
+        <span class="cmd-kpi-label">Alunos ativos</span>
+    </a>
+
+    <a class="cmd-kpi @(pending > 0 ? "cmd-kpi--warn" : "")" asp-controller="Teacher" asp-action="Students"
+       aria-label="@pending missões pendentes">
+        <span class="cmd-kpi-icon" aria-hidden="true">🎯</span>
+        <strong class="cmd-kpi-val">@pending</strong>
+        <span class="cmd-kpi-label">Missões pendentes</span>
+    </a>
+
+    <a class="cmd-kpi cmd-kpi--done" asp-controller="Teacher" asp-action="Students"
+       aria-label="@completed missões concluídas nos últimos 14 dias">
+        <span class="cmd-kpi-icon" aria-hidden="true">✅</span>
+        <strong class="cmd-kpi-val">@completed</strong>
+        <span class="cmd-kpi-label">Concluídas (14d)</span>
+    </a>
+
+    <a class="cmd-kpi" asp-controller="Teacher" asp-action="QuickLesson"
+       aria-label="@lessons.Count aulas recentes">
+        <span class="cmd-kpi-icon" aria-hidden="true">📖</span>
+        <strong class="cmd-kpi-val">@lessons.Count</strong>
+        <span class="cmd-kpi-label">Aulas recentes</span>
+    </a>
+
+    <div class="cmd-kpi" aria-label="Nível médio da turma @(avgLevel > 0 ? avgLevel.ToString() : "indisponível")">
+        <span class="cmd-kpi-icon" aria-hidden="true">⭐</span>
+        <strong class="cmd-kpi-val">@(avgLevel > 0 ? avgLevel.ToString() : "—")</strong>
+        <span class="cmd-kpi-label">Nível médio</span>
     </div>
-</section>
 
-<section class="teacher-stat-grid">
-    <a class="teacher-stat-card" asp-controller="Teacher" asp-action="Students">
-        <span class="teacher-stat-label">Alunos ativos</span>
-        <strong>@activeStudents</strong>
-        <small>Gerenciar turma</small>
-    </a>
-    <a class="teacher-stat-card warn" asp-controller="Teacher" asp-action="Students">
-        <span class="teacher-stat-label">Missoes pendentes</span>
-        <strong>@pending</strong>
-        <small>Ver proximas acoes</small>
-    </a>
-    <a class="teacher-stat-card done" asp-controller="Teacher" asp-action="Students">
-        <span class="teacher-stat-label">Concluidas recentes</span>
-        <strong>@completed</strong>
-        <small>Ultimos 14 dias</small>
-    </a>
-</section>
+    <div class="cmd-kpi" aria-label="Ritmo da turma @activityScore por cento">
+        <span class="cmd-kpi-icon" aria-hidden="true">🔥</span>
+        <strong class="cmd-kpi-val">@activityScore<small class="cmd-kpi-unit">%</small></strong>
+        <span class="cmd-kpi-label">Ritmo da turma</span>
+    </div>
 
-<section class="teacher-overview-grid">
-    <div class="card teacher-panel span-2">
-        <div class="panel-head">
-            <div>
-                <h3>Alunos recentes</h3>
-                <p class="card-sub">Toque para abrir o detalhe e agir rapido.</p>
-            </div>
-            <a class="panel-link" asp-controller="Teacher" asp-action="Students">Ver todos</a>
+</div>
+
+@* ── Quick Actions ──────────────────────────────────────────────────────── *@
+<div class="cmd-actions" role="toolbar" aria-label="Ações rápidas">
+
+    <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateStudent">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Novo aluno
+    </a>
+
+    <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateMission">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Nova missão
+    </a>
+
+    <a class="cmd-action" asp-controller="Teacher" asp-action="QuickLesson">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Registrar aula
+    </a>
+
+    <a class="cmd-action" asp-controller="Teacher" asp-action="Students">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Ver turma
+    </a>
+
+</div>
+
+@* ── Panels ─────────────────────────────────────────────────────────────── *@
+<div class="cmd-panels">
+
+    @* Left — Recent Students *@
+    <div class="cmd-panel">
+        <div class="cmd-panel-head">
+            <h2>Turma</h2>
+            <a asp-controller="Teacher" asp-action="Students">Ver todos →</a>
         </div>
 
-        <div class="teacher-student-list">
-            @foreach (var student in Model.Summary.RecentStudents)
-            {
-                var repProgress = Math.Clamp(student.RepertoireProgressPercent, 0, 100);
-                <a class="teacher-student-card" asp-controller="Teacher" asp-action="StudentDetail" asp-route-studentId="@student.StudentProfileId">
-                    <div class="pavatar">
-                        @if (!string.IsNullOrWhiteSpace(student.ProfilePhotoUrl))
-                        {
-                            <img src="@student.ProfilePhotoUrl" alt="Foto de perfil de @student.DisplayName" />
-                        }
-                        else
-                        {
-                            @Initials(student.DisplayName)
-                        }
-                    </div>
-                    <div class="teacher-student-info">
-                        <div class="teacher-student-top">
-                            <strong>@student.DisplayName</strong>
-                            <span>Nivel @student.CurrentLevel</span>
+        @if (students.Any()) {
+            <div class="cmd-student-list">
+                @foreach (var s in students) {
+                    var rep = Math.Clamp(s.RepertoireProgressPercent, 0, 100);
+                    <a class="cmd-student"
+                       asp-controller="Teacher" asp-action="StudentDetail"
+                       asp-route-studentId="@s.StudentProfileId"
+                       aria-label="Abrir perfil de @s.DisplayName">
+                        <div class="cmd-avatar">
+                            @if (!string.IsNullOrWhiteSpace(s.ProfilePhotoUrl)) {
+                                <img src="@s.ProfilePhotoUrl" alt="" aria-hidden="true" />
+                            } else {
+                                <span aria-hidden="true">@Initials(s.DisplayName)</span>
+                            }
                         </div>
-                        <p>@student.Instrument - @(student.CurrentRepertoireTitle ?? "Sem repertorio")</p>
-                        <div class="teacher-mini-progress">
-                            <i style="width:@repProgress%"></i>
+                        <div class="cmd-student-body">
+                            <div class="cmd-student-row">
+                                <strong>@s.DisplayName</strong>
+                                <span class="cmd-lvl-badge">Nv @s.CurrentLevel</span>
+                            </div>
+                            <p class="cmd-student-sub">@s.Instrument@(s.CurrentRepertoireTitle != null ? $" · {s.CurrentRepertoireTitle}" : "")</p>
+                            <div class="cmd-prog-bar" role="progressbar" aria-valuenow="@rep" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso no repertório @rep por cento">
+                                <i style="width:@rep%"></i>
+                            </div>
                         </div>
-                    </div>
-                </a>
-            }
-            @if (!Model.Summary.RecentStudents.Any())
-            {
-                <div class="teacher-empty-card">
-                    <strong>Nenhum aluno ainda</strong>
-                    <p>Cadastre o primeiro aluno para liberar missoes, repertorio e feedback.</p>
-                    <a class="btn btn-primary btn-sm" asp-controller="Teacher" asp-action="CreateStudent">Cadastrar aluno</a>
-                </div>
-            }
-        </div>
-    </div>
-
-    <div class="card teacher-panel">
-        <div class="panel-head">
-            <div>
-                <h3>Aulas recentes</h3>
-                <p class="card-sub">Ultimos registros</p>
+                    </a>
+                }
             </div>
-            <a class="panel-link" asp-controller="Teacher" asp-action="QuickLesson">Nova</a>
+        } else {
+            <div class="cmd-empty">
+                <p>Nenhum aluno cadastrado ainda.</p>
+                <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateStudent">+ Cadastrar aluno</a>
+            </div>
+        }
+    </div>
+
+    @* Right — Recent Lessons *@
+    <div class="cmd-panel">
+        <div class="cmd-panel-head">
+            <h2>Aulas recentes</h2>
+            <a asp-controller="Teacher" asp-action="QuickLesson">+ Nova</a>
         </div>
 
-        <div class="teacher-timeline">
-            @foreach (var lesson in Model.Summary.RecentLessons)
-            {
-                <a class="teacher-lesson-item" asp-controller="Teacher" asp-action="LessonDetail" asp-route-studentId="@lesson.StudentProfileId" asp-route-lessonId="@lesson.Id">
-                    <span>@lesson.LessonDateUtc.ToLocalTime().ToString("dd/MM")</span>
-                    <div>
-                        <strong>@lesson.Title</strong>
-                        <small>@lesson.LessonDateUtc.ToLocalTime().ToString("HH:mm") · @lesson.Status</small>
-                    </div>
-                </a>
-            }
-            @if (!Model.Summary.RecentLessons.Any())
-            {
-                <div class="teacher-empty-small">
-                    <strong>Nenhuma aula registrada</strong>
-                    <p>Registre data e hora para manter o historico vivo.</p>
-                </div>
-            }
-        </div>
+        @if (lessons.Any()) {
+            <div class="cmd-timeline">
+                @foreach (var l in lessons) {
+                    var local  = l.LessonDateUtc.ToLocalTime();
+                    var isDone = l.Status == LessonStatus.Completed;
+                    var isCx   = l.Status == LessonStatus.Cancelled;
+                    <a class="cmd-lesson @(isDone ? "cmd-lesson--done" : isCx ? "cmd-lesson--cx" : "")"
+                       asp-controller="Teacher" asp-action="LessonDetail"
+                       asp-route-studentId="@l.StudentProfileId"
+                       asp-route-lessonId="@l.Id">
+                        <span class="cmd-lesson-dot" aria-hidden="true"></span>
+                        <div class="cmd-lesson-body">
+                            <strong>@l.Title</strong>
+                            <small>@local.ToString("dd/MM · HH:mm") · @(isDone ? "Concluída" : isCx ? "Cancelada" : "Planejada")</small>
+                        </div>
+                    </a>
+                }
+            </div>
+        } else {
+            <div class="cmd-empty">
+                <p>Nenhuma aula registrada ainda.</p>
+                <a class="cmd-action" asp-controller="Teacher" asp-action="QuickLesson">Registrar aula</a>
+            </div>
+        }
     </div>
-</section>
+
+</div>
 
 @functions {
     private static string Initials(string value)
     {
         var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray();
-        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(part => char.ToUpperInvariant(part[0])));
+        return parts.Length == 0 ? "YR" : string.Concat(parts.Select(p => char.ToUpperInvariant(p[0])));
     }
 }

@@ -239,7 +239,18 @@ public sealed class TeacherController : Controller
         {
             var profile = await CurrentProfile(cancellationToken);
             var detail = await _lessonService.GetLessonDetailAsync(profile, studentId, lessonId, cancellationToken);
-            return View(new TeacherLessonDetailViewModel { Detail = detail });
+            return View(new TeacherLessonDetailViewModel
+            {
+                Detail = detail,
+                EditForm = new EditLessonViewModel
+                {
+                    StudentProfileId = studentId,
+                    LessonId = lessonId,
+                    Title = detail.Lesson.Title,
+                    LessonDateUtc = detail.Lesson.LessonDateUtc.ToLocalTime(),
+                    Notes = detail.Lesson.Notes
+                }
+            });
         }
         catch (UnauthorizedAccessException)
         {
