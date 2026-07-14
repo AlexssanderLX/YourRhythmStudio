@@ -207,12 +207,16 @@ public sealed class TeacherController : Controller
 
     [HttpPost("Students/{studentId:guid}/Lessons/{lessonId:guid}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateLesson(Guid studentId, Guid lessonId, EditLessonViewModel model, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateLesson(
+        Guid studentId,
+        Guid lessonId,
+        [Bind(Prefix = "EditForm")] EditLessonViewModel model,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid || model.StudentProfileId != studentId || model.LessonId != lessonId)
         {
             TempData["Error"] = "Dados da aula invalidos.";
-            return RedirectToAction(nameof(StudentLessons), new { studentId });
+            return RedirectToAction(nameof(LessonDetail), new { studentId, lessonId });
         }
 
         var profile = await CurrentProfile(cancellationToken);
@@ -227,6 +231,25 @@ public sealed class TeacherController : Controller
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
         {
             TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(LessonDetail), new { studentId, lessonId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Lessons/{lessonId:guid}/Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteLesson(Guid studentId, Guid lessonId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _lessonService.DeleteLessonAsync(profile, studentId, lessonId, cancellationToken);
+            TempData["Success"] = "Aula excluída.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(LessonDetail), new { studentId, lessonId });
         }
 
         return RedirectToAction(nameof(StudentLessons), new { studentId });

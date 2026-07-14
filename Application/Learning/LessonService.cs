@@ -162,6 +162,32 @@ public sealed class LessonService
         return ToSummary(lesson);
     }
 
+    public async Task DeleteLessonAsync(
+        AuthenticatedUserProfile profile,
+        Guid studentProfileId,
+        Guid lessonId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        await LearningAuthorization.EnsureTeacherCanAccessStudentAsync(
+            _dbContext,
+            schoolId,
+            teacherProfileId,
+            studentProfileId,
+            cancellationToken);
+
+        var lesson = await _dbContext.Lessons.FirstOrDefaultAsync(
+            item => item.Id == lessonId
+                && item.SchoolId == schoolId
+                && item.TeacherProfileId == teacherProfileId
+                && item.StudentProfileId == studentProfileId,
+            cancellationToken)
+            ?? throw new KeyNotFoundException("Aula nao encontrada.");
+
+        _dbContext.Lessons.Remove(lesson);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task CompleteLessonAsync(
         AuthenticatedUserProfile profile,
         Guid lessonId,
