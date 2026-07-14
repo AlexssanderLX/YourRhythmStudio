@@ -94,6 +94,18 @@
                            asp-route-missionId="@mission.Id">
                             Abrir missao
                         </a>
+                        @if (mission.Status != AssignmentStatus.Completed)
+                        {
+                            <form method="post"
+                                  asp-controller="Teacher"
+                                  asp-action="CancelMission"
+                                  asp-route-studentId="@mission.StudentProfileId"
+                                  asp-route-missionId="@mission.Id"
+                                  onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-danger btn-sm">Apagar</button>
+                            </form>
+                        }
                     </div>
                 </article>
             }
@@ -129,7 +141,8 @@
     .xp-badge { font-size: .75rem; font-weight: 700; color: #34d399; }
     .mission-card-body { font-size: .82rem; color: var(--text-muted, #9ca3af); display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: .85rem; }
     .round-badge { background: rgba(245,158,11,.16); color: #fbbf24; padding: .1rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 700; }
-    .mission-card-actions { display: flex; justify-content: flex-end; }
+    .mission-card-actions { display: flex; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
+    .mission-card-actions form { margin: 0; }
     @@media (max-width: 620px) {
         .mission-page-top, .mission-card-header { flex-direction: column; }
         .mission-page-top .btn, .mission-card-actions .btn { width: 100%; justify-content: center; }

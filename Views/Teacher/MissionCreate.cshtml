@@ -203,6 +203,7 @@
         var jsonInput = document.getElementById('questionsJsonInput');
         var form = document.getElementById('missionForm');
         var submitBtn = document.getElementById('submitBtn');
+        var submitText = submitBtn ? submitBtn.textContent : 'Enviar missao';
 
         document.getElementById('addQuestionBtn').addEventListener('click', function () {
             addQuestion();
@@ -258,7 +259,29 @@
             });
         }
 
+        function resetSubmit() {
+            if (!submitBtn) return;
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitText;
+            form.dataset.submitting = 'false';
+        }
+
         form.addEventListener('submit', function (e) {
+            if (form.dataset.submitting === 'true') {
+                e.preventDefault();
+                return;
+            }
+
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.valid && !window.jQuery(form).valid()) {
+                resetSubmit();
+                return;
+            }
+
+            if (!form.checkValidity()) {
+                resetSubmit();
+                return;
+            }
+
             var items = list.querySelectorAll('.question-item');
             var qs = [];
             var valid = true;
@@ -287,12 +310,16 @@
             if (!valid || qs.length === 0) {
                 e.preventDefault();
                 alert('Adicione pelo menos um campo valido. Alternativas precisam ter entre 2 e 4 opcoes.');
+                resetSubmit();
                 return;
             }
 
             jsonInput.value = JSON.stringify(qs);
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Enviando...';
+            form.dataset.submitting = 'true';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Enviando...';
+            }
         });
 
         addQuestion();

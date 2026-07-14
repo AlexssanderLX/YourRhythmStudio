@@ -215,6 +215,29 @@ public sealed class MissionService
 
     // ── Teacher: list missions for a student ─────────────────────────────────
 
+    public async Task CancelMissionAsync(
+        AuthenticatedUserProfile profile,
+        Guid missionId,
+        CancellationToken ct = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+
+        var assignment = await _db.Assignments
+            .FirstOrDefaultAsync(a => a.Id == missionId
+                                   && a.SchoolId == schoolId
+                                   && a.TeacherProfileId == teacherProfileId
+                                   && a.IsMission, ct)
+            ?? throw new KeyNotFoundException("Missao nao encontrada.");
+
+        if (assignment.Status == AssignmentStatus.Completed)
+        {
+            throw new InvalidOperationException("Missoes concluidas nao podem ser apagadas.");
+        }
+
+        assignment.Skip(DateTime.UtcNow);
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task<IReadOnlyList<MissionSummary>> ListForTeacherStudentAsync(
         AuthenticatedUserProfile profile,
         Guid studentProfileId,

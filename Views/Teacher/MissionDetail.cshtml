@@ -56,6 +56,20 @@
         </div>
     </div>
 
+    @if (m.Status != AssignmentStatus.Completed)
+    {
+        <form method="post"
+              class="mission-danger-action"
+              asp-controller="Teacher"
+              asp-action="CancelMission"
+              asp-route-studentId="@m.StudentProfileId"
+              asp-route-missionId="@m.Id"
+              onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger btn-sm">Apagar missao</button>
+        </form>
+    }
+
     <!-- Perguntas e respostas -->
     <div class="form-card">
         <h3>Perguntas e Respostas</h3>
@@ -186,6 +200,7 @@
     .dash-back a { color: var(--text-muted, #6b7280); text-decoration: none; font-size: .9rem; }
     .mission-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
     .mission-header h2 { margin: .2rem 0 0; font-size: 1.3rem; }
+    .mission-danger-action { display: flex; justify-content: flex-end; margin: -.75rem 0 1rem; }
     .mission-student-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #6b7280); }
     .mission-badges { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; flex-shrink: 0; }
     .status-badge { padding: .2rem .7rem; border-radius: 99px; font-size: .78rem; font-weight: 600; }

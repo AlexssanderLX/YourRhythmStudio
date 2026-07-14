@@ -892,6 +892,33 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(MissionDetail), new { studentId, missionId });
     }
 
+    [HttpPost("Students/{studentId:guid}/Missions/{missionId:guid}/Cancel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelMission(
+        Guid studentId,
+        Guid missionId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+
+        try
+        {
+            var detail = await _missionService.GetMissionDetailForTeacherAsync(profile, missionId, cancellationToken);
+            if (detail is null || detail.Mission.StudentProfileId != studentId)
+                return NotFound();
+
+            await _missionService.CancelMissionAsync(profile, missionId, cancellationToken);
+            TempData["Success"] = "Missao apagada do historico ativo.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(MissionDetail), new { studentId, missionId });
+        }
+
+        return RedirectToAction(nameof(Missions));
+    }
+
     [HttpGet("Missions/{missionId:guid}/Answers/{questionId:guid}/File")]
     public async Task<IActionResult> MissionAnswerFile(
         Guid missionId,

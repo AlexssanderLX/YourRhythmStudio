@@ -231,6 +231,16 @@ public class AuthController : Controller
         if (student?.SchoolUser is null || !student.SchoolUser.IsActive)
             return RedirectToAction(nameof(Login));
 
+        var hasActiveTeacherLink = await _db.TeacherStudents
+            .AsNoTracking()
+            .AnyAsync(link => link.SchoolId == student.SchoolId
+                           && link.StudentProfileId == student.Id
+                           && link.IsActive,
+                cancellationToken);
+
+        if (!hasActiveTeacherLink)
+            return RedirectToAction(nameof(Login));
+
         var schoolUser = student.SchoolUser;
         var claims = new List<Claim>
         {
