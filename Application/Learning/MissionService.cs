@@ -197,7 +197,15 @@ public sealed class MissionService
             .Where(a => a.SchoolId == schoolId
                      && a.TeacherProfileId == teacherProfileId
                      && a.IsMission
-                     && a.Status != AssignmentStatus.Skipped)
+                     && a.Status != AssignmentStatus.Skipped
+                     && _db.TeacherStudents.Any(link => link.SchoolId == schoolId
+                         && link.TeacherProfileId == teacherProfileId
+                         && link.StudentProfileId == a.StudentProfileId
+                         && link.IsActive)
+                     && _db.StudentProfiles.Any(student => student.SchoolId == schoolId
+                         && student.Id == a.StudentProfileId
+                         && student.SchoolUser != null
+                         && student.SchoolUser.IsActive))
             .OrderByDescending(a => a.CreatedAtUtc)
             .ToListAsync(ct);
 
@@ -229,12 +237,7 @@ public sealed class MissionService
                                    && a.IsMission, ct)
             ?? throw new KeyNotFoundException("Missao nao encontrada.");
 
-        if (assignment.Status == AssignmentStatus.Completed)
-        {
-            throw new InvalidOperationException("Missoes concluidas nao podem ser apagadas.");
-        }
-
-        assignment.Skip(DateTime.UtcNow);
+        assignment.ArchiveFromActiveHistory(DateTime.UtcNow);
         await _db.SaveChangesAsync(ct);
     }
 

@@ -94,18 +94,15 @@
                            asp-route-missionId="@mission.Id">
                             Abrir missao
                         </a>
-                        @if (mission.Status != AssignmentStatus.Completed)
-                        {
-                            <form method="post"
-                                  asp-controller="Teacher"
-                                  asp-action="CancelMission"
-                                  asp-route-studentId="@mission.StudentProfileId"
-                                  asp-route-missionId="@mission.Id"
-                                  onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-danger btn-sm">Apagar</button>
-                            </form>
-                        }
+                        <form method="post"
+                              asp-controller="Teacher"
+                              asp-action="CancelMission"
+                              asp-route-studentId="@mission.StudentProfileId"
+                              asp-route-missionId="@mission.Id"
+                              onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger btn-sm">Apagar</button>
+                        </form>
                     </div>
                 </article>
             }

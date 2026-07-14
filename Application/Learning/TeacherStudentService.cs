@@ -179,7 +179,21 @@ public sealed class TeacherStudentService
                 cancellationToken)
             ?? throw new KeyNotFoundException("Student profile was not found.");
 
-        link.Deactivate(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        link.Deactivate(now);
+
+        var studentMissions = await _dbContext.Assignments
+            .Where(assignment => assignment.SchoolId == schoolId
+                && assignment.TeacherProfileId == teacherProfileId
+                && assignment.StudentProfileId == studentProfileId
+                && assignment.IsMission
+                && assignment.Status != Domain.Learning.Enums.AssignmentStatus.Skipped)
+            .ToListAsync(cancellationToken);
+
+        foreach (var mission in studentMissions)
+        {
+            mission.ArchiveFromActiveHistory(now);
+        }
 
         var hasOtherActiveLinks = await _dbContext.TeacherStudents.AnyAsync(
             item => item.SchoolId == schoolId

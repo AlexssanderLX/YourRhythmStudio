@@ -187,6 +187,15 @@ public sealed class Assignment
         UpdatedAtUtc = utcNow;
     }
 
+    public void ArchiveFromActiveHistory(DateTime utcNow)
+    {
+        if (Status == AssignmentStatus.Skipped)
+            return;
+
+        Status = AssignmentStatus.Skipped;
+        UpdatedAtUtc = utcNow;
+    }
+
     public void SubmitForReview(DateTime utcNow)
     {
         if (!IsMission)

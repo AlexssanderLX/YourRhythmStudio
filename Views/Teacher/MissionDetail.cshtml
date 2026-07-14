@@ -56,19 +56,16 @@
         </div>
     </div>
 
-    @if (m.Status != AssignmentStatus.Completed)
-    {
-        <form method="post"
-              class="mission-danger-action"
-              asp-controller="Teacher"
-              asp-action="CancelMission"
-              asp-route-studentId="@m.StudentProfileId"
-              asp-route-missionId="@m.Id"
-              onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-danger btn-sm">Apagar missao</button>
-        </form>
-    }
+    <form method="post"
+          class="mission-danger-action"
+          asp-controller="Teacher"
+          asp-action="CancelMission"
+          asp-route-studentId="@m.StudentProfileId"
+          asp-route-missionId="@m.Id"
+          onsubmit="return confirm('Apagar esta missao do historico ativo? Esta acao preserva auditoria, mas remove a missao das listas do aluno.');">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger btn-sm">Apagar missao</button>
+    </form>
 
     <!-- Perguntas e respostas -->
     <div class="form-card">
