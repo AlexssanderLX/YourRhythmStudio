@@ -26,6 +26,11 @@
             @Html.AntiForgeryToken()
             <input asp-for="ReturnUrl" type="hidden" />
 
+            @if (Context.Request.Query.ContainsKey("expired"))
+            {
+                <div class="auth-validation" role="status">Sua sessao expirou. Entre novamente para continuar.</div>
+            }
+
             <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
 
             <label asp-for="Email"></label>
@@ -38,7 +43,7 @@
 
             <label class="auth-check">
                 <input asp-for="RememberMe" />
-                <span>Manter conectado</span>
+                <span>Permitir retorno rapido neste dispositivo</span>
             </label>
 
             <button type="submit">Entrar</button>

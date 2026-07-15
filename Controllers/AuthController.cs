@@ -11,10 +11,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using YourRhythmStudio.Application.Root;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Users;
+using YourRhythmStudio.Infrastructure.Auth;
 using YourRhythmStudio.Infrastructure.Data;
 using YourRhythmStudio.Infrastructure.Foundation;
 using YourRhythmStudio.ViewModels.Auth;
@@ -23,38 +25,44 @@ namespace YourRhythmStudio.Controllers;
 
 public class AuthController : Controller
 {
-    private const string CookieScheme = "YourRhythmCookie";
+    private const string CookieScheme = YourRhythmAuthenticationExtensions.CookieScheme;
 
     private readonly SaasAccessService _saasAccessService;
     private readonly IUserProfileResolver _userProfileResolver;
     private readonly IAccountStore _accountStore;
+    private readonly ISessionTicketStore _sessionTicketStore;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IClock _clock;
     private readonly YourRhythmDbContext _db;
     private readonly SecureLinkService _secureLinkService;
     private readonly AccessRequestService _accessRequestService;
     private readonly RootAdminService _rootAdminService;
+    private readonly AuthSessionOptions _authSessionOptions;
 
     public AuthController(
         SaasAccessService saasAccessService,
         IUserProfileResolver userProfileResolver,
         IAccountStore accountStore,
+        ISessionTicketStore sessionTicketStore,
         IPasswordHasher passwordHasher,
         IClock clock,
         YourRhythmDbContext db,
         SecureLinkService secureLinkService,
         AccessRequestService accessRequestService,
-        RootAdminService rootAdminService)
+        RootAdminService rootAdminService,
+        IOptions<AuthSessionOptions> authSessionOptions)
     {
         _saasAccessService = saasAccessService;
         _userProfileResolver = userProfileResolver;
         _accountStore = accountStore;
+        _sessionTicketStore = sessionTicketStore;
         _passwordHasher = passwordHasher;
         _clock = clock;
         _db = db;
         _secureLinkService = secureLinkService;
         _accessRequestService = accessRequestService;
         _rootAdminService = rootAdminService;
+        _authSessionOptions = authSessionOptions.Value;
     }
 
     [HttpGet]
@@ -93,6 +101,8 @@ public class AuthController : Controller
 
         var session = result.Value;
         var claims = BuildClaims(session);
+        var account = await _accountStore.FindByIdAsync(session.AccountId);
+        AddSecurityStampClaim(claims, account?.SecurityStamp);
 
         // Papel de domínio (escola/professor/aluno) usado para rotear o dashboard.
         // No MVP é resolvido pelas contas demo; admin de plataforma vira platform-admin.
@@ -109,11 +119,7 @@ public class AuthController : Controller
         await HttpContext.SignInAsync(
             CookieScheme,
             principal,
-            new AuthenticationProperties
-            {
-                IsPersistent = model.RememberMe,
-                ExpiresUtc = session.ExpiresAtUtc
-            });
+            BuildAuthenticationProperties());
 
         if (session.PlatformRole == PlatformAccessRole.PlatformAdmin && string.IsNullOrWhiteSpace(model.ReturnUrl))
             return RedirectToAction("Index", "Root");
@@ -126,6 +132,16 @@ public class AuthController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        if (Guid.TryParse(User.FindFirstValue("SessionId"), out var sessionId))
+        {
+            var session = await _sessionTicketStore.FindByIdAsync(sessionId);
+            if (session is not null && session.RevokedAtUtc is null)
+            {
+                session.RevokedAtUtc = DateTime.UtcNow;
+                await _sessionTicketStore.UpdateAsync(session);
+            }
+        }
+
         await HttpContext.SignOutAsync(CookieScheme);
         return RedirectToAction("Index", "Home");
     }
@@ -255,12 +271,13 @@ public class AuthController : Controller
             new(UserProfileResolver.SchoolUserIdClaim, schoolUser.Id.ToString()),
             new(UserProfileResolver.StudentProfileIdClaim, student.Id.ToString())
         };
+        AddSecurityStampClaim(claims, securityStamp: null);
 
         var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
         await HttpContext.SignInAsync(
             CookieScheme,
             new ClaimsPrincipal(identity),
-            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
+            BuildAuthenticationProperties());
 
         return RedirectToAction("Dashboard", "Student");
     }
@@ -356,5 +373,28 @@ public class AuthController : Controller
         }
 
         return claims;
+    }
+
+    private AuthenticationProperties BuildAuthenticationProperties()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new AuthenticationProperties
+        {
+            IsPersistent = true,
+            IssuedUtc = now,
+            ExpiresUtc = now.Add(_authSessionOptions.IdleTimeout)
+        };
+    }
+
+    private static void AddSecurityStampClaim(List<Claim> claims, string? securityStamp)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        claims.Add(new Claim(YourRhythmAuthClaims.IssuedAtUtc, now));
+        claims.Add(new Claim(YourRhythmAuthClaims.LastValidatedAtUtc, now));
+
+        if (!string.IsNullOrWhiteSpace(securityStamp))
+        {
+            claims.Add(new Claim(YourRhythmAuthClaims.SecurityStamp, securityStamp));
+        }
     }
 }

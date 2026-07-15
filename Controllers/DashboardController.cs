@@ -1,25 +1,36 @@
 using System.Security.Claims;
+using Foundation.Access.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using YourRhythmStudio.Application.Users;
 using YourRhythmStudio.Domain;
+using YourRhythmStudio.Infrastructure.Auth;
 using YourRhythmStudio.ViewModels.Settings;
 
 namespace YourRhythmStudio.Controllers;
 
-[Authorize(AuthenticationSchemes = "YourRhythmCookie")]
+[Authorize(AuthenticationSchemes = YourRhythmAuthenticationExtensions.CookieScheme)]
 public class DashboardController : Controller
 {
-    private const string CookieScheme = "YourRhythmCookie";
+    private const string CookieScheme = YourRhythmAuthenticationExtensions.CookieScheme;
 
     private readonly IUserProfileResolver _profileResolver;
     private readonly SettingsService _settingsService;
+    private readonly IAccountStore _accountStore;
+    private readonly AuthSessionOptions _authSessionOptions;
 
-    public DashboardController(IUserProfileResolver profileResolver, SettingsService settingsService)
+    public DashboardController(
+        IUserProfileResolver profileResolver,
+        SettingsService settingsService,
+        IAccountStore accountStore,
+        IOptions<AuthSessionOptions> authSessionOptions)
     {
         _profileResolver = profileResolver;
         _settingsService = settingsService;
+        _accountStore = accountStore;
+        _authSessionOptions = authSessionOptions.Value;
     }
 
     [HttpGet]
@@ -322,11 +333,28 @@ public class DashboardController : Controller
 
     private async Task RefreshIdentityAsync(CredentialUpdateResult result)
     {
+        var originalIssuedAt = User.FindFirstValue(YourRhythmAuthClaims.IssuedAtUtc);
         var claims = User.Claims
             .Where(claim => claim.Type != ClaimTypes.Name && claim.Type != ClaimTypes.Email)
+            .Where(claim => claim.Type != YourRhythmAuthClaims.SecurityStamp)
+            .Where(claim => claim.Type != YourRhythmAuthClaims.IssuedAtUtc)
+            .Where(claim => claim.Type != YourRhythmAuthClaims.LastValidatedAtUtc)
             .ToList();
         claims.Add(new Claim(ClaimTypes.Name, result.DisplayName));
         claims.Add(new Claim(ClaimTypes.Email, result.Email));
+
+        if (Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accountId))
+        {
+            var account = await _accountStore.FindByIdAsync(accountId);
+            if (!string.IsNullOrWhiteSpace(account?.SecurityStamp))
+            {
+                claims.Add(new Claim(YourRhythmAuthClaims.SecurityStamp, account.SecurityStamp));
+            }
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        claims.Add(new Claim(YourRhythmAuthClaims.IssuedAtUtc, originalIssuedAt ?? now.ToUnixTimeSeconds().ToString()));
+        claims.Add(new Claim(YourRhythmAuthClaims.LastValidatedAtUtc, now.ToUnixTimeSeconds().ToString()));
 
         var identity = new ClaimsIdentity(claims, CookieScheme, ClaimTypes.Name, ClaimTypes.Role);
         await HttpContext.SignInAsync(
@@ -335,7 +363,8 @@ public class DashboardController : Controller
             new AuthenticationProperties
             {
                 IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+                IssuedUtc = now,
+                ExpiresUtc = now.Add(_authSessionOptions.IdleTimeout)
             });
     }
 }

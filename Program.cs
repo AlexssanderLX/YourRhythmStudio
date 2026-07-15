@@ -1,4 +1,5 @@
 using YourRhythmStudio.Infrastructure.Data;
+using YourRhythmStudio.Infrastructure.Auth;
 using YourRhythmStudio.Infrastructure.Foundation;
 using YourRhythmStudio.Infrastructure.Root;
 
@@ -13,22 +14,7 @@ builder.Services.AddYourRhythmDatabase(builder.Configuration);
 builder.Services.AddYourRhythmFoundation();
 
 // Authentication
-builder.Services
-    .AddAuthentication("YourRhythmCookie")
-    .AddCookie("YourRhythmCookie", options =>
-    {
-        options.LoginPath = "/Auth/Login";
-        options.LogoutPath = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
-
-        options.Cookie.Name = "YourRhythm.Auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-
-        options.SlidingExpiration = true;
-    });
-
+builder.Services.AddYourRhythmAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddAuthorization();
 
 var app = builder.Build();

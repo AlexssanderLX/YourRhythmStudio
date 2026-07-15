@@ -144,6 +144,7 @@ Persistencia fora da release:
 /var/www/yourrhythm/shared/uploads/storage
 /var/www/yourrhythm/shared/logs
 /var/www/yourrhythm/shared/backups
+/var/www/yourrhythm/shared/data-protection-keys
 ```
 
 Symlinks por release:
@@ -185,6 +186,27 @@ Email__Smtp__SenderEmail
 Email__Smtp__SenderName
 Email__AdminNotificationRecipient
 Logging__LogLevel__Microsoft
+Authentication__DataProtectionKeysPath
+Authentication__Session__IdleTimeoutMinutes
+Authentication__Session__AbsoluteTimeoutMinutes
+Authentication__Session__ValidationIntervalSeconds
+```
+
+Valores recomendados para sessao autenticada curta:
+
+```text
+Authentication__DataProtectionKeysPath=/var/www/yourrhythm/shared/data-protection-keys
+Authentication__Session__IdleTimeoutMinutes=3
+Authentication__Session__AbsoluteTimeoutMinutes=30
+Authentication__Session__ValidationIntervalSeconds=60
+```
+
+As chaves do ASP.NET Core Data Protection devem ficar fora de `/var/www/yourrhythm/current`, porque `current` aponta para uma release descartavel. Criar a pasta persistente manualmente na VPS, sem versionar chaves:
+
+```bash
+sudo mkdir -p /var/www/yourrhythm/shared/data-protection-keys
+sudo chown yourrhythm:yourrhythm /var/www/yourrhythm/shared/data-protection-keys
+sudo chmod 700 /var/www/yourrhythm/shared/data-protection-keys
 ```
 
 ## Root
