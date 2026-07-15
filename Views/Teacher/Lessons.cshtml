@@ -157,13 +157,14 @@
         </div>
 
         <div class="lesson-detail-state" data-detail-view>
-            <dl>
-                <div><dt>Aluno</dt><dd data-detail-student></dd></div>
-                <div><dt>Instrumento</dt><dd data-detail-instrument></dd></div>
-                <div><dt>Data e hora</dt><dd data-detail-date></dd></div>
-                <div><dt>Status</dt><dd data-detail-status></dd></div>
-                <div class="wide"><dt>Descricao</dt><dd data-detail-notes></dd></div>
-            </dl>
+            <div class="lesson-detail-summary">
+                <div>
+                    <span data-detail-student></span>
+                    <small data-detail-instrument></small>
+                </div>
+                <strong data-detail-date></strong>
+            </div>
+            <p class="lesson-detail-notes" data-detail-notes></p>
             <div class="lesson-modal-actions">
                 <button type="button" class="btn btn-primary btn-sm" data-start-edit>Editar</button>
                 <form method="post" data-delete-form data-safe-submit data-confirm-message="Excluir esta aula?">
@@ -194,7 +195,6 @@
                 <span asp-validation-for="EditForm.Notes" class="auth-error"></span>
             </div>
             <div class="lesson-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-cancel-edit>Voltar</button>
                 <button type="submit" data-loading-text="Salvando...">Salvar aula</button>
             </div>
         </form>
@@ -217,11 +217,12 @@
     .lesson-card-meta { display: grid; justify-items: end; align-content: start; gap: .2rem; white-space: nowrap; }
     .lesson-card-meta em { font-style: normal; font-size: .72rem; color: #93c5fd; border: 1px solid rgba(96,165,250,.35); border-radius: 999px; padding: .08rem .45rem; }
     .lesson-pager { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; color: var(--text-muted, #9ca3af); }
-    .lesson-modal-card { max-width: 620px; }
-    .lesson-detail-state dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 0 0 1rem; }
-    .lesson-detail-state dt { color: var(--text-muted, #9ca3af); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
-    .lesson-detail-state dd { margin: .18rem 0 0; overflow-wrap: anywhere; }
-    .lesson-detail-state .wide { grid-column: 1 / -1; }
+    .lesson-modal-card { max-width: 560px; }
+    .lesson-detail-state[hidden], .lesson-modal-card [data-edit-form][hidden] { display: none !important; }
+    .lesson-detail-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: .85rem; margin-bottom: .85rem; border: 1px solid rgba(148,163,184,.16); border-radius: 12px; background: rgba(15,23,42,.48); }
+    .lesson-detail-summary span, .lesson-detail-summary strong { display: block; font-weight: 800; overflow-wrap: anywhere; }
+    .lesson-detail-summary small { display: block; margin-top: .15rem; color: var(--text-muted, #9ca3af); }
+    .lesson-detail-notes { margin: 0 0 1rem; color: rgba(226,232,240,.9); line-height: 1.45; overflow-wrap: anywhere; }
     .lesson-modal-actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: flex-end; }
     .lesson-modal-actions form { margin: 0; }
     @@media (max-width: 560px) {
@@ -229,7 +230,7 @@
         .lessons-head .btn { width: 100%; justify-content: center; }
         .lesson-list-card { grid-template-columns: 1fr; }
         .lesson-card-meta { justify-items: start; grid-auto-flow: column; justify-content: start; align-items: center; white-space: normal; }
-        .lesson-detail-state dl { grid-template-columns: 1fr; }
+        .lesson-detail-summary { display: grid; }
         .lesson-modal-actions, .lesson-modal-actions .btn, .lesson-modal-actions button { width: 100%; justify-content: center; }
     }
 </style>
@@ -304,7 +305,6 @@
             });
         });
         document.querySelector('[data-start-edit]')?.addEventListener('click', showEditMode);
-        document.querySelector('[data-cancel-edit]')?.addEventListener('click', showDetailMode);
         document.querySelectorAll('[data-close-modal]').forEach(function (el) { el.addEventListener('click', close); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
 
