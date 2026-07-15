@@ -36,6 +36,17 @@ public sealed record LessonDetailSummary(
     LessonSummary Lesson,
     TeacherStudentSummary Student);
 
+public sealed record TeacherLessonListItem(
+    Guid Id,
+    Guid StudentProfileId,
+    string StudentName,
+    string StudentInstrument,
+    string Title,
+    DateTime LessonDateUtc,
+    DateTime? CompletedAtUtc,
+    LessonStatus Status,
+    string? Notes);
+
 public sealed record RepertoireSummary(
     Guid Id,
     string Title,

@@ -46,8 +46,18 @@
         <div class="alert alert-error">@TempData["Error"]</div>
     }
 
+    @if (Model.StatusFilter != null)
+    {
+        <div class="mission-filter-bar">
+            <span class="mission-filter-label">
+                @(Model.StatusFilter == "pending" ? "Filtro: Pendentes" : "Filtro: Concluídas")
+            </span>
+            <a class="mission-filter-clear" href="/Teacher/Missions">Limpar filtro ×</a>
+        </div>
+    }
+
     <div class="mission-stats">
-        <div><strong>@Model.Missions.Count</strong><span>Total</span></div>
+        <div><strong>@Model.Missions.Count</strong><span>@(Model.StatusFilter != null ? "Filtradas" : "Total")</span></div>
         <div><strong>@Model.Pending.Count</strong><span>Para revisar</span></div>
         <div><strong>@Model.Missions.Count(m => m.Status == AssignmentStatus.Completed)</strong><span>Concluidas</span></div>
     </div>
@@ -112,6 +122,10 @@
 
 <style>
     .teacher-missions-page { max-width: 980px; }
+    .mission-filter-bar { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; padding: .55rem .9rem; background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.22); border-radius: 10px; }
+    .mission-filter-label { font-size: .82rem; font-weight: 700; color: #93c5fd; }
+    .mission-filter-clear { font-size: .8rem; color: var(--text-muted, #9ca3af); text-decoration: none; margin-left: auto; }
+    .mission-filter-clear:hover { color: #f87171; }
     .mission-page-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
     .mission-page-top h2 { margin: .2rem 0; font-size: clamp(1.5rem, 4vw, 2.1rem); }
     .mission-page-top p { margin: 0; color: var(--text-muted, #9ca3af); }

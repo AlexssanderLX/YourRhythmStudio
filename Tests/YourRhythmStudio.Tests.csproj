@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -23,6 +24,10 @@
     <Compile Include="..\Application\Learning\LearningLevelCalculator.cs" Link="LearningLevelCalculator.cs" />
     <Compile Include="..\Domain\Learning\Enums\AssignmentRarity.cs" Link="AssignmentRarity.cs" />
     <Compile Include="..\ViewModels\Auth\RegisterViewModel.cs" Link="RegisterViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\YourRhythmStudio.csproj" />
   </ItemGroup>
 
 </Project>

@@ -72,7 +72,7 @@ public class DashboardController : Controller
     public IActionResult Lessons()
     {
         return RequireRole(YourRhythmRoles.Teacher)
-            ? RedirectToAction("Students", "Teacher")
+            ? RedirectToAction("Lessons", "Teacher")
             : Forbid();
     }
 

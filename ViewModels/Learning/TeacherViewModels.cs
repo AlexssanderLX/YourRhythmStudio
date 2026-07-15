@@ -362,6 +362,17 @@ public sealed class QuickLessonViewModel
     public QuickLessonFormViewModel Form { get; set; } = new();
 }
 
+public sealed class TeacherLessonsViewModel
+{
+    public required IReadOnlyCollection<TeacherLessonListItem> Lessons { get; init; }
+    public required IReadOnlyCollection<TeacherStudentSummary> Students { get; init; }
+    public QuickLessonFormViewModel CreateForm { get; set; } = new();
+    public EditLessonViewModel EditForm { get; set; } = new();
+    public int Page { get; init; } = 1;
+    public bool HasPreviousPage => Page > 1;
+    public bool HasNextPage { get; init; }
+}
+
 public sealed class QuickLessonFormViewModel
 {
     [Required]

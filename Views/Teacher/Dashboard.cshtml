@@ -13,11 +13,6 @@
     var lessons        = Model.Summary.RecentLessons;
     var students       = Model.Summary.RecentStudents;
 
-    var avgLevel       = students.Any()
-        ? (int)Math.Round(students.Average(s => s.CurrentLevel))
-        : 0;
-    var activityScore  = Math.Min(100, activeStudents * 22 + completed * 8);
-
     var now      = DateTime.Now;
     var hour     = now.Hour;
     var greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
@@ -50,7 +45,7 @@
 </div>
 
 @* ── KPI Cards ─────────────────────────────────────────────────────────── *@
-<div class="cmd-kpi-grid">
+<div class="cmd-kpi-grid cmd-kpi-grid--4">
 
     <a class="cmd-kpi" asp-controller="Teacher" asp-action="Students"
        aria-label="@activeStudents alunos ativos">
@@ -59,63 +54,27 @@
         <span class="cmd-kpi-label">Alunos ativos</span>
     </a>
 
-    <a class="cmd-kpi @(pending > 0 ? "cmd-kpi--warn" : "")" asp-controller="Teacher" asp-action="Students"
+    <a class="cmd-kpi @(pending > 0 ? "cmd-kpi--warn" : "")"
+       href="/Teacher/Missions?status=pending"
        aria-label="@pending missões pendentes">
         <span class="cmd-kpi-icon" aria-hidden="true">🎯</span>
         <strong class="cmd-kpi-val">@pending</strong>
         <span class="cmd-kpi-label">Missões pendentes</span>
     </a>
 
-    <a class="cmd-kpi cmd-kpi--done" asp-controller="Teacher" asp-action="Students"
+    <a class="cmd-kpi cmd-kpi--done"
+       href="/Teacher/Missions?status=completed"
        aria-label="@completed missões concluídas nos últimos 14 dias">
         <span class="cmd-kpi-icon" aria-hidden="true">✅</span>
         <strong class="cmd-kpi-val">@completed</strong>
         <span class="cmd-kpi-label">Concluídas (14d)</span>
     </a>
 
-    <a class="cmd-kpi" asp-controller="Teacher" asp-action="QuickLesson"
-       aria-label="@lessons.Count aulas recentes">
+    <div class="cmd-kpi" aria-label="@lessons.Count aulas recentes">
         <span class="cmd-kpi-icon" aria-hidden="true">📖</span>
         <strong class="cmd-kpi-val">@lessons.Count</strong>
         <span class="cmd-kpi-label">Aulas recentes</span>
-    </a>
-
-    <div class="cmd-kpi" aria-label="Nível médio da turma @(avgLevel > 0 ? avgLevel.ToString() : "indisponível")">
-        <span class="cmd-kpi-icon" aria-hidden="true">⭐</span>
-        <strong class="cmd-kpi-val">@(avgLevel > 0 ? avgLevel.ToString() : "—")</strong>
-        <span class="cmd-kpi-label">Nível médio</span>
     </div>
-
-    <div class="cmd-kpi" aria-label="Ritmo da turma @activityScore por cento">
-        <span class="cmd-kpi-icon" aria-hidden="true">🔥</span>
-        <strong class="cmd-kpi-val">@activityScore<small class="cmd-kpi-unit">%</small></strong>
-        <span class="cmd-kpi-label">Ritmo da turma</span>
-    </div>
-
-</div>
-
-@* ── Quick Actions ──────────────────────────────────────────────────────── *@
-<div class="cmd-actions" role="toolbar" aria-label="Ações rápidas">
-
-    <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateStudent">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Novo aluno
-    </a>
-
-    <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateMission">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Nova missão
-    </a>
-
-    <a class="cmd-action" asp-controller="Teacher" asp-action="QuickLesson">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        Registrar aula
-    </a>
-
-    <a class="cmd-action" asp-controller="Teacher" asp-action="Students">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Ver turma
-    </a>
 
 </div>
 
@@ -160,7 +119,6 @@
         } else {
             <div class="cmd-empty">
                 <p>Nenhum aluno cadastrado ainda.</p>
-                <a class="cmd-action cmd-action--primary" asp-controller="Teacher" asp-action="CreateStudent">+ Cadastrar aluno</a>
             </div>
         }
     </div>
@@ -169,7 +127,6 @@
     <div class="cmd-panel">
         <div class="cmd-panel-head">
             <h2>Aulas recentes</h2>
-            <a asp-controller="Teacher" asp-action="QuickLesson">+ Nova</a>
         </div>
 
         @if (lessons.Any()) {
@@ -193,7 +150,6 @@
         } else {
             <div class="cmd-empty">
                 <p>Nenhuma aula registrada ainda.</p>
-                <a class="cmd-action" asp-controller="Teacher" asp-action="QuickLesson">Registrar aula</a>
             </div>
         }
     </div>

@@ -16,6 +16,8 @@ namespace YourRhythmStudio.Controllers;
 [Route("Teacher")]
 public sealed class TeacherController : Controller
 {
+    private const int LessonsPageSize = 25;
+
     private readonly ILogger<TeacherController> _logger;
     private readonly IUserProfileResolver _profileResolver;
     private readonly TeacherStudentService _teacherStudentService;
@@ -756,12 +758,31 @@ public sealed class TeacherController : Controller
     // ── Missions ──────────────────────────────────────────────────────────────
 
     [HttpGet("Missions")]
-    public async Task<IActionResult> Missions(CancellationToken cancellationToken)
+    public async Task<IActionResult> Missions([FromQuery] string? status, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfile(cancellationToken);
-        var missions = await _missionService.ListForTeacherAsync(profile, cancellationToken);
+        var allMissions = await _missionService.ListForTeacherAsync(profile, cancellationToken);
         var pending = await _missionService.ListAwaitingReviewAsync(profile, cancellationToken);
-        return View("Devolutivas", new DevolutivasViewModel { Missions = missions, Pending = pending });
+
+        // Validate filter server-side; invalid values fall back to showing all
+        var normalizedStatus = status?.Trim().ToLowerInvariant();
+        var validFilter = normalizedStatus is "pending" or "completed" ? normalizedStatus : null;
+
+        var filtered = validFilter switch
+        {
+            "pending"   => allMissions.Where(m => m.Status == AssignmentStatus.Pending
+                                               || m.Status == AssignmentStatus.InProgress
+                                               || m.Status == AssignmentStatus.AdjustmentsRequested).ToList(),
+            "completed" => allMissions.Where(m => m.Status == AssignmentStatus.Completed).ToList(),
+            _           => (IReadOnlyList<MissionSummary>)allMissions
+        };
+
+        return View("Devolutivas", new DevolutivasViewModel
+        {
+            Missions = filtered,
+            Pending = pending,
+            StatusFilter = validFilter
+        });
     }
 
     [HttpGet("Devolutivas")]
@@ -982,11 +1003,128 @@ public sealed class TeacherController : Controller
     }
 
     [HttpGet("QuickLesson")]
-    public async Task<IActionResult> QuickLesson(CancellationToken cancellationToken)
+    public IActionResult QuickLesson()
+        => RedirectToAction(nameof(Lessons));
+
+    [HttpGet("Lessons")]
+    public async Task<IActionResult> Lessons(int page = 1, CancellationToken cancellationToken = default)
+    {
+        var model = await BuildTeacherLessonsViewModelAsync(page, cancellationToken);
+        return View(model);
+    }
+
+    [HttpPost("Lessons")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateLessonFromLessons(
+        [Bind(Prefix = "CreateForm")] QuickLessonFormViewModel model,
+        CancellationToken cancellationToken)
     {
         var profile = await CurrentProfile(cancellationToken);
-        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
-        return View(new QuickLessonViewModel { Students = students });
+        if (!ModelState.IsValid)
+        {
+            ViewData["OpenCreateLessonModal"] = true;
+            var pageModel = await BuildTeacherLessonsViewModelAsync(1, cancellationToken);
+            pageModel.CreateForm = model;
+            return View("Lessons", pageModel);
+        }
+
+        try
+        {
+            await _lessonService.CreateLessonAsync(
+                profile,
+                new CreateLessonRequest(
+                    model.StudentProfileId,
+                    BuildLessonTitle(model.Title, model.LessonDateUtc),
+                    model.LessonDateUtc.ToUniversalTime(),
+                    model.Notes),
+                cancellationToken);
+            TempData["Success"] = "Aula criada com sucesso.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            ViewData["OpenCreateLessonModal"] = true;
+            var pageModel = await BuildTeacherLessonsViewModelAsync(1, cancellationToken);
+            pageModel.CreateForm = model;
+            return View("Lessons", pageModel);
+        }
+
+        return RedirectToAction(nameof(Lessons));
+    }
+
+    [HttpPost("Lessons/{lessonId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateLessonFromLessons(
+        Guid lessonId,
+        [Bind(Prefix = "EditForm")] EditLessonViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (model.LessonId == Guid.Empty)
+            model.LessonId = lessonId;
+
+        if (!ModelState.IsValid || model.LessonId != lessonId)
+        {
+            ViewData["OpenEditLessonModal"] = lessonId;
+            var pageModel = await BuildTeacherLessonsViewModelAsync(1, cancellationToken);
+            pageModel.EditForm = model;
+            return View("Lessons", pageModel);
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _lessonService.UpdateLessonAsync(
+                profile,
+                new UpdateLessonRequest(
+                    model.StudentProfileId,
+                    lessonId,
+                    BuildLessonTitle(model.Title, model.LessonDateUtc),
+                    model.LessonDateUtc.ToUniversalTime(),
+                    model.Notes),
+                cancellationToken);
+            TempData["Success"] = "Aula atualizada.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            ViewData["OpenEditLessonModal"] = lessonId;
+            var pageModel = await BuildTeacherLessonsViewModelAsync(1, cancellationToken);
+            pageModel.EditForm = model;
+            return View("Lessons", pageModel);
+        }
+
+        return RedirectToAction(nameof(Lessons));
+    }
+
+    [HttpPost("Lessons/{lessonId:guid}/Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteLessonFromLessons(
+        Guid lessonId,
+        [FromForm] Guid studentProfileId,
+        CancellationToken cancellationToken)
+    {
+        if (studentProfileId == Guid.Empty)
+        {
+            TempData["Error"] = "Aula invalida.";
+            return RedirectToAction(nameof(Lessons));
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _lessonService.DeleteLessonAsync(profile, studentProfileId, lessonId, cancellationToken);
+            TempData["Success"] = "Aula excluida.";
+        }
+        catch (KeyNotFoundException)
+        {
+            TempData["Error"] = "Aula nao encontrada ou ja excluida.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Lessons));
     }
 
     [HttpPost("QuickLesson")]
@@ -996,8 +1134,8 @@ public sealed class TeacherController : Controller
         var profile = await CurrentProfile(cancellationToken);
         if (!ModelState.IsValid)
         {
-            var students2 = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
-            return View(new QuickLessonViewModel { Students = students2, Form = model });
+            TempData["Error"] = "Dados da aula invalidos.";
+            return RedirectToAction(nameof(Lessons));
         }
         await _lessonService.CreateLessonAsync(
             profile,
@@ -1007,7 +1145,36 @@ public sealed class TeacherController : Controller
                 model.LessonDateUtc.ToUniversalTime(),
                 model.Notes),
             cancellationToken);
-        return RedirectToAction(nameof(StudentDetail), new { studentId = model.StudentProfileId });
+        TempData["Success"] = "Aula criada com sucesso.";
+        return RedirectToAction(nameof(Lessons));
+    }
+
+    private async Task<TeacherLessonsViewModel> BuildTeacherLessonsViewModelAsync(
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var safePage = Math.Max(1, page);
+        var students = await _teacherStudentService.ListStudentsAsync(profile, cancellationToken);
+        var lessons = await _lessonService.ListLessonsForTeacherAsync(
+            profile,
+            (safePage - 1) * LessonsPageSize,
+            LessonsPageSize + 1,
+            cancellationToken);
+
+        var visibleLessons = lessons.Take(LessonsPageSize).ToArray();
+
+        return new TeacherLessonsViewModel
+        {
+            Students = students,
+            Lessons = visibleLessons,
+            Page = safePage,
+            HasNextPage = lessons.Count > LessonsPageSize,
+            CreateForm = new QuickLessonFormViewModel
+            {
+                LessonDateUtc = DateTime.Now
+            }
+        };
     }
 
     private async Task<TeacherStudentDetailViewModel?> LoadStudentDetail(Guid studentId, CancellationToken cancellationToken)

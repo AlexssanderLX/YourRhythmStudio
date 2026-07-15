@@ -23,7 +23,7 @@
             <partial name="_DashIcon" model="@("users")" />
             Voltar para @student.DisplayName
         </a>
-        <a class="student-home-link" asp-controller="Teacher" asp-action="QuickLesson">Nova aula</a>
+        <a class="student-home-link" asp-controller="Teacher" asp-action="Lessons">Aulas</a>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(successMsg))

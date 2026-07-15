@@ -65,6 +65,7 @@ public sealed class DevolutivasViewModel
 {
     public required IReadOnlyList<MissionSummary> Missions { get; init; }
     public required IReadOnlyList<MissionSummary> Pending { get; init; }
+    public string? StatusFilter { get; init; }
 }
 
 // ── Teacher mission detail ────────────────────────────────────────────────────

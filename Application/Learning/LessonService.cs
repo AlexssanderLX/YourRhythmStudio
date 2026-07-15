@@ -75,6 +75,45 @@ public sealed class LessonService
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<TeacherLessonListItem>> ListLessonsForTeacherAsync(
+        AuthenticatedUserProfile profile,
+        int skip = 0,
+        int take = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, teacherProfileId) = LearningAuthorization.RequireTeacher(profile);
+        var safeSkip = Math.Max(0, skip);
+        var safeTake = Math.Clamp(take, 1, 50);
+
+        return await (
+            from lesson in _dbContext.Lessons.AsNoTracking()
+            join link in _dbContext.TeacherStudents.AsNoTracking()
+                on new { lesson.SchoolId, lesson.TeacherProfileId, lesson.StudentProfileId }
+                equals new { link.SchoolId, link.TeacherProfileId, link.StudentProfileId }
+            join student in _dbContext.StudentProfiles.AsNoTracking()
+                on lesson.StudentProfileId equals student.Id
+            join user in _dbContext.SchoolUsers.AsNoTracking()
+                on student.SchoolUserId equals user.Id
+            where lesson.SchoolId == schoolId
+                && lesson.TeacherProfileId == teacherProfileId
+                && link.IsActive
+                && user.IsActive
+            orderby lesson.LessonDateUtc descending
+            select new TeacherLessonListItem(
+                lesson.Id,
+                lesson.StudentProfileId,
+                user.DisplayName,
+                student.Instrument,
+                lesson.Title,
+                lesson.LessonDateUtc,
+                lesson.CompletedAtUtc,
+                lesson.Status,
+                lesson.Notes))
+            .Skip(safeSkip)
+            .Take(safeTake)
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<LessonDetailSummary> GetLessonDetailAsync(
         AuthenticatedUserProfile profile,
         Guid studentProfileId,
