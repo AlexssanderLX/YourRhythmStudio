@@ -192,12 +192,12 @@ Authentication__Session__AbsoluteTimeoutMinutes
 Authentication__Session__ValidationIntervalSeconds
 ```
 
-Valores recomendados para sessao autenticada curta:
+Valores recomendados para sessao autenticada persistente de uso diario:
 
 ```text
 Authentication__DataProtectionKeysPath=/var/www/yourrhythm/shared/data-protection-keys
-Authentication__Session__IdleTimeoutMinutes=3
-Authentication__Session__AbsoluteTimeoutMinutes=30
+Authentication__Session__IdleTimeoutMinutes=480
+Authentication__Session__AbsoluteTimeoutMinutes=720
 Authentication__Session__ValidationIntervalSeconds=60
 ```
 

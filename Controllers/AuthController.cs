@@ -230,6 +230,11 @@ public class AuthController : Controller
     [AllowAnonymous]
     public async Task<IActionResult> StudentAccess(string code, CancellationToken cancellationToken)
     {
+        if (IsAuthenticatedStudent())
+        {
+            return RedirectToAction("Dashboard", "Student");
+        }
+
         if (string.IsNullOrWhiteSpace(code))
             return RedirectToAction(nameof(Login));
 
@@ -297,6 +302,15 @@ public class AuthController : Controller
         }
 
         return RedirectToAction("Index", "Dashboard");
+    }
+
+    private bool IsAuthenticatedStudent()
+    {
+        return User.Identity?.IsAuthenticated == true
+            && string.Equals(
+                User.FindFirstValue(UserProfileResolver.RoleClaim),
+                YourRhythmRoles.Student,
+                StringComparison.Ordinal);
     }
 
     private string? ResolveFallbackRole(IssuedSaasSession session)

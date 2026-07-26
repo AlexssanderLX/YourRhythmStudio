@@ -24,9 +24,22 @@ public sealed class AuthSessionTests
     {
         var options = new AuthSessionOptions();
 
-        Assert.Equal(TimeSpan.FromMinutes(3), options.IdleTimeout);
-        Assert.Equal(TimeSpan.FromMinutes(30), options.AbsoluteTimeout);
+        Assert.Equal(TimeSpan.FromHours(8), options.IdleTimeout);
+        Assert.Equal(TimeSpan.FromHours(12), options.AbsoluteTimeout);
         Assert.Equal(TimeSpan.FromSeconds(60), options.ValidationInterval);
+    }
+
+    [Fact]
+    public void SessionOptions_ApplyUsabilityFloorForLegacyShortConfiguration()
+    {
+        var options = new AuthSessionOptions
+        {
+            IdleTimeoutMinutes = 3,
+            AbsoluteTimeoutMinutes = 30
+        };
+
+        Assert.Equal(TimeSpan.FromHours(1), options.IdleTimeout);
+        Assert.Equal(TimeSpan.FromHours(1), options.AbsoluteTimeout);
     }
 
     [Fact]
@@ -43,7 +56,7 @@ public sealed class AuthSessionTests
         Assert.True(cookie.Cookie.HttpOnly);
         Assert.Equal(CookieSecurePolicy.Always, cookie.Cookie.SecurePolicy);
         Assert.Equal(SameSiteMode.Lax, cookie.Cookie.SameSite);
-        Assert.Equal(TimeSpan.FromMinutes(3), cookie.ExpireTimeSpan);
+        Assert.Equal(TimeSpan.FromHours(8), cookie.ExpireTimeSpan);
         Assert.True(cookie.SlidingExpiration);
         Assert.Equal(typeof(YourRhythmCookieEvents), cookie.EventsType);
     }
@@ -52,7 +65,7 @@ public sealed class AuthSessionTests
     public async Task ValidatePrincipal_RejectsExpiredAbsoluteLifetime()
     {
         var account = ActiveAccount();
-        var context = CreateContext(account, issuedAt: DateTimeOffset.UtcNow.AddMinutes(-31));
+        var context = CreateContext(account, issuedAt: DateTimeOffset.UtcNow.AddHours(-13));
         var events = CreateEvents(account);
 
         await events.ValidatePrincipal(context);
