@@ -1,0 +1,24 @@
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = "Link do aluno invalido";
+}
+
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="student-access-invalid-title">
+        <a href="/" class="auth-back">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Voltar ao inicio
+        </a>
+
+        <div class="auth-brand">
+            <img src="~/img/logo-mark.svg" alt="YourRhythm Studio" />
+            <span>YourRhythm<span>.</span></span>
+        </div>
+
+        <div class="auth-copy">
+            <p class="auth-kicker">Acesso do aluno</p>
+            <h1 id="student-access-invalid-title">Link invalido ou expirado</h1>
+            <p>Este acesso nao esta disponivel. Peca ao professor para gerar um novo link ou QR Code para o aluno.</p>
+        </div>
+    </section>
+</main>

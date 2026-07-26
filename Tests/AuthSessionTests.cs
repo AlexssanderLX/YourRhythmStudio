@@ -115,6 +115,19 @@ public sealed class AuthSessionTests
         Assert.Null(context.Principal);
     }
 
+    [Fact]
+    public async Task RedirectToLogin_ForStudentArea_UsesStudentAccessPage()
+    {
+        var account = ActiveAccount();
+        var events = CreateEvents(account);
+        var context = CreateRedirectContext("/Student/Dashboard", "/Auth/Login?returnUrl=%2FStudent%2FDashboard");
+
+        await events.RedirectToLogin(context);
+
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal("/Auth/StudentAccess", context.Response.Headers.Location.ToString());
+    }
+
     private static YourRhythmCookieEvents CreateEvents(Account? account)
     {
         var dbOptions = new DbContextOptionsBuilder<YourRhythmDbContext>()
@@ -175,6 +188,28 @@ public sealed class AuthSessionTests
             scheme,
             new CookieAuthenticationOptions(),
             ticket);
+    }
+
+    private static RedirectContext<CookieAuthenticationOptions> CreateRedirectContext(string path, string redirectUri)
+    {
+        var services = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = services };
+        httpContext.Request.Path = path;
+
+        var scheme = new AuthenticationScheme(
+            YourRhythmAuthenticationExtensions.CookieScheme,
+            null,
+            typeof(IAuthenticationHandler));
+
+        return new RedirectContext<CookieAuthenticationOptions>(
+            httpContext,
+            scheme,
+            new CookieAuthenticationOptions(),
+            new AuthenticationProperties(),
+            redirectUri);
     }
 
     private static Account ActiveAccount(string securityStamp = "stamp") => new()

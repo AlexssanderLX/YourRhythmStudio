@@ -95,6 +95,12 @@ public sealed class YourRhythmCookieEvents : CookieAuthenticationEvents
             return Task.CompletedTask;
         }
 
+        if (context.Request.Path.StartsWithSegments("/Student", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Redirect("/Auth/StudentAccess");
+            return Task.CompletedTask;
+        }
+
         var redirectUri = QueryHelpers.AddQueryString(context.RedirectUri, "expired", "1");
         context.Response.Redirect(redirectUri);
         return Task.CompletedTask;

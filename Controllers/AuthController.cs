@@ -236,13 +236,13 @@ public class AuthController : Controller
         }
 
         if (string.IsNullOrWhiteSpace(code))
-            return RedirectToAction(nameof(Login));
+            return View();
 
         var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
         var resolution = await _secureLinkService.ResolveAsync(baseUri, code, cancellationToken);
 
         if (resolution.IsFailure || !Guid.TryParse(resolution.Value?.ResourceKey, out var studentProfileId))
-            return RedirectToAction(nameof(Login));
+            return View("StudentAccessInvalid");
 
         var student = await _db.StudentProfiles
             .AsNoTracking()
@@ -250,7 +250,7 @@ public class AuthController : Controller
             .FirstOrDefaultAsync(s => s.Id == studentProfileId, cancellationToken);
 
         if (student?.SchoolUser is null || !student.SchoolUser.IsActive)
-            return RedirectToAction(nameof(Login));
+            return View("StudentAccessInvalid");
 
         var hasActiveTeacherLink = await _db.TeacherStudents
             .AsNoTracking()
@@ -260,7 +260,7 @@ public class AuthController : Controller
                 cancellationToken);
 
         if (!hasActiveTeacherLink)
-            return RedirectToAction(nameof(Login));
+            return View("StudentAccessInvalid");
 
         var schoolUser = student.SchoolUser;
         var claims = new List<Claim>
