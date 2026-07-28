@@ -145,12 +145,40 @@ public sealed record UpdateLessonRequest(
     DateTime LessonDateUtc,
     string? Notes);
 
+public sealed record RepertoireMaterialSummary(
+    Guid Id,
+    RepertoireMaterialType MaterialType,
+    string Title,
+    string? OriginalFileName,
+    string? ContentType,
+    long? SizeBytes,
+    DateTime AddedAtUtc);
+
+public sealed record RepertoireTeacherDetail(
+    Guid Id,
+    string Title,
+    RepertoireStatus Status,
+    int ProgressPercent,
+    string? Notes,
+    string? ComposerName,
+    string? InstrumentName,
+    string? ReferenceUrl,
+    string? AudioOriginalFileName,
+    string? AudioContentType,
+    long? AudioSizeBytes,
+    bool HasAudio,
+    IReadOnlyCollection<RepertoireMaterialSummary> Materials,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc);
+
 public sealed record AddRepertoireRequest(
     Guid StudentProfileId,
     string Title,
     string? Notes,
     string? ReferenceUrl,
-    RepertoireAudioUpload? Audio);
+    RepertoireAudioUpload? Audio,
+    string? ComposerName = null,
+    string? InstrumentName = null);
 
 public sealed record UpdateRepertoireRequest(
     Guid StudentProfileId,
@@ -158,7 +186,9 @@ public sealed record UpdateRepertoireRequest(
     string Title,
     string? Notes,
     string? ReferenceUrl,
-    RepertoireAudioUpload? Audio);
+    RepertoireAudioUpload? Audio,
+    string? ComposerName = null,
+    string? InstrumentName = null);
 
 public sealed record RepertoireAudioUpload(
     string FileName,

@@ -4,6 +4,8 @@ namespace YourRhythmStudio.Domain.Learning.Enums
     {
         Pdf = 1,
         Audio = 2,
-        Link = 3
+        Link = 3,
+        Image = 4,
+        Video = 5
     }
 }

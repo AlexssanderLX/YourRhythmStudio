@@ -152,6 +152,15 @@ public sealed class RepertoireItem
         UpdatedAtUtc = utcNow;
     }
 
+    public void ClearFiles(DateTime utcNow)
+    {
+        AudioStoredFileName = null;
+        AudioOriginalFileName = null;
+        AudioContentType = null;
+        AudioSizeBytes = null;
+        UpdatedAtUtc = utcNow;
+    }
+
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();

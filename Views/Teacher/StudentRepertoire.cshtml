@@ -1,4 +1,5 @@
 @model YourRhythmStudio.ViewModels.Learning.TeacherStudentDetailWithSkillsViewModel
+@using YourRhythmStudio.Domain.Learning.Enums
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = $"Repertorio · {Model.Base.Detail.Student.DisplayName}";
@@ -6,6 +7,7 @@
     ViewData["DashTitle"] = "Repertorio";
     var student = Model.Base.Detail.Student;
     var studentId = student.StudentProfileId;
+    var autoOpenId = TempData["OpenRepertoireModal"] as string;
 }
 
 <section class="teacher-student-page">
@@ -24,8 +26,8 @@
         </div>
     </div>
 
-    @if (TempData["Error"] is string error) { <div class="auth-validation">@error</div> }
-    @if (TempData["Success"] is string success) { <div class="auth-success">@success</div> }
+    @if (TempData["Error"] is string error) { <div class="auth-validation" role="alert">@error</div> }
+    @if (TempData["Success"] is string success) { <div class="auth-success" role="status">@success</div> }
 
     <section class="student-form-panel module-list-panel">
         <div class="student-panel-head compact">
@@ -34,119 +36,599 @@
         <div class="module-list">
             @foreach (var item in Model.Base.Detail.Repertoire)
             {
+                var attachLabel = item.HasAudio ? "audio" : "";
+                var sep = !string.IsNullOrEmpty(attachLabel) ? " · " : "";
                 <button type="button"
                         class="module-row"
-                        data-open-edit
-                        data-id="@item.Id"
-                        data-title="@item.Title"
-                        data-notes="@item.Notes"
-                        data-url="@item.ReferenceUrl">
+                        data-open-repertoire="@item.Id"
+                        aria-label="Abrir repertorio: @item.Title">
                     <span class="module-row-main">
                         <strong>@item.Title</strong>
-                        <small>@(item.HasAudio ? "audio" : "link") · criado em @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy") · @item.ProgressPercent%</small>
+                        <small>
+                            @item.Status.ToString().ToLower()@(sep)@attachLabel
+                            @if (item.ReferenceUrl is not null) { <span> · link</span> }
+                            · @item.ProgressPercent%
+                            · @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")
+                        </small>
                     </span>
-                    <span class="module-row-meta">@(item.ReferenceUrl is not null ? "link" : item.HasAudio ? "audio" : "sem ref")</span>
+                    <span class="module-row-meta" aria-hidden="true">›</span>
                 </button>
             }
             @if (!Model.Base.Detail.Repertoire.Any())
             {
                 <div class="module-empty">
                     <strong>Nenhum repertorio enviado.</strong>
-                    <p>Adicione um link ou audio para orientar o estudo do aluno.</p>
+                    <p>Adicione um link, audio ou descricao para orientar o estudo do aluno.</p>
                 </div>
             }
         </div>
     </section>
 </section>
 
-<div class="student-action-modal" data-create-panel hidden>
+
+@*
+Modal: Criar repertorio
+*@
+
+<div class="student-action-modal" data-create-panel hidden aria-hidden="true">
     <div class="student-action-modal-backdrop" data-close-modal></div>
     <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Criar repertorio">
         <div class="student-panel-head">
             <div><span class="student-section-kicker">Novo repertorio</span><h2>@student.DisplayName</h2></div>
-            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+            <button type="button" class="student-jump-btn" data-close-modal aria-label="Fechar">Fechar</button>
         </div>
         <form asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" enctype="multipart/form-data" class="auth-form compact-form">
             @Html.AntiForgeryToken()
             <input name="Repertoire.StudentProfileId" type="hidden" value="@studentId" />
             <div>
-                <label>Nome</label>
-                <input name="Repertoire.Title" required maxlength="180" placeholder="Ex: Clair de Lune referencia" />
+                <label>Nome <span aria-hidden="true">*</span></label>
+                <input name="Repertoire.Title" required maxlength="180" placeholder="Ex: Clair de Lune — referencia" />
+            </div>
+            <div>
+                <label>Compositor / Artista</label>
+                <input name="Repertoire.ComposerName" maxlength="180" placeholder="Ex: Debussy" />
+            </div>
+            <div>
+                <label>Instrumento</label>
+                <input name="Repertoire.InstrumentName" maxlength="120" placeholder="Ex: Piano" />
             </div>
             <div>
                 <label>Link de referencia</label>
                 <input name="Repertoire.ReferenceUrl" type="url" maxlength="500" placeholder="https://..." />
             </div>
             <div>
-                <label>Arquivo de audio opcional</label>
+                <label>Audio (opcional — ate 30 MB)</label>
                 <input name="Repertoire.AudioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" />
             </div>
             <div>
-                <label>Descricao opcional</label>
+                <label>Descricao</label>
                 <textarea name="Repertoire.Notes" maxlength="2000" placeholder="Como usar este material?"></textarea>
             </div>
+            <p class="form-hint">Preencha ao menos um campo alem do nome: descricao, link ou audio.</p>
             <button type="submit">Salvar repertorio</button>
         </form>
     </section>
 </div>
 
-<div class="student-action-modal" data-edit-panel hidden>
+
+@*
+Modal: Detalhe / Editar / Excluir
+*@
+
+<div class="student-action-modal" data-detail-panel hidden aria-hidden="true">
     <div class="student-action-modal-backdrop" data-close-modal></div>
-    <section class="student-action-modal-card" role="dialog" aria-modal="true" aria-label="Editar repertorio">
+    <section class="student-action-modal-card rep-detail-card" role="dialog" aria-modal="true"
+             aria-labelledby="rep-modal-title" tabindex="-1" data-rep-card>
         <div class="student-panel-head">
-            <div><span class="student-section-kicker">Editar repertorio</span><h2 data-edit-heading>Material</h2></div>
-            <button type="button" class="student-jump-btn" data-close-modal>Fechar</button>
+            <div>
+                <span class="student-section-kicker" id="rep-modal-kicker">Repertorio</span>
+                <h2 id="rep-modal-title" data-rep-title>Carregando...</h2>
+            </div>
+            <button type="button" class="student-jump-btn" data-close-modal aria-label="Fechar modal">Fechar</button>
         </div>
-        <form method="post" enctype="multipart/form-data" class="auth-form compact-form" data-edit-form>
+
+        
+@*
+Estado: carregando
+*@
+
+        <div data-rep-loading class="rep-loading" aria-live="polite">
+            <p>Carregando...</p>
+        </div>
+
+        
+@*
+Estado: erro
+*@
+
+        <div data-rep-fetch-error class="auth-validation" role="alert" hidden></div>
+
+        
+@*
+Vista de detalhes
+*@
+
+        <div data-rep-detail hidden>
+            <div class="rep-meta-grid">
+                <div>
+                    <span class="rep-meta-label">Status</span>
+                    <span data-rep-status class="rep-meta-value">—</span>
+                </div>
+                <div>
+                    <span class="rep-meta-label">Progresso</span>
+                    <span data-rep-progress class="rep-meta-value">—</span>
+                </div>
+                <div data-rep-composer-wrap hidden>
+                    <span class="rep-meta-label">Compositor</span>
+                    <span data-rep-composer class="rep-meta-value">—</span>
+                </div>
+                <div data-rep-instrument-wrap hidden>
+                    <span class="rep-meta-label">Instrumento</span>
+                    <span data-rep-instrument class="rep-meta-value">—</span>
+                </div>
+                <div>
+                    <span class="rep-meta-label">Criado em</span>
+                    <span data-rep-created class="rep-meta-value">—</span>
+                </div>
+            </div>
+
+            <div data-rep-notes-wrap class="rep-content-block" hidden>
+                <span class="rep-meta-label">Descricao</span>
+                <p data-rep-notes class="rep-notes-text">—</p>
+            </div>
+
+            <div data-rep-link-wrap class="rep-content-block" hidden>
+                <span class="rep-meta-label">Link de referencia</span>
+                <a data-rep-link href="#" target="_blank" rel="noopener noreferrer" class="rep-link">Abrir link</a>
+            </div>
+
+            
+@*
+Anexos
+*@
+
+            <div class="rep-attachments">
+                <span class="rep-meta-label">Anexos</span>
+                <div data-rep-attachments-list class="rep-attachment-list">
+                    
+@*
+Preenchido pelo JS
+*@
+
+                </div>
+                <div data-rep-no-attachments class="rep-no-attachments" hidden>
+                    <span>Nenhum arquivo anexado.</span>
+                </div>
+
+                
+@*
+Formulario de adicionar arquivo
+*@
+
+                <form method="post" enctype="multipart/form-data" data-add-material-form class="rep-add-file-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" data-add-material-item-id />
+                    <div class="rep-add-file-row">
+                        <label class="rep-add-file-label" for="rep-material-file-input">Adicionar arquivo</label>
+                        <input id="rep-material-file-input" name="materialFile" type="file"
+                               accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.webm"
+                               class="rep-file-input" />
+                        <button type="submit" class="btn btn-secondary btn-sm">Adicionar</button>
+                    </div>
+                    <p class="form-hint">Imagens, PDF, audio ou video. Ate 5 MB por arquivo.</p>
+                </form>
+            </div>
+
+            <div class="rep-detail-actions">
+                <button type="button" class="btn btn-secondary btn-sm" data-start-edit>Editar dados</button>
+                <button type="button" class="btn btn-sm rep-archive-btn" data-start-archive>Excluir repertorio</button>
+            </div>
+        </div>
+
+        
+@*
+Formulario de edicao
+*@
+
+        <form method="post" enctype="multipart/form-data" data-rep-edit-form class="auth-form compact-form" hidden>
             @Html.AntiForgeryToken()
             <input name="StudentProfileId" type="hidden" value="@studentId" />
-            <input name="RepertoireItemId" type="hidden" data-edit-id />
+            <input name="RepertoireItemId" type="hidden" data-rep-edit-id />
             <div>
-                <label>Nome</label>
-                <input name="Title" data-edit-title required maxlength="180" />
+                <label>Nome <span aria-hidden="true">*</span></label>
+                <input name="Title" data-rep-edit-title required maxlength="180" />
+            </div>
+            <div>
+                <label>Compositor / Artista</label>
+                <input name="ComposerName" data-rep-edit-composer maxlength="180" />
+            </div>
+            <div>
+                <label>Instrumento</label>
+                <input name="InstrumentName" data-rep-edit-instrument maxlength="120" />
             </div>
             <div>
                 <label>Link de referencia</label>
-                <input name="ReferenceUrl" data-edit-url type="url" maxlength="500" />
+                <input name="ReferenceUrl" data-rep-edit-url type="url" maxlength="500" placeholder="https://..." />
             </div>
             <div>
-                <label>Trocar/adicionar audio opcional</label>
+                <label>Trocar / adicionar audio (ate 30 MB)</label>
                 <input name="AudioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" />
             </div>
             <div>
-                <label>Descricao opcional</label>
-                <textarea name="Notes" data-edit-notes maxlength="2000"></textarea>
+                <label>Descricao</label>
+                <textarea name="Notes" data-rep-edit-notes maxlength="2000"></textarea>
             </div>
-            <button type="submit">Salvar repertorio</button>
+            <div class="rep-edit-actions">
+                <button type="submit">Salvar alteracoes</button>
+                <button type="button" data-cancel-edit class="btn btn-ghost btn-sm">Cancelar</button>
+            </div>
         </form>
+
+        
+@*
+Confirmacao de exclusao
+*@
+
+        <div data-rep-archive-confirm hidden class="rep-archive-confirm">
+            <div class="rep-archive-warn">
+                <p><strong>Excluir este repertorio?</strong></p>
+                <p>Todos os arquivos vinculados serao removidos permanentemente. Esta acao nao pode ser desfeita.</p>
+                <p>Repertorio: <strong data-archive-title-display>—</strong></p>
+            </div>
+            <form method="post" data-rep-archive-form>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="itemId" data-archive-item-id />
+                <div class="rep-archive-btns">
+                    <button type="submit" class="btn rep-confirm-delete-btn">Sim, excluir</button>
+                    <button type="button" data-cancel-archive class="btn btn-ghost btn-sm">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
     </section>
 </div>
+
+
+@*
+Formulario compartilhado de remocao de material
+*@
+
+<form method="post" id="remove-material-form" hidden>
+    @Html.AntiForgeryToken()
+</form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-    (function(){
+    (function () {
+        'use strict';
+
         var studentId = '@studentId';
+        var autoOpenId = @(autoOpenId is not null ? $"'{autoOpenId}'" : "null");
+
+        // ── Panels ────────────────────────────────────────────────────────────
         var createPanel = document.querySelector('[data-create-panel]');
-        var editPanel = document.querySelector('[data-edit-panel]');
-        function open(panel){ panel.hidden = false; document.body.classList.add('modal-open'); }
-        function close(){ document.querySelectorAll('.student-action-modal').forEach(function(p){ p.hidden = true; }); document.body.classList.remove('modal-open'); }
-        document.querySelector('[data-open-create]')?.addEventListener('click', function(){ open(createPanel); });
-        document.querySelectorAll('[data-close-modal]').forEach(function(btn){ btn.addEventListener('click', close); });
-        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
-        document.querySelectorAll('[data-open-edit]').forEach(function(row){
-            row.addEventListener('click', function(){
-                var id = row.dataset.id;
-                var form = document.querySelector('[data-edit-form]');
-                form.action = '/Teacher/Students/' + studentId + '/Repertoire/' + id;
-                document.querySelector('[data-edit-id]').value = id;
-                document.querySelector('[data-edit-title]').value = row.dataset.title || '';
-                document.querySelector('[data-edit-url]').value = row.dataset.url || '';
-                document.querySelector('[data-edit-notes]').value = row.dataset.notes || '';
-                document.querySelector('[data-edit-heading]').textContent = row.dataset.title || 'Material';
-                open(editPanel);
+        var detailPanel = document.querySelector('[data-detail-panel]');
+        var allModals   = document.querySelectorAll('.student-action-modal');
+
+        function openPanel(panel) {
+            allModals.forEach(function (p) { p.hidden = true; p.setAttribute('aria-hidden', 'true'); });
+            panel.hidden = false;
+            panel.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            var card = panel.querySelector('[data-rep-card]');
+            if (card) card.focus();
+        }
+
+        function closeAll() {
+            allModals.forEach(function (p) { p.hidden = true; p.setAttribute('aria-hidden', 'true'); });
+            document.body.classList.remove('modal-open');
+            if (lastFocused) { lastFocused.focus(); lastFocused = null; }
+        }
+
+        var lastFocused = null;
+
+        // ── Create panel ─────────────────────────────────────────────────────
+        var openCreateBtn = document.querySelector('[data-open-create]');
+        if (openCreateBtn) {
+            openCreateBtn.addEventListener('click', function () {
+                lastFocused = openCreateBtn;
+                openPanel(createPanel);
+            });
+        }
+
+        // ── Close handlers ───────────────────────────────────────────────────
+        document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+            btn.addEventListener('click', closeAll);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeAll();
+        });
+
+        // ── Detail modal elements ────────────────────────────────────────────
+        var elTitle       = document.querySelector('[data-rep-title]');
+        var elLoading     = document.querySelector('[data-rep-loading]');
+        var elFetchError  = document.querySelector('[data-rep-fetch-error]');
+        var elDetail      = document.querySelector('[data-rep-detail]');
+        var elEditForm    = document.querySelector('[data-rep-edit-form]');
+        var elArchiveCnf  = document.querySelector('[data-rep-archive-confirm]');
+
+        var elStatus      = document.querySelector('[data-rep-status]');
+        var elProgress    = document.querySelector('[data-rep-progress]');
+        var elComposerWrap = document.querySelector('[data-rep-composer-wrap]');
+        var elComposer    = document.querySelector('[data-rep-composer]');
+        var elInstrumentWrap = document.querySelector('[data-rep-instrument-wrap]');
+        var elInstrument  = document.querySelector('[data-rep-instrument]');
+        var elCreated     = document.querySelector('[data-rep-created]');
+        var elNotesWrap   = document.querySelector('[data-rep-notes-wrap]');
+        var elNotes       = document.querySelector('[data-rep-notes]');
+        var elLinkWrap    = document.querySelector('[data-rep-link-wrap]');
+        var elLink        = document.querySelector('[data-rep-link]');
+        var elAttList     = document.querySelector('[data-rep-attachments-list]');
+        var elNoAtt       = document.querySelector('[data-rep-no-attachments]');
+
+        var elEditId       = document.querySelector('[data-rep-edit-id]');
+        var elEditTitle    = document.querySelector('[data-rep-edit-title]');
+        var elEditComposer = document.querySelector('[data-rep-edit-composer]');
+        var elEditInstrument = document.querySelector('[data-rep-edit-instrument]');
+        var elEditUrl      = document.querySelector('[data-rep-edit-url]');
+        var elEditNotes    = document.querySelector('[data-rep-edit-notes]');
+
+        var elArchiveForm  = document.querySelector('[data-rep-archive-form]');
+        var elArchiveId    = document.querySelector('[data-archive-item-id]');
+        var elArchiveTitle = document.querySelector('[data-archive-title-display]');
+
+        var elAddMaterialForm   = document.querySelector('[data-add-material-form]');
+        var elAddMaterialItemId = document.querySelector('[data-add-material-item-id]');
+
+        var removeMaterialForm = document.getElementById('remove-material-form');
+
+        var currentItemId = null;
+
+        function showDetailView() {
+            elLoading.hidden    = true;
+            elFetchError.hidden = true;
+            elDetail.hidden     = false;
+            elEditForm.hidden   = true;
+            elArchiveCnf.hidden = true;
+        }
+
+        function showEditForm() {
+            elLoading.hidden    = true;
+            elFetchError.hidden = true;
+            elDetail.hidden     = true;
+            elEditForm.hidden   = false;
+            elArchiveCnf.hidden = true;
+        }
+
+        function showArchiveConfirm() {
+            elLoading.hidden    = true;
+            elFetchError.hidden = true;
+            elDetail.hidden     = true;
+            elEditForm.hidden   = true;
+            elArchiveCnf.hidden = false;
+        }
+
+        function showLoading() {
+            elLoading.hidden    = false;
+            elFetchError.hidden = true;
+            elDetail.hidden     = true;
+            elEditForm.hidden   = true;
+            elArchiveCnf.hidden = true;
+            elTitle.textContent = 'Carregando...';
+        }
+
+        function showError(msg) {
+            elLoading.hidden         = false;
+            elLoading.hidden         = true;
+            elFetchError.hidden      = false;
+            elFetchError.textContent = msg || 'Erro ao carregar repertorio.';
+            elDetail.hidden          = true;
+            elEditForm.hidden        = true;
+            elArchiveCnf.hidden      = true;
+        }
+
+        function formatStatus(s) {
+            var map = { NotStarted: 'Nao iniciado', Practicing: 'Em pratica', Learned: 'Aprendido', Archived: 'Arquivado' };
+            return map[s] || s;
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function materialIcon(type) {
+            var icons = { 1: '📄', 2: '🎵', 3: '🔗', 4: '🖼', 5: '🎬' };
+            return icons[type] || '📎';
+        }
+
+        function buildAttachmentList(data) {
+            var items = [];
+
+            // Legacy audio
+            if (data.hasAudio && data.audioOriginalFileName) {
+                var audioUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Audio';
+                items.push('<div class="rep-att-item">'
+                    + '<span class="rep-att-icon" aria-hidden="true">🎵</span>'
+                    + '<div class="rep-att-info">'
+                    + '<a href="' + escapeHtml(audioUrl) + '" target="_blank" rel="noopener noreferrer" class="rep-att-name">'
+                    + escapeHtml(data.audioOriginalFileName) + '</a>'
+                    + (data.audioSizeBytes ? '<span class="rep-att-size">' + formatSize(data.audioSizeBytes) + '</span>' : '')
+                    + '</div>'
+                    + '</div>');
+            }
+
+            // Materials
+            (data.materials || []).forEach(function (m) {
+                var fileUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials/' + m.id;
+                var removeUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials/' + m.id + '/Remove';
+
+                var previewHtml = '';
+                if (m.materialType === 4 && m.contentType && m.contentType.startsWith('image/')) {
+                    previewHtml = '<img src="' + escapeHtml(fileUrl) + '" alt="' + escapeHtml(m.originalFileName) + '" class="rep-att-thumb" loading="lazy" />';
+                }
+
+                items.push('<div class="rep-att-item">'
+                    + previewHtml
+                    + '<span class="rep-att-icon" aria-hidden="true">' + materialIcon(m.materialType) + '</span>'
+                    + '<div class="rep-att-info">'
+                    + '<a href="' + escapeHtml(fileUrl) + '" target="_blank" rel="noopener noreferrer" class="rep-att-name">'
+                    + escapeHtml(m.originalFileName || m.title) + '</a>'
+                    + (m.sizeBytes ? '<span class="rep-att-size">' + formatSize(m.sizeBytes) + '</span>' : '')
+                    + '</div>'
+                    + '<button type="button" class="rep-att-remove btn-ghost btn-sm"'
+                    + ' data-remove-material="' + escapeHtml(m.id) + '"'
+                    + ' data-remove-url="' + escapeHtml(removeUrl) + '"'
+                    + ' aria-label="Remover ' + escapeHtml(m.originalFileName || m.title) + '">'
+                    + 'Remover</button>'
+                    + '</div>');
+            });
+
+            if (items.length === 0) {
+                elAttList.innerHTML = '';
+                elNoAtt.hidden = false;
+            } else {
+                elAttList.innerHTML = items.join('');
+                elNoAtt.hidden = true;
+
+                // Bind remove buttons
+                elAttList.querySelectorAll('[data-remove-material]').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var materialId = btn.dataset.removeMaterial;
+                        var removeUrl  = btn.dataset.removeUrl;
+                        if (!confirm('Remover este arquivo do repertorio?')) return;
+                        removeMaterialForm.action = removeUrl;
+                        removeMaterialForm.submit();
+                    });
+                });
+            }
+        }
+
+        function populateDetail(data) {
+            elTitle.textContent = data.title || '(sem nome)';
+            elStatus.textContent = formatStatus(data.status);
+            elProgress.textContent = data.progressPercent + '%';
+
+            if (data.composerName) {
+                elComposer.textContent = data.composerName;
+                elComposerWrap.hidden = false;
+            } else {
+                elComposerWrap.hidden = true;
+            }
+
+            if (data.instrumentName) {
+                elInstrument.textContent = data.instrumentName;
+                elInstrumentWrap.hidden = false;
+            } else {
+                elInstrumentWrap.hidden = true;
+            }
+
+            var d = new Date(data.createdAtUtc);
+            elCreated.textContent = d.toLocaleDateString('pt-BR');
+
+            if (data.notes) {
+                elNotes.textContent = data.notes;
+                elNotesWrap.hidden = false;
+            } else {
+                elNotesWrap.hidden = true;
+            }
+
+            if (data.referenceUrl) {
+                elLink.href = data.referenceUrl;
+                elLink.textContent = data.referenceUrl.length > 60
+                    ? data.referenceUrl.substring(0, 57) + '...'
+                    : data.referenceUrl;
+                elLinkWrap.hidden = false;
+            } else {
+                elLinkWrap.hidden = true;
+            }
+
+            buildAttachmentList(data);
+
+            // Populate edit form
+            elEditId.value           = data.id;
+            elEditTitle.value        = data.title || '';
+            elEditComposer.value     = data.composerName || '';
+            elEditInstrument.value   = data.instrumentName || '';
+            elEditUrl.value          = data.referenceUrl || '';
+            elEditNotes.value        = data.notes || '';
+            elEditForm.action        = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id;
+
+            // Populate add material form
+            elAddMaterialItemId.value = data.id;
+            elAddMaterialForm.action  = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials';
+
+            // Populate archive form
+            elArchiveId.value        = data.id;
+            elArchiveForm.action     = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Archive';
+            if (elArchiveTitle) elArchiveTitle.textContent = data.title || '';
+        }
+
+        function openRepertoireDetail(itemId, trigger) {
+            currentItemId = itemId;
+            lastFocused   = trigger || null;
+            showLoading();
+            openPanel(detailPanel);
+
+            fetch('/Teacher/Students/' + studentId + '/Repertoire/' + itemId + '/Detail', {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                populateDetail(data);
+                showDetailView();
+            })
+            .catch(function () {
+                showError('Nao foi possivel carregar os dados. Tente novamente.');
+            });
+        }
+
+        // ── Row clicks ───────────────────────────────────────────────────────
+        document.querySelectorAll('[data-open-repertoire]').forEach(function (row) {
+            row.addEventListener('click', function () {
+                openRepertoireDetail(row.dataset.openRepertoire, row);
             });
         });
+
+        // ── Edit / cancel ────────────────────────────────────────────────────
+        document.querySelector('[data-start-edit]')?.addEventListener('click', showEditForm);
+        document.querySelector('[data-cancel-edit]')?.addEventListener('click', showDetailView);
+
+        // ── Archive / cancel ─────────────────────────────────────────────────
+        document.querySelector('[data-start-archive]')?.addEventListener('click', showArchiveConfirm);
+        document.querySelector('[data-cancel-archive]')?.addEventListener('click', showDetailView);
+
+        // ── Prevent double submit ─────────────────────────────────────────────
+        [elEditForm, elAddMaterialForm, elArchiveForm].forEach(function (form) {
+            if (!form) return;
+            form.addEventListener('submit', function () {
+                form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Salvando...';
+                });
+            });
+        });
+
+        // ── Auto-open after redirect ──────────────────────────────────────────
+        if (autoOpenId) {
+            openRepertoireDetail(autoOpenId, null);
+        }
+
     }());
     </script>
 }

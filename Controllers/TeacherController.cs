@@ -183,6 +183,24 @@ public sealed class TeacherController : Controller
         return PhysicalFile(audio.PhysicalPath, audio.ContentType, audio.DownloadFileName, enableRangeProcessing: true);
     }
 
+    [HttpGet("Students/{studentId:guid}/Repertoire/{itemId:guid}/Detail")]
+    public async Task<IActionResult> GetRepertoireDetail(Guid studentId, Guid itemId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var detail = await _repertoireService.GetDetailForTeacherAsync(profile, studentId, itemId, cancellationToken);
+        if (detail is null) return NotFound();
+        return Ok(detail);
+    }
+
+    [HttpGet("Students/{studentId:guid}/Repertoire/{itemId:guid}/Materials/{materialId:guid}")]
+    public async Task<IActionResult> GetRepertoireMaterial(Guid studentId, Guid itemId, Guid materialId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var file = await _repertoireService.GetMaterialForTeacherAsync(profile, studentId, itemId, materialId, cancellationToken);
+        if (file is null) return NotFound();
+        return PhysicalFile(file.PhysicalPath, file.ContentType, file.DownloadFileName, enableRangeProcessing: true);
+    }
+
     [HttpPost("Students/{studentId:guid}/Lessons")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateLesson(
@@ -320,7 +338,9 @@ public sealed class TeacherController : Controller
                     model.Title,
                     model.Notes,
                     model.ReferenceUrl,
-                    audio),
+                    audio,
+                    model.ComposerName,
+                    model.InstrumentName),
                 cancellationToken);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -359,7 +379,7 @@ public sealed class TeacherController : Controller
 
             await _repertoireService.UpdateRepertoireAsync(
                 profile,
-                new UpdateRepertoireRequest(studentId, repertoireItemId, model.Title, model.Notes, model.ReferenceUrl, audio),
+                new UpdateRepertoireRequest(studentId, repertoireItemId, model.Title, model.Notes, model.ReferenceUrl, audio, model.ComposerName, model.InstrumentName),
                 cancellationToken);
             TempData["Success"] = "Repertorio atualizado.";
         }
@@ -368,6 +388,78 @@ public sealed class TeacherController : Controller
             TempData["Error"] = ex.Message;
         }
 
+        TempData["OpenRepertoireModal"] = repertoireItemId.ToString();
+        return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Repertoire/{itemId:guid}/Archive")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ArchiveRepertoire(Guid studentId, Guid itemId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _repertoireService.ArchiveRepertoireAsync(profile, studentId, itemId, cancellationToken);
+            TempData["Success"] = "Repertorio excluido.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+            TempData["OpenRepertoireModal"] = itemId.ToString();
+        }
+        return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Repertoire/{itemId:guid}/Materials")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddRepertoireMaterial(Guid studentId, Guid itemId, IFormFile? materialFile, CancellationToken cancellationToken)
+    {
+        if (materialFile is null or { Length: 0 })
+        {
+            TempData["Error"] = "Selecione um arquivo.";
+            TempData["OpenRepertoireModal"] = itemId.ToString();
+            return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+        }
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _repertoireService.AddMaterialAsync(
+                profile,
+                studentId,
+                itemId,
+                materialFile.FileName,
+                materialFile.ContentType,
+                materialFile.Length,
+                materialFile.OpenReadStream,
+                cancellationToken);
+            TempData["Success"] = "Arquivo adicionado.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        TempData["OpenRepertoireModal"] = itemId.ToString();
+        return RedirectToAction(nameof(StudentRepertoire), new { studentId });
+    }
+
+    [HttpPost("Students/{studentId:guid}/Repertoire/{itemId:guid}/Materials/{materialId:guid}/Remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveRepertoireMaterial(Guid studentId, Guid itemId, Guid materialId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            await _repertoireService.RemoveMaterialAsync(profile, studentId, materialId, cancellationToken);
+            TempData["Success"] = "Arquivo removido.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        TempData["OpenRepertoireModal"] = itemId.ToString();
         return RedirectToAction(nameof(StudentRepertoire), new { studentId });
     }
 
@@ -1313,6 +1405,8 @@ public sealed class TeacherController : Controller
             Title = ReadString(current.Title, "Base.Repertoire.Title", "Repertoire.Title"),
             Notes = ReadString(current.Notes, "Base.Repertoire.Notes", "Repertoire.Notes"),
             ReferenceUrl = ReadString(current.ReferenceUrl, "Base.Repertoire.ReferenceUrl", "Repertoire.ReferenceUrl"),
+            ComposerName = ReadString(current.ComposerName, "Base.Repertoire.ComposerName", "Repertoire.ComposerName"),
+            InstrumentName = ReadString(current.InstrumentName, "Base.Repertoire.InstrumentName", "Repertoire.InstrumentName"),
             AudioFile = Request.Form.Files.GetFile("Base.Repertoire.AudioFile") ?? Request.Form.Files.GetFile("Repertoire.AudioFile")
         };
     }

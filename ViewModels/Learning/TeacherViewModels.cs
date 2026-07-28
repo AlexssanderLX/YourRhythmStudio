@@ -147,6 +147,12 @@ public sealed class AddRepertoireViewModel
     [Url(ErrorMessage = "Informe uma URL valida.")]
     public string? ReferenceUrl { get; set; }
 
+    [StringLength(180)]
+    public string? ComposerName { get; set; }
+
+    [StringLength(120)]
+    public string? InstrumentName { get; set; }
+
     public IFormFile? AudioFile { get; set; }
 }
 
@@ -168,6 +174,12 @@ public sealed class EditRepertoireViewModel
     [StringLength(500)]
     [Url(ErrorMessage = "Informe uma URL valida.")]
     public string? ReferenceUrl { get; set; }
+
+    [StringLength(180)]
+    public string? ComposerName { get; set; }
+
+    [StringLength(120)]
+    public string? InstrumentName { get; set; }
 
     public IFormFile? AudioFile { get; set; }
 }
