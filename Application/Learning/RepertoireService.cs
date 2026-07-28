@@ -56,12 +56,6 @@ public sealed class RepertoireService
             request.StudentProfileId,
             cancellationToken);
 
-        bool hasContent = !string.IsNullOrWhiteSpace(request.ReferenceUrl)
-            || request.Audio is not null
-            || !string.IsNullOrWhiteSpace(request.Notes);
-        if (!hasContent)
-            throw new ArgumentException("Informe ao menos um conteudo: descricao, link ou audio.");
-
         var now = DateTime.UtcNow;
         var referenceUrl = NormalizeReferenceUrl(request.ReferenceUrl);
         var item = new RepertoireItem(

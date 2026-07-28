@@ -425,23 +425,53 @@ public sealed class TeacherStudentService
 
         var studentIds = rows.Select(r => r.StudentProfileId).ToList();
 
-        var latestRepertoire = await _dbContext.RepertoireItems
+        var repertoireData = await _dbContext.RepertoireItems
             .AsNoTracking()
             .Where(item => item.SchoolId == schoolId && studentIds.Contains(item.StudentProfileId))
             .GroupBy(item => item.StudentProfileId)
             .Select(g => new
             {
                 StudentProfileId = g.Key,
-                Progress = g.OrderByDescending(x => x.UpdatedAtUtc).Select(x => x.ProgressPercent).FirstOrDefault(),
+                AvgProgress = (int)g.Average(x => (double)x.ProgressPercent),
                 Title = g.OrderByDescending(x => x.UpdatedAtUtc).Select(x => x.Title).FirstOrDefault()
             })
             .ToListAsync(ct);
 
-        var repertoireByStudent = latestRepertoire.ToDictionary(r => r.StudentProfileId);
+        var missionData = await _dbContext.Assignments
+            .AsNoTracking()
+            .Where(a => a.SchoolId == schoolId
+                && studentIds.Contains(a.StudentProfileId)
+                && a.IsMission
+                && a.Status != AssignmentStatus.Skipped)
+            .GroupBy(a => a.StudentProfileId)
+            .Select(g => new
+            {
+                StudentProfileId = g.Key,
+                Total = g.Count(),
+                Completed = g.Count(a => a.Status == AssignmentStatus.Completed)
+            })
+            .ToListAsync(ct);
+
+        var repByStudent     = repertoireData.ToDictionary(r => r.StudentProfileId);
+        var missionByStudent = missionData.ToDictionary(m => m.StudentProfileId);
 
         return rows.Select(row =>
         {
-            repertoireByStudent.TryGetValue(row.StudentProfileId, out var rep);
+            repByStudent.TryGetValue(row.StudentProfileId, out var rep);
+            missionByStudent.TryGetValue(row.StudentProfileId, out var mis);
+
+            var hasRep     = rep is not null;
+            var hasMission = mis is not null && mis.Total > 0;
+            int missionRate = hasMission ? mis!.Completed * 100 / mis.Total : 0;
+
+            int combinedProgress = (hasRep, hasMission) switch
+            {
+                (true, true)  => (rep!.AvgProgress + missionRate) / 2,
+                (true, false) => rep!.AvgProgress,
+                (false, true) => missionRate,
+                _             => 0
+            };
+
             return new TeacherStudentSummary(
                 row.StudentProfileId,
                 row.SchoolUserId,
@@ -452,7 +482,7 @@ public sealed class TeacherStudentService
                 row.Notes,
                 row.CurrentXp,
                 row.CurrentLevel,
-                rep?.Progress ?? 0,
+                Math.Clamp(combinedProgress, 0, 100),
                 rep?.Title,
                 ToPublicPhotoUrl(row.ProfilePhotoPath));
         }).ToList();

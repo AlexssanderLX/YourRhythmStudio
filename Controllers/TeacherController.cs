@@ -352,6 +352,42 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(StudentRepertoire), new { studentId });
     }
 
+    [HttpPost("Students/{studentId:guid}/Repertoire/Create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateRepertoireJson(
+        Guid studentId,
+        [FromForm] string? title,
+        [FromForm] string? notes,
+        [FromForm] string? referenceUrl,
+        [FromForm] string? composerName,
+        [FromForm] string? instrumentName,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return BadRequest(new { error = "Nome do repertorio e obrigatorio." });
+
+        var profile = await CurrentProfile(cancellationToken);
+        try
+        {
+            var summary = await _repertoireService.AddRepertoireAsync(
+                profile,
+                new AddRepertoireRequest(
+                    studentId,
+                    title.Trim(),
+                    string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
+                    string.IsNullOrWhiteSpace(referenceUrl) ? null : referenceUrl.Trim(),
+                    null,
+                    string.IsNullOrWhiteSpace(composerName) ? null : composerName.Trim(),
+                    string.IsNullOrWhiteSpace(instrumentName) ? null : instrumentName.Trim()),
+                cancellationToken);
+            return Ok(new { id = summary.Id });
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("Students/{studentId:guid}/Repertoire/{repertoireItemId:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateRepertoire(

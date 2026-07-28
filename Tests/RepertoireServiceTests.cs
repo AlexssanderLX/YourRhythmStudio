@@ -45,15 +45,16 @@ public sealed class RepertoireServiceTests
     }
 
     [Fact]
-    public async Task AddRepertoireAsync_WithNoContent_Throws()
+    public async Task AddRepertoireAsync_WithTitleOnly_Succeeds()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
         var svc = CreateService(db);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            svc.AddRepertoireAsync(ctx.Teacher,
-                new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, null, null)));
+        var result = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, null, null));
+
+        Assert.NotEqual(Guid.Empty, result.Id);
     }
 
     [Fact]

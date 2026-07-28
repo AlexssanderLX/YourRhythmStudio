@@ -77,31 +77,42 @@ Modal: Criar repertorio
             <div><span class="student-section-kicker">Novo repertorio</span><h2>@student.DisplayName</h2></div>
             <button type="button" class="student-jump-btn" data-close-modal aria-label="Fechar">Fechar</button>
         </div>
-        <form asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
+        <form data-create-form class="auth-form compact-form" novalidate>
             @Html.AntiForgeryToken()
-            <input name="Repertoire.StudentProfileId" type="hidden" value="@studentId" />
             <div>
                 <label>Nome <span aria-hidden="true">*</span></label>
-                <input name="Repertoire.Title" required maxlength="180" placeholder="Ex: Clair de Lune" />
+                <input name="title" required maxlength="180" placeholder="Ex: Clair de Lune" />
             </div>
             <div>
                 <label>Compositor / Artista</label>
-                <input name="Repertoire.ComposerName" maxlength="180" placeholder="Ex: Debussy" />
+                <input name="composerName" maxlength="180" placeholder="Ex: Debussy" />
             </div>
             <div>
                 <label>Instrumento</label>
-                <input name="Repertoire.InstrumentName" maxlength="120" placeholder="Ex: Piano" />
+                <input name="instrumentName" maxlength="120" placeholder="Ex: Piano" />
             </div>
             <div>
                 <label>Link de referencia</label>
-                <input name="Repertoire.ReferenceUrl" type="url" maxlength="500" placeholder="https://..." />
+                <input name="referenceUrl" type="url" maxlength="500" placeholder="https://..." />
             </div>
             <div>
                 <label>Descricao</label>
-                <textarea name="Repertoire.Notes" maxlength="2000" placeholder="Como usar este material?"></textarea>
+                <textarea name="notes" maxlength="2000" placeholder="Como usar este material?"></textarea>
             </div>
-            <p class="form-hint">Preencha ao menos um campo alem do nome: descricao ou link. Arquivos podem ser adicionados apos criar.</p>
-            <button type="submit">Salvar repertorio</button>
+
+            <div class="rep-file-drop-area" data-create-drop-area>
+                <input type="file" id="create-file-input" multiple
+                       accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.webm"
+                       style="display:none" aria-hidden="true" />
+                <label for="create-file-input">
+                    <strong>Adicionar arquivos</strong> — arraste ou clique para selecionar
+                </label>
+                <small style="display:block;margin-top:4px;color:rgba(160,185,230,.5)">Imagens, PDF, TXT, audio, video · ate 5 MB por arquivo</small>
+            </div>
+            <div data-create-staging-list class="rep-staging-list" hidden></div>
+            <p data-create-error class="rep-file-error" hidden></p>
+
+            <button type="submit" data-create-submit>Salvar repertorio</button>
         </form>
     </section>
 </div>
@@ -671,6 +682,111 @@ Modal: Detalhe / Editar / Excluir
         // ── Auto-open after redirect ──────────────────────────────────────────
         if (autoOpenId) {
             openRepertoireDetail(autoOpenId, null);
+        }
+
+        // ── Create modal file staging ─────────────────────────────────────────
+        var elCreateForm        = document.querySelector('[data-create-form]');
+        var elCreateFileInput   = document.getElementById('create-file-input');
+        var elCreateStagingList = document.querySelector('[data-create-staging-list]');
+        var elCreateError       = document.querySelector('[data-create-error]');
+        var elCreateSubmitBtn   = document.querySelector('[data-create-submit]');
+        var createDropArea      = document.querySelector('[data-create-drop-area]');
+        var createPendingFiles  = [];
+
+        function renderCreateStaging() {
+            if (!elCreateStagingList) return;
+            if (createPendingFiles.length === 0) {
+                elCreateStagingList.hidden = true;
+                elCreateStagingList.innerHTML = '';
+                return;
+            }
+            elCreateStagingList.hidden = false;
+            var html = createPendingFiles.map(function (f, i) {
+                var warn = f.size > MAX_FILE_BYTES ? ' rep-staging-warn' : '';
+                return '<div class="rep-staging-item' + warn + '">'
+                    + '<span class="rep-staging-name">' + escapeHtml(f.name) + '</span>'
+                    + '<span class="rep-staging-size">(' + formatSize(f.size)
+                    + (f.size > MAX_FILE_BYTES ? ' — excede 5 MB' : '') + ')</span>'
+                    + '<button type="button" class="rep-staging-remove" data-cidx="' + i + '" aria-label="Remover">&times;</button>'
+                    + '</div>';
+            }).join('');
+            elCreateStagingList.innerHTML = html;
+            elCreateStagingList.querySelectorAll('[data-cidx]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    createPendingFiles.splice(parseInt(btn.dataset.cidx, 10), 1);
+                    renderCreateStaging();
+                });
+            });
+        }
+
+        if (elCreateFileInput) {
+            elCreateFileInput.addEventListener('change', function () {
+                Array.from(this.files).forEach(function (f) { createPendingFiles.push(f); });
+                elCreateFileInput.value = '';
+                renderCreateStaging();
+            });
+        }
+
+        if (createDropArea) {
+            createDropArea.addEventListener('dragover', function (e) { e.preventDefault(); createDropArea.classList.add('rep-drag-over'); });
+            createDropArea.addEventListener('dragleave', function () { createDropArea.classList.remove('rep-drag-over'); });
+            createDropArea.addEventListener('drop', function (e) {
+                e.preventDefault();
+                createDropArea.classList.remove('rep-drag-over');
+                Array.from(e.dataTransfer.files).forEach(function (f) { createPendingFiles.push(f); });
+                renderCreateStaging();
+            });
+        }
+
+        if (openCreateBtn) {
+            openCreateBtn.addEventListener('click', function () {
+                createPendingFiles = [];
+                renderCreateStaging();
+                if (elCreateError) elCreateError.hidden = true;
+                if (elCreateForm) elCreateForm.reset();
+            });
+        }
+
+        if (elCreateForm) {
+            elCreateForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (elCreateError) elCreateError.hidden = true;
+
+                var titleVal = elCreateForm.querySelector('[name="title"]');
+                if (!titleVal || !titleVal.value.trim()) {
+                    if (elCreateError) { elCreateError.textContent = 'Nome e obrigatorio.'; elCreateError.hidden = false; }
+                    return;
+                }
+                if (createPendingFiles.some(function (f) { return f.size > MAX_FILE_BYTES; })) {
+                    if (elCreateError) { elCreateError.textContent = 'Remova os arquivos que excedem 5 MB antes de salvar.'; elCreateError.hidden = false; }
+                    return;
+                }
+
+                if (elCreateSubmitBtn) { elCreateSubmitBtn.disabled = true; elCreateSubmitBtn.textContent = 'Criando...'; }
+
+                var fd = new FormData(elCreateForm);
+                try {
+                    var resp = await fetch('/Teacher/Students/' + studentId + '/Repertoire/Create', { method: 'POST', body: fd });
+                    var data = await resp.json();
+                    if (!resp.ok || data.error) throw new Error(data.error || 'Erro ao criar repertorio.');
+
+                    var newId  = data.id;
+                    var matUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + newId + '/Materials';
+
+                    for (var i = 0; i < createPendingFiles.length; i++) {
+                        if (elCreateSubmitBtn) elCreateSubmitBtn.textContent = 'Enviando arquivo ' + (i + 1) + '/' + createPendingFiles.length + '...';
+                        var uf = new FormData();
+                        uf.append('materialFile', createPendingFiles[i]);
+                        uf.append('__RequestVerificationToken', getCsrfToken());
+                        try { await fetch(matUrl, { method: 'POST', body: uf }); } catch { /* best-effort */ }
+                    }
+
+                    window.location.reload();
+                } catch (err) {
+                    if (elCreateError) { elCreateError.textContent = err.message; elCreateError.hidden = false; }
+                    if (elCreateSubmitBtn) { elCreateSubmitBtn.disabled = false; elCreateSubmitBtn.textContent = 'Salvar repertorio'; }
+                }
+            });
         }
 
     }());
