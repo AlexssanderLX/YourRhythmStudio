@@ -451,6 +451,150 @@ public sealed class RepertoireServiceTests
         Assert.Empty(db.RepertoireItemMaterials);
     }
 
+    // ── List excludes archived ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ListForTeacherStudentAsync_ExcludesArchivedItems()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var active = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Ativo", "Notas", null, null));
+        var toArchive = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Arquivado", null, "https://example.com", null));
+
+        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, toArchive.Id);
+
+        var list = await svc.ListForTeacherStudentAsync(ctx.Teacher, ctx.StudentProfile.Id);
+
+        Assert.Single(list);
+        Assert.Equal(active.Id, list.First().Id);
+    }
+
+    // ── File size limits ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AddMaterialAsync_ExactlyMaxFileSize_Succeeds()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var added = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
+
+        var maxBytes = 5 * 1024 * 1024; // exactly 5 MB
+        var content = new byte[4];       // SaveMaterialAsync reads from stream; length param is checked
+
+        var material = await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "partitura.pdf", "application/pdf", maxBytes,
+            () => new MemoryStream(content));
+
+        Assert.NotEqual(Guid.Empty, material.Id);
+    }
+
+    [Fact]
+    public async Task AddMaterialAsync_ExactlyMaxTotalSize_Succeeds()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var added = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
+
+        // Add first file of 5 MB (max per file)
+        var firstContent = new byte[4];
+        await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "a.pdf", "application/pdf", 5 * 1024 * 1024,
+            () => new MemoryStream(firstContent));
+
+        // Add second file bringing total to exactly 10 MB
+        var material = await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "b.pdf", "application/pdf", 5 * 1024 * 1024,
+            () => new MemoryStream(firstContent));
+
+        Assert.NotEqual(Guid.Empty, material.Id);
+        Assert.Equal(2, db.RepertoireItemMaterials.Count());
+    }
+
+    [Fact]
+    public async Task AddMaterialAsync_ExceedsTotalSize_Throws()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var added = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
+
+        var content = new byte[4];
+
+        // Add two files totalling 10 MB
+        await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "a.pdf", "application/pdf", 5 * 1024 * 1024,
+            () => new MemoryStream(content));
+        await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "b.pdf", "application/pdf", 5 * 1024 * 1024,
+            () => new MemoryStream(content));
+
+        // Third file would push total to 10 MB + 1 byte
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+                "c.pdf", "application/pdf", 1,
+                () => new MemoryStream(content)));
+    }
+
+    [Fact]
+    public async Task AddMaterialAsync_ExistingFilesCountedInTotal_Throws()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var added = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
+
+        var content = new byte[4];
+
+        // Seed existing material directly (bypassing service, simulating pre-existing file)
+        var existingMaterial = new Domain.Learning.RepertoireItemMaterial(
+            added.Id, ctx.SchoolId, Domain.Learning.Enums.RepertoireMaterialType.Pdf,
+            "existing.pdf", 1)
+        {
+            SizeBytes = 9 * 1024 * 1024  // 9 MB existing
+        };
+        db.RepertoireItemMaterials.Add(existingMaterial);
+        await db.SaveChangesAsync();
+
+        // New file of 2 MB would push total to 11 MB
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+                "novo.pdf", "application/pdf", 2 * 1024 * 1024,
+                () => new MemoryStream(content)));
+    }
+
+    [Fact]
+    public async Task AddMaterialAsync_ValidTxtFile_AddsMaterial()
+    {
+        await using var db = CreateDb();
+        var ctx = await SeedAsync(db);
+        var svc = CreateService(db);
+
+        var added = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
+
+        var content = System.Text.Encoding.UTF8.GetBytes("Letra da musica aqui.");
+        var material = await svc.AddMaterialAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id,
+            "letra.txt", "text/plain", content.Length,
+            () => new MemoryStream(content));
+
+        Assert.NotEqual(Guid.Empty, material.Id);
+        Assert.Equal(RepertoireMaterialType.Pdf, material.MaterialType);
+    }
+
     // ── Overposting protection ────────────────────────────────────────────────
 
     [Fact]

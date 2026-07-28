@@ -58,7 +58,7 @@
             {
                 <div class="module-empty">
                     <strong>Nenhum repertorio enviado.</strong>
-                    <p>Adicione um link, audio ou descricao para orientar o estudo do aluno.</p>
+                    <p>Adicione uma descricao ou link para orientar o estudo do aluno.</p>
                 </div>
             }
         </div>
@@ -77,12 +77,12 @@ Modal: Criar repertorio
             <div><span class="student-section-kicker">Novo repertorio</span><h2>@student.DisplayName</h2></div>
             <button type="button" class="student-jump-btn" data-close-modal aria-label="Fechar">Fechar</button>
         </div>
-        <form asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" enctype="multipart/form-data" class="auth-form compact-form">
+        <form asp-action="AddRepertoire" asp-route-studentId="@studentId" method="post" class="auth-form compact-form">
             @Html.AntiForgeryToken()
             <input name="Repertoire.StudentProfileId" type="hidden" value="@studentId" />
             <div>
                 <label>Nome <span aria-hidden="true">*</span></label>
-                <input name="Repertoire.Title" required maxlength="180" placeholder="Ex: Clair de Lune — referencia" />
+                <input name="Repertoire.Title" required maxlength="180" placeholder="Ex: Clair de Lune" />
             </div>
             <div>
                 <label>Compositor / Artista</label>
@@ -97,14 +97,10 @@ Modal: Criar repertorio
                 <input name="Repertoire.ReferenceUrl" type="url" maxlength="500" placeholder="https://..." />
             </div>
             <div>
-                <label>Audio (opcional — ate 30 MB)</label>
-                <input name="Repertoire.AudioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" />
-            </div>
-            <div>
                 <label>Descricao</label>
                 <textarea name="Repertoire.Notes" maxlength="2000" placeholder="Como usar este material?"></textarea>
             </div>
-            <p class="form-hint">Preencha ao menos um campo alem do nome: descricao, link ou audio.</p>
+            <p class="form-hint">Preencha ao menos um campo alem do nome: descricao ou link. Arquivos podem ser adicionados apos criar.</p>
             <button type="submit">Salvar repertorio</button>
         </form>
     </section>
@@ -117,169 +113,124 @@ Modal: Detalhe / Editar / Excluir
 
 <div class="student-action-modal" data-detail-panel hidden aria-hidden="true">
     <div class="student-action-modal-backdrop" data-close-modal></div>
-    <section class="student-action-modal-card rep-detail-card" role="dialog" aria-modal="true"
+    <section class="student-action-modal-card rep-modal-card" role="dialog" aria-modal="true"
              aria-labelledby="rep-modal-title" tabindex="-1" data-rep-card>
         <div class="student-panel-head">
             <div>
-                <span class="student-section-kicker" id="rep-modal-kicker">Repertorio</span>
+                <span class="student-section-kicker">Repertorio</span>
                 <h2 id="rep-modal-title" data-rep-title>Carregando...</h2>
             </div>
             <button type="button" class="student-jump-btn" data-close-modal aria-label="Fechar modal">Fechar</button>
         </div>
 
-        
-@*
-Estado: carregando
-*@
-
-        <div data-rep-loading class="rep-loading" aria-live="polite">
+        @* Estado: carregando *@
+        <div data-rep-loading class="rep-state-loading" aria-live="polite">
             <p>Carregando...</p>
         </div>
 
-        
-@*
-Estado: erro
-*@
-
+        @* Estado: erro *@
         <div data-rep-fetch-error class="auth-validation" role="alert" hidden></div>
 
-        
-@*
-Vista de detalhes
-*@
+        @* Conteudo principal: editar + anexos *@
+        <div data-rep-content hidden>
 
-        <div data-rep-detail hidden>
-            <div class="rep-meta-grid">
-                <div>
-                    <span class="rep-meta-label">Status</span>
-                    <span data-rep-status class="rep-meta-value">—</span>
-                </div>
-                <div>
-                    <span class="rep-meta-label">Progresso</span>
-                    <span data-rep-progress class="rep-meta-value">—</span>
-                </div>
-                <div data-rep-composer-wrap hidden>
-                    <span class="rep-meta-label">Compositor</span>
-                    <span data-rep-composer class="rep-meta-value">—</span>
-                </div>
-                <div data-rep-instrument-wrap hidden>
-                    <span class="rep-meta-label">Instrumento</span>
-                    <span data-rep-instrument class="rep-meta-value">—</span>
-                </div>
-                <div>
-                    <span class="rep-meta-label">Criado em</span>
-                    <span data-rep-created class="rep-meta-value">—</span>
-                </div>
+            <div class="rep-meta-row">
+                <span class="rep-badge" data-rep-status-badge></span>
+                <span class="rep-meta-progress" data-rep-progress-text></span>
             </div>
 
-            <div data-rep-notes-wrap class="rep-content-block" hidden>
-                <span class="rep-meta-label">Descricao</span>
-                <p data-rep-notes class="rep-notes-text">—</p>
-            </div>
+            @* Formulario de edicao (estado principal) *@
+            <form method="post" data-rep-edit-form class="rep-edit-form">
+                @Html.AntiForgeryToken()
+                <input name="StudentProfileId" type="hidden" value="@studentId" />
+                <input name="RepertoireItemId" type="hidden" data-rep-edit-id />
 
-            <div data-rep-link-wrap class="rep-content-block" hidden>
-                <span class="rep-meta-label">Link de referencia</span>
-                <a data-rep-link href="#" target="_blank" rel="noopener noreferrer" class="rep-link">Abrir link</a>
-            </div>
-
-            
-@*
-Anexos
-*@
-
-            <div class="rep-attachments">
-                <span class="rep-meta-label">Anexos</span>
-                <div data-rep-attachments-list class="rep-attachment-list">
-                    
-@*
-Preenchido pelo JS
-*@
-
+                <div class="rep-form-section">
+                    <div>
+                        <label class="rep-field-label">Nome <span aria-hidden="true">*</span></label>
+                        <input name="Title" data-rep-edit-title required maxlength="180" class="rep-field-input" />
+                    </div>
+                    <div class="rep-form-row2">
+                        <div>
+                            <label class="rep-field-label">Compositor / Artista</label>
+                            <input name="ComposerName" data-rep-edit-composer maxlength="180" class="rep-field-input" />
+                        </div>
+                        <div>
+                            <label class="rep-field-label">Instrumento</label>
+                            <input name="InstrumentName" data-rep-edit-instrument maxlength="120" class="rep-field-input" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="rep-field-label">Link de referencia</label>
+                        <input name="ReferenceUrl" data-rep-edit-url type="url" maxlength="500" placeholder="https://..." class="rep-field-input" />
+                    </div>
+                    <div>
+                        <label class="rep-field-label">Descricao</label>
+                        <textarea name="Notes" data-rep-edit-notes maxlength="2000" rows="3" class="rep-field-input"></textarea>
+                    </div>
                 </div>
-                <div data-rep-no-attachments class="rep-no-attachments" hidden>
+
+                <div class="rep-form-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" data-rep-save-btn>Salvar alteracoes</button>
+                </div>
+            </form>
+
+            <div class="rep-section-divider"></div>
+
+            @* Secao de anexos *@
+            <div class="rep-attachments-section">
+                <div class="rep-section-head">
+                    <span class="rep-section-label">Anexos</span>
+                    <span class="rep-total-size" data-rep-total-size></span>
+                </div>
+
+                <div data-rep-attachments-list class="rep-attachment-list"></div>
+                <div data-rep-no-attachments class="rep-empty-files" hidden>
                     <span>Nenhum arquivo anexado.</span>
                 </div>
 
-                
-@*
-Formulario de adicionar arquivo
-*@
+                @* Staging: arquivos selecionados aguardando envio *@
+                <div data-rep-file-staging hidden>
+                    <div data-rep-file-staging-list class="rep-staging-list"></div>
+                </div>
 
-                <form method="post" enctype="multipart/form-data" data-add-material-form class="rep-add-file-form">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" data-add-material-item-id />
-                    <div class="rep-add-file-row">
-                        <label class="rep-add-file-label" for="rep-material-file-input">Adicionar arquivo</label>
-                        <input id="rep-material-file-input" name="materialFile" type="file"
-                               accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.webm"
-                               class="rep-file-input" />
-                        <button type="submit" class="btn btn-secondary btn-sm">Adicionar</button>
+                @* Area de selecao de arquivos *@
+                <div class="rep-file-drop-area" data-rep-drop-area>
+                    <div class="rep-file-drop-inner">
+                        <label class="rep-file-choose-btn" for="rep-file-input">
+                            + Adicionar arquivos
+                        </label>
+                        <input id="rep-file-input" type="file" multiple
+                               accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.webm"
+                               class="rep-file-input-hidden" />
+                        <span class="rep-file-hint">Imagens, PDF, audio ou video &middot; max. 5 MB por arquivo &middot; 10 MB no total</span>
                     </div>
-                    <p class="form-hint">Imagens, PDF, audio ou video. Ate 5 MB por arquivo.</p>
-                </form>
+                </div>
+
+                <div class="rep-upload-row" data-rep-upload-row hidden>
+                    <button type="button" class="btn btn-secondary btn-sm" data-rep-upload-btn disabled>Enviar selecionados</button>
+                    <span class="rep-upload-progress" data-rep-upload-progress></span>
+                </div>
+
+                <div class="rep-file-error" data-rep-file-error hidden></div>
             </div>
 
-            <div class="rep-detail-actions">
-                <button type="button" class="btn btn-secondary btn-sm" data-start-edit>Editar dados</button>
-                <button type="button" class="btn btn-sm rep-archive-btn" data-start-archive>Excluir repertorio</button>
+            <div class="rep-section-divider"></div>
+
+            <div class="rep-danger-zone">
+                <button type="button" class="rep-archive-btn" data-start-archive>Excluir repertorio</button>
             </div>
         </div>
 
-        
-@*
-Formulario de edicao
-*@
-
-        <form method="post" enctype="multipart/form-data" data-rep-edit-form class="auth-form compact-form" hidden>
-            @Html.AntiForgeryToken()
-            <input name="StudentProfileId" type="hidden" value="@studentId" />
-            <input name="RepertoireItemId" type="hidden" data-rep-edit-id />
-            <div>
-                <label>Nome <span aria-hidden="true">*</span></label>
-                <input name="Title" data-rep-edit-title required maxlength="180" />
-            </div>
-            <div>
-                <label>Compositor / Artista</label>
-                <input name="ComposerName" data-rep-edit-composer maxlength="180" />
-            </div>
-            <div>
-                <label>Instrumento</label>
-                <input name="InstrumentName" data-rep-edit-instrument maxlength="120" />
-            </div>
-            <div>
-                <label>Link de referencia</label>
-                <input name="ReferenceUrl" data-rep-edit-url type="url" maxlength="500" placeholder="https://..." />
-            </div>
-            <div>
-                <label>Trocar / adicionar audio (ate 30 MB)</label>
-                <input name="AudioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" />
-            </div>
-            <div>
-                <label>Descricao</label>
-                <textarea name="Notes" data-rep-edit-notes maxlength="2000"></textarea>
-            </div>
-            <div class="rep-edit-actions">
-                <button type="submit">Salvar alteracoes</button>
-                <button type="button" data-cancel-edit class="btn btn-ghost btn-sm">Cancelar</button>
-            </div>
-        </form>
-
-        
-@*
-Confirmacao de exclusao
-*@
-
+        @* Confirmacao de exclusao *@
         <div data-rep-archive-confirm hidden class="rep-archive-confirm">
-            <div class="rep-archive-warn">
-                <p><strong>Excluir este repertorio?</strong></p>
-                <p>Todos os arquivos vinculados serao removidos permanentemente. Esta acao nao pode ser desfeita.</p>
-                <p>Repertorio: <strong data-archive-title-display>—</strong></p>
-            </div>
+            <p class="rep-archive-title">Excluir este repertorio?</p>
+            <p class="rep-archive-sub">Todos os arquivos vinculados serao removidos permanentemente. Esta acao nao pode ser desfeita.</p>
+            <p class="rep-archive-name"><strong data-archive-title-display></strong></p>
             <form method="post" data-rep-archive-form>
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="itemId" data-archive-item-id />
                 <div class="rep-archive-btns">
-                    <button type="submit" class="btn rep-confirm-delete-btn">Sim, excluir</button>
+                    <button type="submit" class="rep-confirm-delete-btn" data-rep-archive-submit-btn>Sim, excluir</button>
                     <button type="button" data-cancel-archive class="btn btn-ghost btn-sm">Cancelar</button>
                 </div>
             </form>
@@ -289,10 +240,7 @@ Confirmacao de exclusao
 </div>
 
 
-@*
-Formulario compartilhado de remocao de material
-*@
-
+@* Formulario compartilhado de remocao de material *@
 <form method="post" id="remove-material-form" hidden>
     @Html.AntiForgeryToken()
 </form>
@@ -303,13 +251,17 @@ Formulario compartilhado de remocao de material
     (function () {
         'use strict';
 
-        var studentId = '@studentId';
-        var autoOpenId = @(autoOpenId is not null ? $"'{autoOpenId}'" : "null");
+        var MAX_FILE_BYTES   = 5 * 1024 * 1024;
+        var MAX_TOTAL_BYTES  = 10 * 1024 * 1024;
+
+        var studentId   = '@studentId';
+        var autoOpenId  = @(autoOpenId is not null ? $"'{autoOpenId}'" : "null");
 
         // ── Panels ────────────────────────────────────────────────────────────
         var createPanel = document.querySelector('[data-create-panel]');
         var detailPanel = document.querySelector('[data-detail-panel]');
         var allModals   = document.querySelectorAll('.student-action-modal');
+        var lastFocused = null;
 
         function openPanel(panel) {
             allModals.forEach(function (p) { p.hidden = true; p.setAttribute('aria-hidden', 'true'); });
@@ -325,8 +277,6 @@ Formulario compartilhado de remocao de material
             document.body.classList.remove('modal-open');
             if (lastFocused) { lastFocused.focus(); lastFocused = null; }
         }
-
-        var lastFocused = null;
 
         // ── Create panel ─────────────────────────────────────────────────────
         var openCreateBtn = document.querySelector('[data-open-create]');
@@ -349,85 +299,76 @@ Formulario compartilhado de remocao de material
         var elTitle       = document.querySelector('[data-rep-title]');
         var elLoading     = document.querySelector('[data-rep-loading]');
         var elFetchError  = document.querySelector('[data-rep-fetch-error]');
-        var elDetail      = document.querySelector('[data-rep-detail]');
-        var elEditForm    = document.querySelector('[data-rep-edit-form]');
+        var elContent     = document.querySelector('[data-rep-content]');
         var elArchiveCnf  = document.querySelector('[data-rep-archive-confirm]');
 
-        var elStatus      = document.querySelector('[data-rep-status]');
-        var elProgress    = document.querySelector('[data-rep-progress]');
-        var elComposerWrap = document.querySelector('[data-rep-composer-wrap]');
-        var elComposer    = document.querySelector('[data-rep-composer]');
-        var elInstrumentWrap = document.querySelector('[data-rep-instrument-wrap]');
-        var elInstrument  = document.querySelector('[data-rep-instrument]');
-        var elCreated     = document.querySelector('[data-rep-created]');
-        var elNotesWrap   = document.querySelector('[data-rep-notes-wrap]');
-        var elNotes       = document.querySelector('[data-rep-notes]');
-        var elLinkWrap    = document.querySelector('[data-rep-link-wrap]');
-        var elLink        = document.querySelector('[data-rep-link]');
-        var elAttList     = document.querySelector('[data-rep-attachments-list]');
-        var elNoAtt       = document.querySelector('[data-rep-no-attachments]');
+        var elStatusBadge  = document.querySelector('[data-rep-status-badge]');
+        var elProgressText = document.querySelector('[data-rep-progress-text]');
 
-        var elEditId       = document.querySelector('[data-rep-edit-id]');
-        var elEditTitle    = document.querySelector('[data-rep-edit-title]');
-        var elEditComposer = document.querySelector('[data-rep-edit-composer]');
+        var elEditForm       = document.querySelector('[data-rep-edit-form]');
+        var elEditId         = document.querySelector('[data-rep-edit-id]');
+        var elEditTitle      = document.querySelector('[data-rep-edit-title]');
+        var elEditComposer   = document.querySelector('[data-rep-edit-composer]');
         var elEditInstrument = document.querySelector('[data-rep-edit-instrument]');
-        var elEditUrl      = document.querySelector('[data-rep-edit-url]');
-        var elEditNotes    = document.querySelector('[data-rep-edit-notes]');
+        var elEditUrl        = document.querySelector('[data-rep-edit-url]');
+        var elEditNotes      = document.querySelector('[data-rep-edit-notes]');
 
-        var elArchiveForm  = document.querySelector('[data-rep-archive-form]');
-        var elArchiveId    = document.querySelector('[data-archive-item-id]');
-        var elArchiveTitle = document.querySelector('[data-archive-title-display]');
+        var elArchiveForm    = document.querySelector('[data-rep-archive-form]');
+        var elArchiveId      = document.querySelector('[data-archive-item-id]');
+        var elArchiveTitle   = document.querySelector('[data-archive-title-display]');
 
-        var elAddMaterialForm   = document.querySelector('[data-add-material-form]');
-        var elAddMaterialItemId = document.querySelector('[data-add-material-item-id]');
+        var elAttList        = document.querySelector('[data-rep-attachments-list]');
+        var elNoAtt          = document.querySelector('[data-rep-no-attachments]');
+        var elTotalSize      = document.querySelector('[data-rep-total-size]');
+
+        var elFileStaging    = document.querySelector('[data-rep-file-staging]');
+        var elStagingList    = document.querySelector('[data-rep-file-staging-list]');
+        var elUploadRow      = document.querySelector('[data-rep-upload-row]');
+        var elUploadBtn      = document.querySelector('[data-rep-upload-btn]');
+        var elUploadProgress = document.querySelector('[data-rep-upload-progress]');
+        var elFileError      = document.querySelector('[data-rep-file-error]');
+        var elFileInput      = document.getElementById('rep-file-input');
 
         var removeMaterialForm = document.getElementById('remove-material-form');
 
-        var currentItemId = null;
+        var currentItemId    = null;
+        var existingTotalSize = 0;
+        var pendingFiles     = [];
+        var uploadUrl        = null;
+        var isUploading      = false;
 
-        function showDetailView() {
-            elLoading.hidden    = true;
+        // ── Modal states ─────────────────────────────────────────────────────
+        function showLoading() {
+            elLoading.hidden    = false;
             elFetchError.hidden = true;
-            elDetail.hidden     = false;
-            elEditForm.hidden   = true;
+            elContent.hidden    = true;
             elArchiveCnf.hidden = true;
+            elTitle.textContent = 'Carregando...';
         }
 
-        function showEditForm() {
+        function showContent() {
             elLoading.hidden    = true;
             elFetchError.hidden = true;
-            elDetail.hidden     = true;
-            elEditForm.hidden   = false;
+            elContent.hidden    = false;
             elArchiveCnf.hidden = true;
         }
 
         function showArchiveConfirm() {
             elLoading.hidden    = true;
             elFetchError.hidden = true;
-            elDetail.hidden     = true;
-            elEditForm.hidden   = true;
+            elContent.hidden    = true;
             elArchiveCnf.hidden = false;
         }
 
-        function showLoading() {
-            elLoading.hidden    = false;
-            elFetchError.hidden = true;
-            elDetail.hidden     = true;
-            elEditForm.hidden   = true;
-            elArchiveCnf.hidden = true;
-            elTitle.textContent = 'Carregando...';
-        }
-
         function showError(msg) {
-            elLoading.hidden         = false;
             elLoading.hidden         = true;
             elFetchError.hidden      = false;
             elFetchError.textContent = msg || 'Erro ao carregar repertorio.';
-            elDetail.hidden          = true;
-            elEditForm.hidden        = true;
+            elContent.hidden         = true;
             elArchiveCnf.hidden      = true;
         }
 
+        // ── Helpers ──────────────────────────────────────────────────────────
         function formatStatus(s) {
             var map = { NotStarted: 'Nao iniciado', Practicing: 'Em pratica', Learned: 'Aprendido', Archived: 'Arquivado' };
             return map[s] || s;
@@ -443,21 +384,34 @@ Formulario compartilhado de remocao de material
         function escapeHtml(str) {
             if (!str) return '';
             return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function materialIcon(type) {
-            var icons = { 1: '📄', 2: '🎵', 3: '🔗', 4: '🖼', 5: '🎬' };
-            return icons[type] || '📎';
+            return ({ 1: '📄', 2: '🎵', 3: '🔗', 4: '🖼', 5: '🎬' })[type] || '📎';
         }
 
+        function getCsrfToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        function calcExistingTotal(data) {
+            var total = data.audioSizeBytes || 0;
+            (data.materials || []).forEach(function (m) { total += m.sizeBytes || 0; });
+            return total;
+        }
+
+        // ── Attachment list ───────────────────────────────────────────────────
         function buildAttachmentList(data) {
+            existingTotalSize = calcExistingTotal(data);
+            elTotalSize.textContent = existingTotalSize > 0
+                ? formatSize(existingTotalSize) + ' usados'
+                : '';
+
             var items = [];
 
-            // Legacy audio
             if (data.hasAudio && data.audioOriginalFileName) {
                 var audioUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Audio';
                 items.push('<div class="rep-att-item">'
@@ -466,20 +420,16 @@ Formulario compartilhado de remocao de material
                     + '<a href="' + escapeHtml(audioUrl) + '" target="_blank" rel="noopener noreferrer" class="rep-att-name">'
                     + escapeHtml(data.audioOriginalFileName) + '</a>'
                     + (data.audioSizeBytes ? '<span class="rep-att-size">' + formatSize(data.audioSizeBytes) + '</span>' : '')
-                    + '</div>'
-                    + '</div>');
+                    + '</div></div>');
             }
 
-            // Materials
             (data.materials || []).forEach(function (m) {
-                var fileUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials/' + m.id;
+                var fileUrl   = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials/' + m.id;
                 var removeUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials/' + m.id + '/Remove';
-
                 var previewHtml = '';
                 if (m.materialType === 4 && m.contentType && m.contentType.startsWith('image/')) {
                     previewHtml = '<img src="' + escapeHtml(fileUrl) + '" alt="' + escapeHtml(m.originalFileName) + '" class="rep-att-thumb" loading="lazy" />';
                 }
-
                 items.push('<div class="rep-att-item">'
                     + previewHtml
                     + '<span class="rep-att-icon" aria-hidden="true">' + materialIcon(m.materialType) + '</span>'
@@ -488,7 +438,7 @@ Formulario compartilhado de remocao de material
                     + escapeHtml(m.originalFileName || m.title) + '</a>'
                     + (m.sizeBytes ? '<span class="rep-att-size">' + formatSize(m.sizeBytes) + '</span>' : '')
                     + '</div>'
-                    + '<button type="button" class="rep-att-remove btn-ghost btn-sm"'
+                    + '<button type="button" class="rep-att-remove"'
                     + ' data-remove-material="' + escapeHtml(m.id) + '"'
                     + ' data-remove-url="' + escapeHtml(removeUrl) + '"'
                     + ' aria-label="Remover ' + escapeHtml(m.originalFileName || m.title) + '">'
@@ -502,62 +452,22 @@ Formulario compartilhado de remocao de material
             } else {
                 elAttList.innerHTML = items.join('');
                 elNoAtt.hidden = true;
-
-                // Bind remove buttons
                 elAttList.querySelectorAll('[data-remove-material]').forEach(function (btn) {
                     btn.addEventListener('click', function () {
-                        var materialId = btn.dataset.removeMaterial;
-                        var removeUrl  = btn.dataset.removeUrl;
                         if (!confirm('Remover este arquivo do repertorio?')) return;
-                        removeMaterialForm.action = removeUrl;
+                        removeMaterialForm.action = btn.dataset.removeUrl;
                         removeMaterialForm.submit();
                     });
                 });
             }
         }
 
+        // ── Populate detail ───────────────────────────────────────────────────
         function populateDetail(data) {
-            elTitle.textContent = data.title || '(sem nome)';
-            elStatus.textContent = formatStatus(data.status);
-            elProgress.textContent = data.progressPercent + '%';
+            elTitle.textContent       = data.title || '(sem nome)';
+            elStatusBadge.textContent = formatStatus(data.status);
+            elProgressText.textContent = data.progressPercent + '%';
 
-            if (data.composerName) {
-                elComposer.textContent = data.composerName;
-                elComposerWrap.hidden = false;
-            } else {
-                elComposerWrap.hidden = true;
-            }
-
-            if (data.instrumentName) {
-                elInstrument.textContent = data.instrumentName;
-                elInstrumentWrap.hidden = false;
-            } else {
-                elInstrumentWrap.hidden = true;
-            }
-
-            var d = new Date(data.createdAtUtc);
-            elCreated.textContent = d.toLocaleDateString('pt-BR');
-
-            if (data.notes) {
-                elNotes.textContent = data.notes;
-                elNotesWrap.hidden = false;
-            } else {
-                elNotesWrap.hidden = true;
-            }
-
-            if (data.referenceUrl) {
-                elLink.href = data.referenceUrl;
-                elLink.textContent = data.referenceUrl.length > 60
-                    ? data.referenceUrl.substring(0, 57) + '...'
-                    : data.referenceUrl;
-                elLinkWrap.hidden = false;
-            } else {
-                elLinkWrap.hidden = true;
-            }
-
-            buildAttachmentList(data);
-
-            // Populate edit form
             elEditId.value           = data.id;
             elEditTitle.value        = data.title || '';
             elEditComposer.value     = data.composerName || '';
@@ -566,19 +476,139 @@ Formulario compartilhado de remocao de material
             elEditNotes.value        = data.notes || '';
             elEditForm.action        = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id;
 
-            // Populate add material form
-            elAddMaterialItemId.value = data.id;
-            elAddMaterialForm.action  = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials';
-
-            // Populate archive form
-            elArchiveId.value        = data.id;
-            elArchiveForm.action     = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Archive';
             if (elArchiveTitle) elArchiveTitle.textContent = data.title || '';
+            elArchiveForm.action     = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Archive';
+
+            uploadUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials';
+
+            buildAttachmentList(data);
         }
 
+        // ── Multi-file upload ─────────────────────────────────────────────────
+        function renderStagingList() {
+            if (pendingFiles.length === 0) {
+                elFileStaging.hidden = true;
+                elUploadRow.hidden   = true;
+                return;
+            }
+            elFileStaging.hidden = false;
+            elUploadRow.hidden   = false;
+
+            var html = pendingFiles.map(function (f, i) {
+                var warn = f.size > MAX_FILE_BYTES ? ' rep-staging-warn' : '';
+                return '<div class="rep-staging-item' + warn + '">'
+                    + '<span class="rep-staging-name">' + escapeHtml(f.name) + '</span>'
+                    + '<span class="rep-staging-size">(' + formatSize(f.size) + ')</span>'
+                    + '<button type="button" class="rep-staging-remove" data-idx="' + i + '" aria-label="Remover da selecao">&times;</button>'
+                    + '</div>';
+            }).join('');
+
+            elStagingList.innerHTML = html;
+            elStagingList.querySelectorAll('[data-idx]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    pendingFiles.splice(parseInt(btn.dataset.idx), 1);
+                    renderStagingList();
+                    validatePendingFiles();
+                });
+            });
+            validatePendingFiles();
+        }
+
+        function validatePendingFiles() {
+            var hasOversized = pendingFiles.some(function (f) { return f.size > MAX_FILE_BYTES; });
+            var pendingTotal = pendingFiles.reduce(function (s, f) { return s + f.size; }, 0);
+            var wouldBe      = existingTotalSize + pendingTotal;
+
+            elFileError.hidden = true;
+            elUploadBtn.disabled = true;
+
+            if (pendingFiles.length === 0) return;
+
+            if (hasOversized) {
+                elFileError.textContent = 'Um ou mais arquivos excedem 5 MB.';
+                elFileError.hidden = false;
+            } else if (wouldBe > MAX_TOTAL_BYTES) {
+                elFileError.textContent = 'Total ultrapassaria 10 MB (' + formatSize(wouldBe) + ').';
+                elFileError.hidden = false;
+            } else {
+                elUploadBtn.disabled = false;
+            }
+        }
+
+        if (elFileInput) {
+            elFileInput.addEventListener('change', function () {
+                Array.from(elFileInput.files).forEach(function (f) { pendingFiles.push(f); });
+                elFileInput.value = '';
+                renderStagingList();
+            });
+        }
+
+        if (elUploadBtn) {
+            elUploadBtn.addEventListener('click', function () {
+                if (isUploading || pendingFiles.length === 0) return;
+                uploadPendingFiles();
+            });
+        }
+
+        async function uploadPendingFiles() {
+            isUploading = true;
+            elUploadBtn.disabled = true;
+            elUploadBtn.textContent = 'Enviando...';
+
+            var errors = [];
+            var count = pendingFiles.length;
+
+            for (var i = 0; i < count; i++) {
+                var f = pendingFiles[i];
+                if (elUploadProgress) elUploadProgress.textContent = (i + 1) + '/' + count;
+
+                var fd = new FormData();
+                fd.append('materialFile', f);
+                fd.append('__RequestVerificationToken', getCsrfToken());
+
+                try {
+                    var r = await fetch(uploadUrl, { method: 'POST', body: fd });
+                    if (!r.ok) errors.push(f.name + ': erro ' + r.status);
+                } catch (e) {
+                    errors.push(f.name + ': falha de rede');
+                }
+            }
+
+            pendingFiles = [];
+            renderStagingList();
+            isUploading = false;
+            elUploadBtn.textContent = 'Enviar selecionados';
+            if (elUploadProgress) elUploadProgress.textContent = '';
+
+            if (errors.length > 0) {
+                elFileError.textContent = errors.join('; ');
+                elFileError.hidden = false;
+            } else {
+                elFileError.hidden = true;
+            }
+
+            await reloadAttachments();
+        }
+
+        async function reloadAttachments() {
+            if (!currentItemId) return;
+            try {
+                var r = await fetch('/Teacher/Students/' + studentId + '/Repertoire/' + currentItemId + '/Detail', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (r.ok) {
+                    buildAttachmentList(await r.json());
+                    validatePendingFiles();
+                }
+            } catch (e) { /* best-effort */ }
+        }
+
+        // ── Open repertoire detail ────────────────────────────────────────────
         function openRepertoireDetail(itemId, trigger) {
             currentItemId = itemId;
             lastFocused   = trigger || null;
+            pendingFiles  = [];
+            renderStagingList();
             showLoading();
             openPanel(detailPanel);
 
@@ -591,30 +621,26 @@ Formulario compartilhado de remocao de material
             })
             .then(function (data) {
                 populateDetail(data);
-                showDetailView();
+                showContent();
             })
             .catch(function () {
                 showError('Nao foi possivel carregar os dados. Tente novamente.');
             });
         }
 
-        // ── Row clicks ───────────────────────────────────────────────────────
+        // ── Row clicks ────────────────────────────────────────────────────────
         document.querySelectorAll('[data-open-repertoire]').forEach(function (row) {
             row.addEventListener('click', function () {
                 openRepertoireDetail(row.dataset.openRepertoire, row);
             });
         });
 
-        // ── Edit / cancel ────────────────────────────────────────────────────
-        document.querySelector('[data-start-edit]')?.addEventListener('click', showEditForm);
-        document.querySelector('[data-cancel-edit]')?.addEventListener('click', showDetailView);
-
-        // ── Archive / cancel ─────────────────────────────────────────────────
+        // ── Archive ───────────────────────────────────────────────────────────
         document.querySelector('[data-start-archive]')?.addEventListener('click', showArchiveConfirm);
-        document.querySelector('[data-cancel-archive]')?.addEventListener('click', showDetailView);
+        document.querySelector('[data-cancel-archive]')?.addEventListener('click', showContent);
 
         // ── Prevent double submit ─────────────────────────────────────────────
-        [elEditForm, elAddMaterialForm, elArchiveForm].forEach(function (form) {
+        [elEditForm, elArchiveForm].forEach(function (form) {
             if (!form) return;
             form.addEventListener('submit', function () {
                 form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
@@ -623,6 +649,24 @@ Formulario compartilhado de remocao de material
                 });
             });
         });
+
+        // ── Drag and drop ─────────────────────────────────────────────────────
+        var dropArea = document.querySelector('[data-rep-drop-area]');
+        if (dropArea && elFileInput) {
+            dropArea.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                dropArea.classList.add('rep-drag-over');
+            });
+            dropArea.addEventListener('dragleave', function () {
+                dropArea.classList.remove('rep-drag-over');
+            });
+            dropArea.addEventListener('drop', function (e) {
+                e.preventDefault();
+                dropArea.classList.remove('rep-drag-over');
+                Array.from(e.dataTransfer.files).forEach(function (f) { pendingFiles.push(f); });
+                renderStagingList();
+            });
+        }
 
         // ── Auto-open after redirect ──────────────────────────────────────────
         if (autoOpenId) {

@@ -9,8 +9,9 @@ namespace YourRhythmStudio.Application.Learning;
 
 public sealed class RepertoireService
 {
-    private const long MaxAudioBytes = 30 * 1024 * 1024;
+    private const long MaxAudioBytes = 5 * 1024 * 1024;
     private const long MaxMaterialBytes = 5 * 1024 * 1024;
+    private const long MaxTotalMaterialBytes = 10 * 1024 * 1024;
     private const int MaxMaterialsPerItem = 10;
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -21,7 +22,7 @@ public sealed class RepertoireService
     private static readonly HashSet<string> AllowedMaterialExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png", ".gif", ".webp",
-        ".pdf",
+        ".pdf", ".txt",
         ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac",
         ".mp4", ".mov", ".webm"
     };
@@ -436,6 +437,14 @@ public sealed class RepertoireService
         if (existingCount >= MaxMaterialsPerItem)
             throw new InvalidOperationException($"Limite de {MaxMaterialsPerItem} arquivos por repertorio atingido.");
 
+        var existingTotalSize = await _dbContext.RepertoireItemMaterials
+            .Where(m => m.RepertoireItemId == itemId && m.SchoolId == schoolId)
+            .Select(m => m.SizeBytes ?? 0L)
+            .SumAsync(cancellationToken);
+
+        if (existingTotalSize + length > MaxTotalMaterialBytes)
+            throw new InvalidOperationException("O total de arquivos do repertorio nao pode ultrapassar 10 MB.");
+
         var (storedFileName, materialType) = await SaveMaterialAsync(fileName, contentType, length, openReadStream, cancellationToken);
 
         var originalFileName = Path.GetFileName(fileName);
@@ -545,7 +554,9 @@ public sealed class RepertoireService
     {
         var query = _dbContext.RepertoireItems
             .AsNoTracking()
-            .Where(item => item.SchoolId == schoolId && item.StudentProfileId == studentProfileId);
+            .Where(item => item.SchoolId == schoolId
+                && item.StudentProfileId == studentProfileId
+                && item.Status != RepertoireStatus.Archived);
 
         if (teacherProfileId is not null)
         {
@@ -593,7 +604,7 @@ public sealed class RepertoireService
 
         if (upload.Length > MaxAudioBytes)
         {
-            throw new ArgumentException("Arquivo de audio maior que 30 MB.");
+            throw new ArgumentException("Arquivo maior que 5 MB.");
         }
 
         var originalFileName = Path.GetFileName(upload.FileName);
@@ -709,7 +720,8 @@ public sealed class RepertoireService
                 || (extension.Equals(".ogg", StringComparison.OrdinalIgnoreCase)
                     && contentType.Equals("application/ogg", StringComparison.OrdinalIgnoreCase)),
             RepertoireMaterialType.Video => contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase),
-            RepertoireMaterialType.Pdf => contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase),
+            RepertoireMaterialType.Pdf => contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
+                || contentType.Equals("text/plain", StringComparison.OrdinalIgnoreCase),
             _ => false
         };
 
