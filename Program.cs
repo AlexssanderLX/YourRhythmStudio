@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Infrastructure.Data;
 using YourRhythmStudio.Infrastructure.Auth;
 using YourRhythmStudio.Infrastructure.Foundation;
@@ -22,6 +23,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     await app.Services.RemoveFoundationDemoAccountsAsync();
+}
+else
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<YourRhythmDbContext>();
+    await db.Database.MigrateAsync();
 }
 
 await RootBootstrap.EnsureRootAccountAsync(app.Services);
