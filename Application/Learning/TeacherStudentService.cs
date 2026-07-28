@@ -1,3 +1,4 @@
+using Foundation.Core.Utilities;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
 using YourRhythmStudio.Application.Users;
@@ -258,7 +259,8 @@ public sealed class TeacherStudentService
                 Instrument = instrument,
                 Level = OptionalText(request.Level) ?? string.Empty,
                 Notes = OptionalText(request.Notes) ?? string.Empty,
-                CurrentLevel = ParseInitialLevel(request.Level)
+                CurrentLevel = ParseInitialLevel(request.Level),
+                AccessCode = SecureCodeGenerator.GenerateToken(32)
             };
 
             _dbContext.SchoolUsers.Add(schoolUser);
@@ -290,7 +292,8 @@ public sealed class TeacherStudentService
                     Instrument = instrument,
                     Level = OptionalText(request.Level) ?? string.Empty,
                     Notes = OptionalText(request.Notes) ?? string.Empty,
-                    CurrentLevel = ParseInitialLevel(request.Level)
+                    CurrentLevel = ParseInitialLevel(request.Level),
+                    AccessCode = SecureCodeGenerator.GenerateToken(32)
                 };
 
                 _dbContext.StudentProfiles.Add(studentProfile);
@@ -532,6 +535,25 @@ public sealed class TeacherStudentService
             return Math.Clamp(parsed, 1, 5);
 
         return 1;
+    }
+
+    public async Task<string> GetOrGenerateAccessCodeAsync(
+        AuthenticatedUserProfile teacher,
+        Guid studentProfileId,
+        CancellationToken cancellationToken)
+    {
+        var schoolId = teacher.SchoolId;
+
+        var student = await _dbContext.StudentProfiles
+            .FirstOrDefaultAsync(s => s.Id == studentProfileId && s.SchoolId == schoolId, cancellationToken)
+            ?? throw new KeyNotFoundException("Student not found.");
+
+        if (!string.IsNullOrEmpty(student.AccessCode))
+            return student.AccessCode;
+
+        student.AccessCode = SecureCodeGenerator.GenerateToken(32);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return student.AccessCode;
     }
 
     private static string? ToPublicPhotoUrl(string? relativePath)

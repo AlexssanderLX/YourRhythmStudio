@@ -116,6 +116,8 @@ public sealed class YourRhythmDbContext : DbContext
             entity.Property(student => student.Instrument).HasMaxLength(120);
             entity.Property(student => student.Level).HasMaxLength(80);
             entity.Property(student => student.Notes).HasMaxLength(1000);
+            entity.Property(student => student.AccessCode).HasMaxLength(128);
+            entity.HasIndex(student => student.AccessCode).IsUnique();
             entity.HasOne(student => student.School)
                 .WithMany(school => school.Students)
                 .HasForeignKey(student => student.SchoolId)

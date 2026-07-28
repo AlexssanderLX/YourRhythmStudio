@@ -238,16 +238,10 @@ public class AuthController : Controller
         if (string.IsNullOrWhiteSpace(code))
             return View();
 
-        var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
-        var resolution = await _secureLinkService.ResolveAsync(baseUri, code, cancellationToken);
-
-        if (resolution.IsFailure || !Guid.TryParse(resolution.Value?.ResourceKey, out var studentProfileId))
-            return View("StudentAccessInvalid");
-
         var student = await _db.StudentProfiles
             .AsNoTracking()
             .Include(s => s.SchoolUser)
-            .FirstOrDefaultAsync(s => s.Id == studentProfileId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.AccessCode == code, cancellationToken);
 
         if (student?.SchoolUser is null || !student.SchoolUser.IsActive)
             return View("StudentAccessInvalid");

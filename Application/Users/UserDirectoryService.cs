@@ -1,3 +1,4 @@
+using Foundation.Core.Utilities;
 using Microsoft.EntityFrameworkCore;
 using YourRhythmStudio.Domain;
 using YourRhythmStudio.Domain.Users;
@@ -83,7 +84,8 @@ public sealed class UserDirectoryService : IUserDirectoryService
             SchoolUserId = user.Id,
             Instrument = request.Instrument.Trim(),
             Level = request.Level.Trim(),
-            Notes = request.Notes.Trim()
+            Notes = request.Notes.Trim(),
+            AccessCode = SecureCodeGenerator.GenerateToken(32)
         };
 
         _dbContext.SchoolUsers.Add(user);

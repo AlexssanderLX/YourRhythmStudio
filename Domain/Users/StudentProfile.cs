@@ -25,4 +25,6 @@ public sealed class StudentProfile
     public int CurrentLevelXp { get; set; }
 
     public int CurrentLevel { get; set; } = 1;
+
+    public string? AccessCode { get; set; }
 }

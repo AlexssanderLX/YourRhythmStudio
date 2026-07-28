@@ -1360,20 +1360,18 @@ public sealed class TeacherController : Controller
 
     private async Task<StudentAccessLinkViewModel?> BuildStudentAccessLinkAsync(TeacherStudentSummary student, CancellationToken cancellationToken)
     {
-        var baseUri = new Uri($"{Request.Scheme}://{Request.Host}");
-        var result = await _secureLinkService.CreateAsync(
-            baseUri,
-            new CreateSecureLinkRequest(
-                Label: $"Acesso aluno {student.DisplayName}",
-                ResourceKey: student.StudentProfileId.ToString(),
-                RelativePath: "/Auth/StudentAccess"),
-            cancellationToken);
-
-        if (result.IsFailure || result.Value is null)
+        var profile = await CurrentProfile(cancellationToken);
+        string code;
+        try
+        {
+            code = await _teacherStudentService.GetOrGenerateAccessCodeAsync(profile, student.StudentProfileId, cancellationToken);
+        }
+        catch
+        {
             return null;
+        }
 
-        var issued = result.Value;
-        var accessUrl = QueryHelpers.AddQueryString(issued.AbsoluteUrl, "code", issued.PublicCode);
+        var accessUrl = $"{Request.Scheme}://{Request.Host}/Auth/StudentAccess?code={code}";
         var qr = await _qrArtifactGenerator.GenerateSvgAsync(accessUrl, $"student-access-{student.StudentProfileId:N}", cancellationToken);
         return new StudentAccessLinkViewModel(accessUrl, qr.DataUri);
     }
