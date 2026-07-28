@@ -362,7 +362,7 @@ public sealed class RepertoireService
             item.UpdatedAtUtc);
     }
 
-    public async Task ArchiveRepertoireAsync(
+    public async Task DeleteRepertoireAsync(
         AuthenticatedUserProfile profile,
         Guid studentProfileId,
         Guid itemId,
@@ -380,9 +380,6 @@ public sealed class RepertoireService
                 cancellationToken)
             ?? throw new KeyNotFoundException("Repertoire item was not found.");
 
-        if (item.Status == RepertoireStatus.Archived)
-            return;
-
         var materials = await _dbContext.RepertoireItemMaterials
             .Where(m => m.RepertoireItemId == itemId && m.SchoolId == schoolId)
             .ToListAsync(cancellationToken);
@@ -396,16 +393,77 @@ public sealed class RepertoireService
             .Select(m => Path.Combine(GetMaterialStorageRoot(), Path.GetFileName(m.StoredFileName!)))
             .ToList();
 
-        var now = DateTime.UtcNow;
-        item.Archive(now);
-        item.ClearFiles(now);
-
         _dbContext.RepertoireItemMaterials.RemoveRange(materials);
+        _dbContext.RepertoireItems.Remove(item);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         DeleteFileIfExists(legacyAudioPath);
         foreach (var path in materialPaths)
             DeleteFileIfExists(path);
+    }
+
+    public async Task<IReadOnlyCollection<RepertoireMaterialSummary>> ListMaterialsForCurrentStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, studentProfileId) = LearningAuthorization.RequireStudent(profile);
+
+        var itemBelongs = await _dbContext.RepertoireItems
+            .AnyAsync(i => i.Id == itemId
+                && i.SchoolId == schoolId
+                && i.StudentProfileId == studentProfileId,
+                cancellationToken);
+
+        if (!itemBelongs) return Array.Empty<RepertoireMaterialSummary>();
+
+        return await _dbContext.RepertoireItemMaterials
+            .AsNoTracking()
+            .Where(m => m.RepertoireItemId == itemId && m.SchoolId == schoolId)
+            .OrderBy(m => m.Order)
+            .ThenBy(m => m.AddedAtUtc)
+            .Select(m => new RepertoireMaterialSummary(
+                m.Id,
+                m.MaterialType,
+                m.Title,
+                m.OriginalFileName,
+                m.ContentType,
+                m.SizeBytes,
+                m.AddedAtUtc))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<RepertoireAudioFile?> GetMaterialForCurrentStudentAsync(
+        AuthenticatedUserProfile profile,
+        Guid itemId,
+        Guid materialId,
+        CancellationToken cancellationToken = default)
+    {
+        var (schoolId, studentProfileId) = LearningAuthorization.RequireStudent(profile);
+
+        var itemBelongs = await _dbContext.RepertoireItems
+            .AnyAsync(i => i.Id == itemId
+                && i.SchoolId == schoolId
+                && i.StudentProfileId == studentProfileId,
+                cancellationToken);
+
+        if (!itemBelongs) return null;
+
+        var material = await _dbContext.RepertoireItemMaterials
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == materialId
+                && m.SchoolId == schoolId
+                && m.RepertoireItemId == itemId,
+                cancellationToken);
+
+        if (material?.StoredFileName is null || material.OriginalFileName is null || material.ContentType is null)
+            return null;
+
+        var fileName = Path.GetFileName(material.StoredFileName);
+        var physicalPath = Path.Combine(GetMaterialStorageRoot(), fileName);
+        if (!File.Exists(physicalPath)) return null;
+
+        return new RepertoireAudioFile(physicalPath, material.ContentType, material.OriginalFileName);
     }
 
     public async Task<RepertoireMaterialSummary> AddMaterialAsync(

@@ -91,3 +91,39 @@
         <p>@item.Notes</p>
     </section>
 }
+
+@if (Model.Materials.Any())
+{
+    <section class="s-card rep-materials-section">
+        <div class="s-sec-title">Arquivos do professor</div>
+        <ul class="rep-student-materials-list">
+            @foreach (var mat in Model.Materials)
+            {
+                var icon = mat.MaterialType.ToString() switch {
+                    "Audio" => "♪",
+                    "Video" => "▶",
+                    "Image" => "◼",
+                    _ => "⬇"
+                };
+                var sizeLabel = mat.SizeBytes.HasValue
+                    ? (mat.SizeBytes.Value >= 1024 * 1024
+                        ? $"{mat.SizeBytes.Value / 1048576.0:F1} MB"
+                        : $"{mat.SizeBytes.Value / 1024.0:F0} KB")
+                    : "";
+                <li class="rep-student-material-item">
+                    <span class="rep-student-mat-icon">@icon</span>
+                    <div class="rep-student-mat-info">
+                        <span class="rep-student-mat-name">@mat.Title</span>
+                        @if (!string.IsNullOrWhiteSpace(sizeLabel))
+                        {
+                            <span class="rep-student-mat-size">@sizeLabel</span>
+                        }
+                    </div>
+                    <a class="rep-student-mat-download"
+                       href="@Url.Action("RepertoireMaterial", "Student", new { id = item.Id, materialId = mat.Id })"
+                       download="@mat.OriginalFileName">Baixar</a>
+                </li>
+            }
+        </ul>
+    </section>
+}

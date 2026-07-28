@@ -392,14 +392,14 @@ public sealed class TeacherController : Controller
         return RedirectToAction(nameof(StudentRepertoire), new { studentId });
     }
 
-    [HttpPost("Students/{studentId:guid}/Repertoire/{itemId:guid}/Archive")]
+    [HttpPost("Students/{studentId:guid}/Repertoire/{itemId:guid}/Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ArchiveRepertoire(Guid studentId, Guid itemId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteRepertoire(Guid studentId, Guid itemId, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfile(cancellationToken);
         try
         {
-            await _repertoireService.ArchiveRepertoireAsync(profile, studentId, itemId, cancellationToken);
+            await _repertoireService.DeleteRepertoireAsync(profile, studentId, itemId, cancellationToken);
             TempData["Success"] = "Repertorio excluido.";
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)

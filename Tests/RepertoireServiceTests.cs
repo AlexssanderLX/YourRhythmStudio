@@ -380,10 +380,10 @@ public sealed class RepertoireServiceTests
             svc.RemoveMaterialAsync(ctx.OtherTeacher, ctx.StudentProfile.Id, material.Id));
     }
 
-    // ── Archive ───────────────────────────────────────────────────────────────
+    // ── Delete ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ArchiveRepertoireAsync_AuthorizedItem_ArchivesAndClearsFiles()
+    public async Task DeleteRepertoireAsync_AuthorizedItem_RemovesFromDb()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
@@ -392,14 +392,13 @@ public sealed class RepertoireServiceTests
         var added = await svc.AddRepertoireAsync(ctx.Teacher,
             new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
 
-        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
+        await svc.DeleteRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
 
-        var item = await db.RepertoireItems.SingleAsync();
-        Assert.Equal(RepertoireStatus.Archived, item.Status);
+        Assert.Empty(db.RepertoireItems);
     }
 
     [Fact]
-    public async Task ArchiveRepertoireAsync_AlreadyArchived_IsIdempotent()
+    public async Task DeleteRepertoireAsync_AlreadyDeleted_Throws()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
@@ -408,16 +407,14 @@ public sealed class RepertoireServiceTests
         var added = await svc.AddRepertoireAsync(ctx.Teacher,
             new AddRepertoireRequest(ctx.StudentProfile.Id, "Titulo", null, "https://example.com", null));
 
-        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
-        // Second call must not throw
-        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
+        await svc.DeleteRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
 
-        var item = await db.RepertoireItems.SingleAsync();
-        Assert.Equal(RepertoireStatus.Archived, item.Status);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            svc.DeleteRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id));
     }
 
     [Fact]
-    public async Task ArchiveRepertoireAsync_WithUnauthorizedUser_Throws()
+    public async Task DeleteRepertoireAsync_WithUnauthorizedUser_Throws()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
@@ -428,11 +425,11 @@ public sealed class RepertoireServiceTests
 
         // Item belongs to school1; other teacher is in otherSchool — IDOR blocked: item not found in their school scope
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            svc.ArchiveRepertoireAsync(ctx.OtherTeacher, ctx.OtherStudentProfile.Id, added.Id));
+            svc.DeleteRepertoireAsync(ctx.OtherTeacher, ctx.OtherStudentProfile.Id, added.Id));
     }
 
     [Fact]
-    public async Task ArchiveRepertoireAsync_RemovesMaterials()
+    public async Task DeleteRepertoireAsync_RemovesMaterialsAndItem()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
@@ -446,15 +443,16 @@ public sealed class RepertoireServiceTests
             "partitura.pdf", "application/pdf", content.Length,
             () => new MemoryStream(content));
 
-        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
+        await svc.DeleteRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, added.Id);
 
         Assert.Empty(db.RepertoireItemMaterials);
+        Assert.Empty(db.RepertoireItems);
     }
 
-    // ── List excludes archived ────────────────────────────────────────────────
+    // ── List excludes deleted ─────────────────────────────────────────────────
 
     [Fact]
-    public async Task ListForTeacherStudentAsync_ExcludesArchivedItems()
+    public async Task ListForTeacherStudentAsync_ExcludesDeletedItems()
     {
         await using var db = CreateDb();
         var ctx = await SeedAsync(db);
@@ -462,10 +460,10 @@ public sealed class RepertoireServiceTests
 
         var active = await svc.AddRepertoireAsync(ctx.Teacher,
             new AddRepertoireRequest(ctx.StudentProfile.Id, "Ativo", "Notas", null, null));
-        var toArchive = await svc.AddRepertoireAsync(ctx.Teacher,
-            new AddRepertoireRequest(ctx.StudentProfile.Id, "Arquivado", null, "https://example.com", null));
+        var toDelete = await svc.AddRepertoireAsync(ctx.Teacher,
+            new AddRepertoireRequest(ctx.StudentProfile.Id, "Excluido", null, "https://example.com", null));
 
-        await svc.ArchiveRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, toArchive.Id);
+        await svc.DeleteRepertoireAsync(ctx.Teacher, ctx.StudentProfile.Id, toDelete.Id);
 
         var list = await svc.ListForTeacherStudentAsync(ctx.Teacher, ctx.StudentProfile.Id);
 

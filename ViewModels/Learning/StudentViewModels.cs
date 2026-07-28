@@ -30,6 +30,7 @@ public sealed class StudentProgressViewModel
 public sealed class StudentRepertoireDetailViewModel
 {
     public required RepertoireSummary Item { get; init; }
+    public IReadOnlyCollection<RepertoireMaterialSummary> Materials { get; init; } = Array.Empty<RepertoireMaterialSummary>();
 }
 
 public sealed class StudentLevelsViewModel

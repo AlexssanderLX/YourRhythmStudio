@@ -91,7 +91,17 @@ public sealed class StudentController : Controller
         var profile = await CurrentProfile(cancellationToken);
         var item = await _repertoireService.GetByIdForCurrentStudentAsync(profile, id, cancellationToken);
         if (item is null) return NotFound();
-        return View(new StudentRepertoireDetailViewModel { Item = item });
+        var materials = await _repertoireService.ListMaterialsForCurrentStudentAsync(profile, id, cancellationToken);
+        return View(new StudentRepertoireDetailViewModel { Item = item, Materials = materials });
+    }
+
+    [HttpGet("Repertoire/{id:guid}/Materials/{materialId:guid}")]
+    public async Task<IActionResult> RepertoireMaterial(Guid id, Guid materialId, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfile(cancellationToken);
+        var file = await _repertoireService.GetMaterialForCurrentStudentAsync(profile, id, materialId, cancellationToken);
+        if (file is null) return NotFound();
+        return PhysicalFile(file.PhysicalPath, file.ContentType, file.DownloadFileName, enableRangeProcessing: true);
     }
 
     [HttpGet("Repertoire/{id:guid}/OpenReference")]

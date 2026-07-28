@@ -477,7 +477,7 @@ Modal: Detalhe / Editar / Excluir
             elEditForm.action        = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id;
 
             if (elArchiveTitle) elArchiveTitle.textContent = data.title || '';
-            elArchiveForm.action     = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Archive';
+            elArchiveForm.action     = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Delete';
 
             uploadUrl = '/Teacher/Students/' + studentId + '/Repertoire/' + data.id + '/Materials';
 
