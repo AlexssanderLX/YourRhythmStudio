@@ -13,6 +13,8 @@
 
     var tracks = [];
     var queue = [];
+    var queueIndex = 0;
+    var queueReady = false;
     var current = -1;
     var lastPlayed = null;
     var revealed = false;
@@ -39,11 +41,16 @@
                 tracks = Array.isArray(data)
                     ? data.filter(function (track) { return track && track.url && track.title; })
                     : [];
+                tracks = uniqueTracks(tracks);
                 queue = [];
+                queueIndex = 0;
+                queueReady = false;
             })
             .catch(function () {
                 tracks = [];
                 queue = [];
+                queueIndex = 0;
+                queueReady = false;
             });
     }
 
@@ -65,6 +72,12 @@
         return a.url === b.url;
     }
 
+    function uniqueTracks(list) {
+        return list.filter(function (track, index) {
+            return list.findIndex(function (candidate) { return sameTrack(candidate, track); }) === index;
+        });
+    }
+
     function shuffle(list) {
         var copy = list.slice();
         for (var i = copy.length - 1; i > 0; i--) {
@@ -79,6 +92,8 @@
 
     function buildQueue() {
         queue = shuffle(tracks);
+        queueIndex = 0;
+        queueReady = true;
 
         if (queue.length > 1 && sameTrack(queue[0], lastPlayed)) {
             var first = queue.shift();
@@ -89,8 +104,14 @@
     function nextTrack() {
         if (tracks.length === 0) return null;
         if (tracks.length === 1) return tracks[0];
-        if (queue.length === 0) buildQueue();
-        return queue.shift() || null;
+        if (!queueReady) buildQueue();
+        if (queue.length === 0) return null;
+
+        if (queueIndex >= queue.length) {
+            queueIndex = 0;
+        }
+
+        return queue[queueIndex++] || null;
     }
 
     function playTrack(track) {
@@ -112,7 +133,11 @@
         var failed = current >= 0 && current < tracks.length ? tracks[current] : lastPlayed;
         if (failed) {
             tracks = tracks.filter(function (track) { return !sameTrack(track, failed); });
+            var previousQueueLength = queue.length;
             queue = queue.filter(function (track) { return !sameTrack(track, failed); });
+            if (queue.length < previousQueueLength && queueIndex > 0) {
+                queueIndex--;
+            }
         }
         current = -1;
         lastPlayed = null;
