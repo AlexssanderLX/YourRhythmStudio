@@ -19,6 +19,7 @@
     var lastPlayed = null;
     var revealed = false;
     var activated = false;
+    var desiredState = "idle";
 
     function setState(state) {
         root.classList.toggle("playing", state === "playing");
@@ -123,10 +124,29 @@
 
         var promise = audio.play();
         if (promise && typeof promise.then === "function") {
-            promise.then(function () { setState("playing"); }).catch(handleTrackError);
+            promise.then(function () { setState("playing"); }).catch(handlePlayFailure);
         } else {
             setState("playing");
         }
+    }
+
+    function resumePlayback() {
+        desiredState = "playing";
+        var promise = audio.play();
+        if (promise && typeof promise.then === "function") {
+            promise.then(function () { setState("playing"); }).catch(handlePlayFailure);
+        } else {
+            setState("playing");
+        }
+    }
+
+    function handlePlayFailure(error) {
+        if (desiredState === "paused" || (error && error.name === "AbortError")) {
+            setState("paused");
+            return;
+        }
+
+        handleTrackError();
     }
 
     function handleTrackError() {
@@ -157,24 +177,24 @@
 
         if (!activated) {
             activated = true;
+            desiredState = "playing";
             playTrack(nextTrack());
             return;
         }
 
         if (audio.paused) {
-            var promise = audio.play();
-            if (promise && typeof promise.then === "function") {
-                promise.then(function () { setState("playing"); }).catch(handleTrackError);
-            } else {
-                setState("playing");
-            }
+            resumePlayback();
         } else {
+            desiredState = "paused";
             audio.pause();
             setState("paused");
         }
     });
 
-    audio.addEventListener("ended", function () { playTrack(nextTrack()); });
+    audio.addEventListener("ended", function () {
+        desiredState = "playing";
+        playTrack(nextTrack());
+    });
     audio.addEventListener("error", function () { if (activated) handleTrackError(); });
     audio.addEventListener("pause", function () { if (activated && !audio.ended) setState("paused"); });
     audio.addEventListener("play", function () { setState("playing"); });
