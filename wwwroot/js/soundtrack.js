@@ -12,7 +12,9 @@
     if (!root || !btn || !label || !audio) return;
 
     var tracks = [];
+    var queue = [];
     var current = -1;
+    var lastPlayed = null;
     var revealed = false;
     var activated = false;
 
@@ -37,9 +39,11 @@
                 tracks = Array.isArray(data)
                     ? data.filter(function (track) { return track && track.url && track.title; })
                     : [];
+                queue = [];
             })
             .catch(function () {
                 tracks = [];
+                queue = [];
             });
     }
 
@@ -55,21 +59,45 @@
         });
     }
 
-    function pickRandom() {
-        if (tracks.length === 0) return -1;
-        if (tracks.length === 1) return 0;
-
-        var index;
-        do {
-            index = Math.floor(Math.random() * tracks.length);
-        } while (index === current);
-        return index;
+    function sameTrack(a, b) {
+        if (!a || !b) return false;
+        if (a.id != null && b.id != null) return a.id === b.id;
+        return a.url === b.url;
     }
 
-    function playIndex(index) {
-        if (index < 0 || !tracks[index]) return;
-        current = index;
-        audio.src = tracks[index].url;
+    function shuffle(list) {
+        var copy = list.slice();
+        for (var i = copy.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = copy[i];
+            copy[i] = copy[j];
+            copy[j] = tmp;
+        }
+
+        return copy;
+    }
+
+    function buildQueue() {
+        queue = shuffle(tracks);
+
+        if (queue.length > 1 && sameTrack(queue[0], lastPlayed)) {
+            var first = queue.shift();
+            queue.push(first);
+        }
+    }
+
+    function nextTrack() {
+        if (tracks.length === 0) return null;
+        if (tracks.length === 1) return tracks[0];
+        if (queue.length === 0) buildQueue();
+        return queue.shift() || null;
+    }
+
+    function playTrack(track) {
+        if (!track) return;
+        current = tracks.findIndex(function (item) { return sameTrack(item, track); });
+        lastPlayed = track;
+        audio.src = track.url;
         audio.volume = INITIAL_VOLUME;
 
         var promise = audio.play();
@@ -81,13 +109,16 @@
     }
 
     function handleTrackError() {
-        if (current >= 0 && current < tracks.length) {
-            tracks.splice(current, 1);
-            current = -1;
+        var failed = current >= 0 && current < tracks.length ? tracks[current] : lastPlayed;
+        if (failed) {
+            tracks = tracks.filter(function (track) { return !sameTrack(track, failed); });
+            queue = queue.filter(function (track) { return !sameTrack(track, failed); });
         }
+        current = -1;
+        lastPlayed = null;
 
         if (tracks.length > 0) {
-            playIndex(pickRandom());
+            playTrack(nextTrack());
             return;
         }
 
@@ -101,7 +132,7 @@
 
         if (!activated) {
             activated = true;
-            playIndex(pickRandom());
+            playTrack(nextTrack());
             return;
         }
 
@@ -118,7 +149,7 @@
         }
     });
 
-    audio.addEventListener("ended", function () { playIndex(pickRandom()); });
+    audio.addEventListener("ended", function () { playTrack(nextTrack()); });
     audio.addEventListener("error", function () { if (activated) handleTrackError(); });
     audio.addEventListener("pause", function () { if (activated && !audio.ended) setState("paused"); });
     audio.addEventListener("play", function () { setState("playing"); });
