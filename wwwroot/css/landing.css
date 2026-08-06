@@ -39,6 +39,8 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 /* Scroll lock while mobile menu is open */
