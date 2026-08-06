@@ -45,11 +45,14 @@ public sealed class AccessRequestService
 
     public async Task<IReadOnlyCollection<RegisterPlanOptionViewModel>> GetRequestablePlanOptionsAsync(CancellationToken ct = default)
     {
-        return await _db.Plans
+        var plans = await _db.Plans
             .AsNoTracking()
-            .Where(plan => plan.IsActive && VisiblePlanCodes.Contains(plan.Code))
+            .Where(plan => plan.IsActive && (plan.Code == "professor" || plan.Code == "escola"))
             .OrderBy(plan => plan.Code == "professor" ? 0 : 1)
             .ThenBy(plan => plan.Name)
+            .ToListAsync(ct);
+
+        return plans
             .Select(plan => new RegisterPlanOptionViewModel
             {
                 Code = plan.Code,
@@ -59,7 +62,7 @@ public sealed class AccessRequestService
                 MaxStudents = plan.MaxStudents,
                 IsAvailableForRequest = RequestablePlanCodes.Contains(plan.Code)
             })
-            .ToListAsync(ct);
+            .ToList();
     }
 
     public async Task<SubmitAccessRequestResult> SubmitAsync(RegisterViewModel model, CancellationToken ct = default)
